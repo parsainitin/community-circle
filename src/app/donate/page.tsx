@@ -103,23 +103,23 @@ export default function DonatePage() {
           <Heart className="w-6 h-6 fill-red-500" />
         </div>
         <div className="space-y-1">
-          <h2 className="text-base font-bold text-slate-800">Support Jambu Community Circle</h2>
+          <h2 className="text-base font-bold text-slate-800">जंबू कम्युनिटी सर्कल सहयोग</h2>
           <p className="text-xs text-slate-400">
-            Keep the platform running ad-free, secure, and fast for everyone.
+            प्लेटफ़ॉर्म को विज्ञापन-मुक्त, सुरक्षित और तेज़ रखने में सहयोग करें।
           </p>
         </div>
       </div>
 
       {/* 💌 REQUEST NOTE */}
       <div className="bg-slate-50 border border-slate-150 p-4.5 rounded-3xl leading-relaxed text-xs text-slate-600 font-semibold space-y-2">
-        <p>
-          Dear Jambu Community Circle Members,
+        <p className="text-sm font-bold text-slate-800 border-b border-slate-200/60 pb-1 mb-1">
+          प्रिय जंबू कम्युनिटी सर्कल सदस्यों,
         </p>
         <p>
-          To maintain this digital circle without intrusive ads and keep our community database servers responsive and secure, we request your kind support.
+          इस डिजिटल सर्कल को बिना किसी विज्ञापन के चलाने और हमारे कम्युनिटी डेटाबेस सर्वर को सुरक्षित व तेज रखने के लिए, हम आपसे आर्थिक सहयोग का विनम्र अनुरोध करते हैं।
         </p>
         <p>
-          Your contributions directly fund database storage, API integrations, and ongoing development work to preserve our family lineages and marketplace connections. Any amount you donate makes a huge difference! Thank you. ❤️
+          आपका योगदान सीधे तौर पर हमारे डेटाबेस स्टोरेज, एपीआई इंटीग्रेशन और हमारे पारिवारिक इतिहास (Lineages) व बाजार कनेक्शनों (Marketplace) को सुरक्षित रखने के लिए चल रहे विकास कार्यों में मदद करता है। आपके द्वारा दान की गई कोई भी राशि हमारे लिए अत्यंत मूल्यवान है! धन्यवाद। ❤️
         </p>
       </div>
 
