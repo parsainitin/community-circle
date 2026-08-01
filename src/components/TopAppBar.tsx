@@ -98,7 +98,7 @@ export default function TopAppBar() {
           aria-label="User Menu"
         >
           <img
-            src={user?.avatar || "/avatar.jpg"}
+            src={user?.avatar || (user?.sex === "Female" ? "/avatar_female.jpg" : user?.sex === "Male" ? "/avatar_male.jpg" : "/avatar.jpg")}
             alt="User Profile"
             className="w-full h-full object-cover"
           />
@@ -116,7 +116,7 @@ export default function TopAppBar() {
             <div className="flex flex-col items-center pb-3 border-b border-slate-100 space-y-2">
               <div className="relative group cursor-pointer w-14 h-14 rounded-full overflow-hidden border border-slate-200 shadow-xs">
                 <img
-                  src={user?.avatar || "/avatar.jpg"}
+                  src={user?.avatar || (user?.sex === "Female" ? "/avatar_female.jpg" : user?.sex === "Male" ? "/avatar_male.jpg" : "/avatar.jpg")}
                   alt="User Avatar Preview"
                   className="w-full h-full object-cover"
                 />

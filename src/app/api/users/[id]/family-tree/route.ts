@@ -8,7 +8,7 @@ interface RouteParams {
 
 // Recursive helper to get descendants hierarchical tree
 async function getDescendantsTree(userId: string): Promise<any[]> {
-  const children = await User.find({ parent: userId }).select("name phone gotra mobileNumber parent avatar");
+  const children = await User.find({ parent: userId }).select("name phone gotra mobileNumber parent avatar sex");
   const results: any[] = [];
 
   for (const child of children) {
@@ -20,6 +20,7 @@ async function getDescendantsTree(userId: string): Promise<any[]> {
       mobileNumber: child.mobileNumber,
       gotra: child.gotra,
       avatar: child.avatar,
+      sex: child.sex,
       children: childTree,
     });
   }
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     await dbConnect();
     const { id } = await params;
 
-    const user = await User.findById(id).select("name phone gotra mobileNumber parent avatar");
+    const user = await User.findById(id).select("name phone gotra mobileNumber parent avatar sex");
     if (!user) {
       return Response.json({ error: "User not found" }, { status: 404 });
     }
@@ -49,7 +50,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       }
       visited.add(parentIdStr);
 
-      const parentUser = await User.findById(currentParentId).select("name phone gotra mobileNumber parent avatar");
+      const parentUser = await User.findById(currentParentId).select("name phone gotra mobileNumber parent avatar sex");
       if (!parentUser) break;
 
       ancestors.push({
@@ -59,6 +60,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         mobileNumber: parentUser.mobileNumber,
         gotra: parentUser.gotra,
         avatar: parentUser.avatar,
+        sex: parentUser.sex,
       });
 
       currentParentId = parentUser.parent;
@@ -75,6 +77,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         mobileNumber: user.mobileNumber,
         gotra: user.gotra,
         avatar: user.avatar,
+        sex: user.sex,
       },
       ancestors,
       descendants,

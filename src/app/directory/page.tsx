@@ -275,11 +275,11 @@ export default function DirectoryPage() {
     return colors[Math.abs(hash) % colors.length];
   };
 
-  const renderTreeNode = (nodeUser: { _id: string; name: string; avatar?: string }, isActive: boolean) => {
+  const renderTreeNode = (nodeUser: { _id: string; name: string; avatar?: string; sex?: string }, isActive: boolean) => {
     return (
       <div className="relative group select-none flex flex-col items-center">
         <img
-          src={nodeUser.avatar || "/avatar.jpg"}
+          src={nodeUser.avatar || (nodeUser.sex === "Female" ? "/avatar_female.jpg" : nodeUser.sex === "Male" ? "/avatar_male.jpg" : "/avatar.jpg")}
           alt={nodeUser.name}
           className={`w-11 h-11 rounded-full object-cover shrink-0 shadow-md border-2 transition-transform duration-100 active:scale-95 cursor-pointer ${
             isActive ? "border-whatsapp-green bg-whatsapp-light scale-105" : "border-slate-200 hover:border-slate-400"
@@ -404,13 +404,11 @@ export default function DirectoryPage() {
                     className="w-10 h-10 rounded-full object-cover shrink-0 shadow-xs border border-slate-100"
                   />
                 ) : (
-                  <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow-xs uppercase ${getAvatarColor(
-                      contact.name
-                    )}`}
-                  >
-                    {getInitials(contact.name)}
-                  </div>
+                  <img
+                    src={contact.sex === "Female" ? "/avatar_female.jpg" : contact.sex === "Male" ? "/avatar_male.jpg" : "/avatar.jpg"}
+                    alt={contact.name}
+                    className="w-10 h-10 rounded-full object-cover shrink-0 shadow-xs border border-slate-100 bg-slate-50"
+                  />
                 )}
                 <div className="min-w-0">
                   <h4 className="text-[14px] font-bold text-slate-800 truncate">{contact.name}</h4>
