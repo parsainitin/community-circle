@@ -1,0 +1,103 @@
+import mongoose, { Schema, Document, Model } from "mongoose";
+
+export interface IUser extends Document {
+  name: string;
+  phone: string;
+  gotra?: string;
+  address?: string;
+  mobileNumber?: string;
+  age?: number;
+  sex?: string;
+  maritalStatus?: string;
+  bloodGroup?: string;
+  password?: string;
+  parent?: mongoose.Types.ObjectId | IUser;
+  parentRelationship?: string;
+  familyMembers: mongoose.Types.ObjectId[] | IUser[];
+  avatar?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const UserSchema: Schema<IUser> = new Schema(
+  {
+    name: {
+      type: String,
+      required: [true, "Name is required"],
+      trim: true,
+    },
+    phone: {
+      type: String,
+      required: [true, "Phone is required"],
+      trim: true,
+    },
+    gotra: {
+      type: String,
+      trim: true,
+    },
+    address: {
+      type: String,
+      trim: true,
+    },
+    mobileNumber: {
+      type: String,
+      trim: true,
+    },
+    age: {
+      type: Number,
+      min: [0, "Age cannot be negative"],
+    },
+    sex: {
+      type: String,
+      enum: {
+        values: ["Male", "Female", "Other", "Prefer not to say"],
+        message: "{VALUE} is not a valid sex option",
+      },
+    },
+    maritalStatus: {
+      type: String,
+      enum: {
+        values: ["Single", "Married", "Divorced", "Widowed", "Separated"],
+        message: "{VALUE} is not a valid marital status",
+      },
+    },
+    bloodGroup: {
+      type: String,
+      enum: {
+        values: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],
+        message: "{VALUE} is not a valid blood group",
+      },
+    },
+    password: {
+      type: String,
+      required: [true, "Password is required"],
+    },
+    parent: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+    familyMembers: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    parentRelationship: {
+      type: String,
+      enum: {
+        values: ["Son", "Daughter", "Wife", "Husband", "Father", "Mother"],
+        message: "{VALUE} is not a valid parent relationship option",
+      },
+    },
+    avatar: {
+      type: String,
+      default: "",
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+export const User: Model<IUser> =
+  mongoose.models.User || mongoose.model<IUser>("User", UserSchema);
