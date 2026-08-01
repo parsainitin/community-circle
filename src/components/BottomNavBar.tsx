@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MessageSquare, Users, Briefcase, Calendar, Megaphone } from "lucide-react";
+import { MessageSquare, Users, Briefcase, Calendar, Megaphone, LayoutDashboard } from "lucide-react";
 
 export default function BottomNavBar() {
   const pathname = usePathname();
@@ -15,17 +15,17 @@ export default function BottomNavBar() {
       icon: MessageSquare,
     },
     {
-      label: "Announce",
-      href: "/announcements",
-      icon: Megaphone,
-    },
-    {
       label: "Directory",
       href: "/directory",
       icon: Users,
     },
     {
-      label: "Opportunities",
+      label: "Dashboard",
+      href: "/dashboard",
+      icon: LayoutDashboard,
+    },
+    {
+      label: "Listing",
       href: "/opportunities",
       icon: Briefcase,
     },

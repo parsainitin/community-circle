@@ -12,29 +12,91 @@ export async function POST(request: NextRequest) {
   try {
     await dbConnect();
     const body = await request.json();
-    const { name, phone, mobileNumber, password, gotra, address, age, sex, maritalStatus, bloodGroup, parentId, parentRelationship, avatar } = body;
+    const {
+      name,
+      phone,
+      mobileNumber,
+      password,
+      gotra,
+      kulDevi,
+      address,
+      city,
+      village,
+      age,
+      sex,
+      maritalStatus,
+      bloodGroup,
+      parentId,
+      parentRelationship,
+      avatar,
+      education,
+      institution,
+      occupationType,
+      profession,
+      company
+    } = body;
 
-    if (!name || !mobileNumber || !password) {
-      return Response.json({ error: "Missing required fields: name, mobileNumber, password" }, { status: 400 });
+    const isChild = parentRelationship === "Son" || parentRelationship === "Daughter";
+
+    let finalCity = city;
+    let finalVillage = village;
+    let finalAddress = address;
+
+    if (!finalCity && parentId) {
+      const parentUser = await User.findById(parentId);
+      if (parentUser) {
+        finalCity = parentUser.city;
+        if (!finalVillage) {
+          finalVillage = parentUser.village;
+        }
+        if (!finalAddress) {
+          finalAddress = parentUser.address;
+        }
+      }
+    }
+
+    if (!name || !finalCity) {
+      return Response.json({ error: "Missing required fields: name, city" }, { status: 400 });
+    }
+
+    let finalMobileNumber = mobileNumber;
+    let finalPassword = password;
+
+    if (!finalMobileNumber) {
+      if (isChild) {
+        finalMobileNumber = `Child_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+      } else {
+        return Response.json({ error: "Missing required field: mobileNumber" }, { status: 400 });
+      }
+    }
+
+    if (!finalPassword) {
+      if (isChild) {
+        finalPassword = "Community123";
+      } else {
+        return Response.json({ error: "Missing required field: password" }, { status: 400 });
+      }
     }
 
     // Check if user already exists with the same mobileNumber
-    const existingUser = await User.findOne({ mobileNumber });
+    const existingUser = await User.findOne({ mobileNumber: finalMobileNumber });
     if (existingUser) {
       return Response.json({ error: "User already exists with this mobile number" }, { status: 400 });
     }
 
     // Hash the password before saving
-    const hashedPassword = hashPassword(password);
+    const hashedPassword = hashPassword(finalPassword);
 
     const newUser = await User.create({
       name,
-      // Use phone = mobileNumber if phone is not provided, since both are mobile/phone fields
-      phone: phone || mobileNumber,
-      mobileNumber,
+      phone: phone || finalMobileNumber,
+      mobileNumber: finalMobileNumber,
       password: hashedPassword,
       gotra,
-      address,
+      kulDevi,
+      address: finalAddress,
+      city: finalCity,
+      village: finalVillage,
       age: age ? Number(age) : undefined,
       sex,
       maritalStatus,
@@ -43,6 +105,11 @@ export async function POST(request: NextRequest) {
       parent: parentId || undefined,
       parentRelationship: parentRelationship || undefined,
       familyMembers: parentId ? [parentId] : [],
+      education,
+      institution,
+      occupationType,
+      profession,
+      company,
     });
 
     if (parentId) {

@@ -4,7 +4,10 @@ export interface IUser extends Document {
   name: string;
   phone: string;
   gotra?: string;
+  kulDevi?: string;
   address?: string;
+  city: string;
+  village?: string;
   mobileNumber?: string;
   age?: number;
   sex?: string;
@@ -15,6 +18,11 @@ export interface IUser extends Document {
   parentRelationship?: string;
   familyMembers: mongoose.Types.ObjectId[] | IUser[];
   avatar?: string;
+  education?: string;
+  institution?: string;
+  occupationType?: string;
+  profession?: string;
+  company?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -35,7 +43,20 @@ const UserSchema: Schema<IUser> = new Schema(
       type: String,
       trim: true,
     },
+    kulDevi: {
+      type: String,
+      trim: true,
+    },
     address: {
+      type: String,
+      trim: true,
+    },
+    city: {
+      type: String,
+      required: [true, "City is required"],
+      trim: true,
+    },
+    village: {
       type: String,
       trim: true,
     },
@@ -92,6 +113,26 @@ const UserSchema: Schema<IUser> = new Schema(
     avatar: {
       type: String,
       default: "",
+    },
+    education: {
+      type: String,
+      trim: true,
+    },
+    institution: {
+      type: String,
+      trim: true,
+    },
+    occupationType: {
+      type: String,
+      trim: true,
+    },
+    profession: {
+      type: String,
+      trim: true,
+    },
+    company: {
+      type: String,
+      trim: true,
     },
   },
   {

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { MessageSquare, Phone, Lock, User, Home, Shield, Award, Heart, Camera } from "lucide-react";
+import { MessageSquare, Phone, Lock, User, Home, Shield, Award, Heart, Camera, GraduationCap, Briefcase, MapPin } from "lucide-react";
 import { compressImage, checkFileSize } from "@/lib/imageCompression";
 
 type AuthTab = "signin" | "signup" | "forgot";
@@ -23,6 +23,8 @@ export default function AuthPage() {
   const [phone, setPhone] = useState("");
   const [gotra, setGotra] = useState("");
   const [address, setAddress] = useState("");
+  const [city, setCity] = useState("");
+  const [village, setVillage] = useState("");
   const [age, setAge] = useState("");
   const [sex, setSex] = useState("Male");
   const [maritalStatus, setMaritalStatus] = useState("Single");
@@ -35,13 +37,25 @@ export default function AuthPage() {
   const [parentRelationship, setParentRelationship] = useState("");
   const [addressSameAsParent, setAddressSameAsParent] = useState(false);
   const [fetchedParentAddress, setFetchedParentAddress] = useState("");
+  const [fetchedParentCity, setFetchedParentCity] = useState("");
+  const [fetchedParentVillage, setFetchedParentVillage] = useState("");
   const [fetchedParentGotra, setFetchedParentGotra] = useState("");
+  const [kulDevi, setKulDevi] = useState("");
+  const [fetchedParentKulDevi, setFetchedParentKulDevi] = useState("");
+  const [education, setEducation] = useState("");
+  const [institution, setInstitution] = useState("");
+  const [occupationType, setOccupationType] = useState("");
+  const [profession, setProfession] = useState("");
+  const [company, setCompany] = useState("");
 
   const handleParentChange = async (selectedParentId: string) => {
     setParentId(selectedParentId);
     if (!selectedParentId) {
       setFetchedParentAddress("");
+      setFetchedParentCity("");
+      setFetchedParentVillage("");
       setFetchedParentGotra("");
+      setFetchedParentKulDevi("");
       setParentRelationship("");
       setAddressSameAsParent(false);
       return;
@@ -52,13 +66,25 @@ export default function AuthPage() {
       if (res.ok) {
         const data = await res.json();
         setFetchedParentAddress(data.address || "");
+        setFetchedParentCity(data.city || "");
+        setFetchedParentVillage(data.village || "");
         setFetchedParentGotra(data.gotra || "");
+        setFetchedParentKulDevi(data.kulDevi || "");
         setAddressSameAsParent(true);
         if (data.address) {
           setAddress(data.address);
         }
+        if (data.city) {
+          setCity(data.city);
+        }
+        if (data.village) {
+          setVillage(data.village);
+        }
         if (data.gotra) {
           setGotra(data.gotra);
+        }
+        if (data.kulDevi) {
+          setKulDevi(data.kulDevi);
         }
       }
     } catch (err) {
@@ -68,8 +94,10 @@ export default function AuthPage() {
 
   const handleAddressSameAsParentChange = (checked: boolean) => {
     setAddressSameAsParent(checked);
-    if (checked && fetchedParentAddress) {
-      setAddress(fetchedParentAddress);
+    if (checked) {
+      if (fetchedParentAddress) setAddress(fetchedParentAddress);
+      if (fetchedParentCity) setCity(fetchedParentCity);
+      if (fetchedParentVillage) setVillage(fetchedParentVillage);
     }
   };
 
@@ -90,6 +118,10 @@ export default function AuthPage() {
     if (signupStep === 3) {
       if (!mobileNumber.trim()) {
         setError("Please enter your mobile number");
+        return;
+      }
+      if (!city.trim()) {
+        setError("Please enter your city");
         return;
       }
     }
@@ -169,7 +201,10 @@ export default function AuthPage() {
       mobileNumber,
       password,
       gotra,
+      kulDevi,
       address,
+      city,
+      village,
       age: age ? Number(age) : undefined,
       sex,
       maritalStatus,
@@ -177,6 +212,11 @@ export default function AuthPage() {
       avatar: finalAvatarUrl,
       parentId: parentId || undefined,
       parentRelationship: parentRelationship || undefined,
+      education: education || undefined,
+      institution: institution || undefined,
+      occupationType: occupationType || undefined,
+      profession: profession || undefined,
+      company: company || undefined,
     });
     setLoading(false);
     if (!res.success) {
@@ -334,13 +374,13 @@ export default function AuthPage() {
               {/* Step indicator progress bar */}
               <div className="space-y-1.5 select-none pb-2 border-b border-slate-100">
                 <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  <span>Step {signupStep} of 5</span>
-                  <span>{Math.round((signupStep / 5) * 100)}% Complete</span>
+                  <span>Step {signupStep} of 7</span>
+                  <span>{Math.round((signupStep / 7) * 100)}% Complete</span>
                 </div>
                 <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-whatsapp-green transition-all duration-300"
-                    style={{ width: `${(signupStep / 5) * 100}%` }}
+                    style={{ width: `${(signupStep / 7) * 100}%` }}
                   />
                 </div>
               </div>
@@ -377,15 +417,14 @@ export default function AuthPage() {
                         const file = e.target.files?.[0];
                         if (!file) return;
 
-                        if (!checkFileSize(file, 5)) {
-                          setError("Image exceeds the maximum allowed size of 5MB");
-                          return;
-                        }
-
                         setError(null);
                         setAvatarUrl(URL.createObjectURL(file));
 
                         const compressed = await compressImage(file);
+                        if (!checkFileSize(compressed, 5)) {
+                          setError("Selected file exceeds the maximum allowed size of 5MB");
+                          return;
+                        }
                         setAvatarFile(compressed);
                       }}
                     />
@@ -551,6 +590,47 @@ export default function AuthPage() {
                       />
                     </div>
                   </div>
+
+                  <div className="grid grid-cols-2 gap-3.5">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                        City *
+                      </label>
+                      <div className="relative">
+                        <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. Indore"
+                          value={city}
+                          disabled={addressSameAsParent}
+                          onChange={(e) => setCity(e.target.value)}
+                          className={`w-full pl-11 pr-4 py-2.5 rounded-xl border border-slate-100 focus:border-whatsapp-green focus:ring-1 focus:ring-whatsapp-green text-sm outline-hidden transition-all text-slate-800 font-semibold ${
+                            addressSameAsParent ? "bg-slate-100 text-slate-500 cursor-not-allowed" : "bg-slate-50 hover:bg-slate-100/70 focus:bg-white"
+                          }`}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                        Village (Optional)
+                      </label>
+                      <div className="relative">
+                        <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="e.g. Ashta"
+                          value={village}
+                          disabled={addressSameAsParent}
+                          onChange={(e) => setVillage(e.target.value)}
+                          className={`w-full pl-11 pr-4 py-2.5 rounded-xl border border-slate-100 focus:border-whatsapp-green focus:ring-1 focus:ring-whatsapp-green text-sm outline-hidden transition-all text-slate-800 font-semibold ${
+                            addressSameAsParent ? "bg-slate-100 text-slate-500 cursor-not-allowed" : "bg-slate-50 hover:bg-slate-100/70 focus:bg-white"
+                          }`}
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -643,15 +723,134 @@ export default function AuthPage() {
                       className="w-full px-3 py-2.5 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green focus:ring-1 focus:ring-whatsapp-green text-sm outline-hidden transition-all text-slate-800"
                     />
                   </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                      KulDevi
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Enter KulDevi"
+                      value={kulDevi}
+                      onChange={(e) => setKulDevi(e.target.value)}
+                      className="w-full px-3 py-2.5 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green focus:ring-1 focus:ring-whatsapp-green text-sm outline-hidden transition-all text-slate-800"
+                    />
+                  </div>
                 </div>
               )}
 
-              {/* STEP 5: Security / Passwords */}
+              {/* STEP 5: Education Details */}
               {signupStep === 5 && (
                 <div className="space-y-4 pt-1">
                   <div className="border-l-2 border-whatsapp-green pl-2.5">
                     <span className="text-xs font-bold text-whatsapp-green uppercase tracking-wide">
-                      5. Security Password
+                      5. Education Details (Optional)
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                      Highest Qualification / Degree
+                    </label>
+                    <div className="relative">
+                      <GraduationCap className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="e.g. B.Tech Computer Science, MBA, Class XII"
+                        value={education}
+                        onChange={(e) => setEducation(e.target.value)}
+                        className="w-full pl-11 pr-4 py-2.5 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green focus:ring-1 focus:ring-whatsapp-green text-sm outline-hidden transition-all text-slate-800"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                      Institution / School / University
+                    </label>
+                    <div className="relative">
+                      <Home className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="e.g. Stanford University, Public School"
+                        value={institution}
+                        onChange={(e) => setInstitution(e.target.value)}
+                        className="w-full pl-11 pr-4 py-2.5 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green focus:ring-1 focus:ring-whatsapp-green text-sm outline-hidden transition-all text-slate-800"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 6: Job & Professional Details */}
+              {signupStep === 6 && (
+                <div className="space-y-4 pt-1">
+                  <div className="border-l-2 border-whatsapp-green pl-2.5">
+                    <span className="text-xs font-bold text-whatsapp-green uppercase tracking-wide">
+                      6. Job & Professional Details (Optional)
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                      Occupation Type
+                    </label>
+                    <select
+                      value={occupationType}
+                      onChange={(e) => setOccupationType(e.target.value)}
+                      className="w-full py-2.5 px-3 bg-slate-50 border border-slate-100 rounded-xl text-sm text-slate-800 focus:border-whatsapp-green outline-hidden"
+                    >
+                      <option value="">Select Occupation Type</option>
+                      <option value="Salaried">Salaried / Employed</option>
+                      <option value="Business Owner">Business Owner / Self-Employed</option>
+                      <option value="Freelancer">Freelancer</option>
+                      <option value="Student">Student</option>
+                      <option value="Homemaker">Homemaker</option>
+                      <option value="Retired">Retired</option>
+                      <option value="Unemployed">Unemployed / Looking for Opportunities</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                      Designation / Job Title
+                    </label>
+                    <div className="relative">
+                      <Briefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="e.g. Software Engineer, Owner, Manager"
+                        value={profession}
+                        onChange={(e) => setProfession(e.target.value)}
+                        className="w-full pl-11 pr-4 py-2.5 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green focus:ring-1 focus:ring-whatsapp-green text-sm outline-hidden transition-all text-slate-800"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                      Company / Business Name
+                    </label>
+                    <div className="relative">
+                      <Home className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="e.g. Google LLC, Self-Owned Shop"
+                        value={company}
+                        onChange={(e) => setCompany(e.target.value)}
+                        className="w-full pl-11 pr-4 py-2.5 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green focus:ring-1 focus:ring-whatsapp-green text-sm outline-hidden transition-all text-slate-800"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 7: Security / Passwords */}
+              {signupStep === 7 && (
+                <div className="space-y-4 pt-1">
+                  <div className="border-l-2 border-whatsapp-green pl-2.5">
+                    <span className="text-xs font-bold text-whatsapp-green uppercase tracking-wide">
+                      7. Security Password
                     </span>
                   </div>
 
@@ -702,7 +901,7 @@ export default function AuthPage() {
                     Back
                   </button>
                 )}
-                {signupStep < 5 ? (
+                {signupStep < 7 ? (
                   <button
                     type="button"
                     onClick={handleNextStep}

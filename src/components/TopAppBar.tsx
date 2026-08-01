@@ -14,14 +14,14 @@ export default function TopAppBar() {
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
-    if (!checkFileSize(file, 5)) {
-      alert("Image exceeds the maximum allowed size of 5MB");
-      return;
-    }
-
     setUpdating(true);
     try {
       const compressed = await compressImage(file);
+      if (!checkFileSize(compressed, 5)) {
+        alert("Selected file exceeds the maximum allowed size of 5MB");
+        setUpdating(false);
+        return;
+      }
       const formData = new FormData();
       formData.append("file", compressed);
 
@@ -153,6 +153,14 @@ export default function TopAppBar() {
                     <ShieldAlert className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                     <span className="text-xs text-slate-500 truncate max-w-[150px]">
                       Gotra: {user.gotra}
+                    </span>
+                  </div>
+                )}
+                {user?.kulDevi && (
+                  <div className="flex items-center justify-center space-x-1.5 mt-0.5">
+                    <Heart className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span className="text-xs text-slate-500 truncate max-w-[150px]">
+                      KulDevi: {user.kulDevi}
                     </span>
                   </div>
                 )}

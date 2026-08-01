@@ -11,6 +11,7 @@ export interface IPost extends Document {
       date: string;
       location: string;
       poster?: string;
+      contributionFee?: number;
     };
   rsvps?: {
     going: mongoose.Types.ObjectId[];
@@ -65,6 +66,7 @@ const PostSchema: Schema<IPost> = new Schema(
       date: { type: String, trim: true },
       location: { type: String, trim: true },
       poster: { type: String, default: "" },
+      contributionFee: { type: Number, default: 0 },
     },
     rsvps: {
       going: [{ type: Schema.Types.ObjectId, ref: "User", default: [] }],

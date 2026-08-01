@@ -527,13 +527,12 @@ export default function OpportunitiesPage() {
                     const file = e.target.files?.[0];
                     if (!file) return;
 
-                    if (!checkFileSize(file, 5)) {
-                      alert("Image exceeds the maximum allowed size of 5MB");
-                      return;
-                    }
-
                     setBizFileUrl(URL.createObjectURL(file));
                     const compressed = await compressImage(file);
+                    if (!checkFileSize(compressed, 5)) {
+                      alert("Selected file exceeds the maximum allowed size of 5MB");
+                      return;
+                    }
                     setBizFile(compressed);
                   }}
                   className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[10px] file:font-bold file:bg-whatsapp-light file:text-whatsapp-green hover:file:bg-slate-100 cursor-pointer"

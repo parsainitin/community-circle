@@ -11,6 +11,7 @@ interface DonationType {
     _id: string;
     name: string;
     gotra?: string;
+    kulDevi?: string;
   };
   transactionId: string;
   createdAt: string;
@@ -246,9 +247,11 @@ export default function DonatePage() {
                     <span className="text-xs font-bold text-slate-700 block">
                       {d.donor?.name || "Anonymous Member"}
                     </span>
-                    {d.donor?.gotra && (
+                    {(d.donor?.gotra || d.donor?.kulDevi) && (
                       <span className="text-[9px] text-slate-400 font-semibold block mt-0.5">
-                        Gotra: {d.donor.gotra}
+                        {d.donor.gotra && `Gotra: ${d.donor.gotra}`}
+                        {d.donor.gotra && d.donor.kulDevi && " • "}
+                        {d.donor.kulDevi && `KulDevi: ${d.donor.kulDevi}`}
                       </span>
                     )}
                   </div>

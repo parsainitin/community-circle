@@ -33,10 +33,10 @@ export async function GET(request: NextRequest) {
 
     const posts = await Post.find(filter)
       .populate("author", "name phone")
-      .populate({
-        path: "replies",
-        populate: { path: "author", select: "name phone" }
-      })
+      .populate({ path: "replies", populate: { path: "author", select: "name phone" } })
+      .populate("rsvps.going", "name")
+      .populate("rsvps.maybe", "name")
+      .populate("rsvps.cant", "name")
       .sort({ createdAt: -1 });
 
     return Response.json(posts);

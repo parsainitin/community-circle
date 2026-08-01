@@ -1,12 +1,18 @@
 # Walkthrough - Mobile-Optimized WhatsApp-style Web Application & Cloudinary Storage
 
-I have successfully integrated Cloudinary for media uploads, extended the User schema to support custom avatars, added image compression, created file uploaders for profile pictures and business catalog items, simplified the Sign Up process into a step-by-step wizard, updated the Wall into an automated Community Activity Feed, added event posters, implemented automatic past event cleanup, created a collaborative Announcements tab, added a premium Google Pay donation support feature, refined relationship choices, integrated direct new member registration within the family linkage modal, added consistent branding to the login page, configured isolated environment variables, resolved build-time connection errors, implemented PWA installation assets, and updated the default user profile placeholder image with a premium cartoon avatar.
+I have successfully integrated Cloudinary for media uploads, extended the User schema to support custom avatars, added image compression, created file uploaders for profile pictures and business catalog items, simplified the Sign Up process into a step-by-step wizard, updated the Wall into an automated Community Activity Feed, added event posters, implemented automatic past event cleanup, created a collaborative Announcements tab, added a premium Google Pay donation support feature, refined relationship choices, integrated direct new member registration within the family linkage modal, added consistent branding to the login page, configured isolated environment variables, resolved build-time connection errors, implemented PWA installation assets, and updated the default user profile placeholders to support gender-specific cartoon avatars.
 
 ## Changes Made
 
-### 1. Default Cartoon Avatar Profile Asset
-- **Asset Replacement**: Replaced the default grey silhouette profile placeholder image at [avatar.jpg](file:///c:/VYANAMICS/Vyanamics-Project/CommunityCircle/public/avatar.jpg) in the `public` directory.
-- **New Design**: Used AI vector image generation to create a modern, minimalist cartoon face avatar character set against a soft, premium pastel gradient background circle. This serves as the default fallback profile picture across all user profiles, family trees, and message headers when no custom avatar is uploaded.
+### 1. Gender-Specific Cartoon Avatar Fallbacks
+- **Cartoon Profile Design Assets**: Generated two new default profile avatar icons:
+  - [avatar_male.jpg](file:///c:/VYANAMICS/Vyanamics-Project/CommunityCircle/public/avatar_male.jpg): A cartoon boy character icon on a soft blue pastel gradient circle.
+  - [avatar_female.jpg](file:///c:/VYANAMICS/Vyanamics-Project/CommunityCircle/public/avatar_female.jpg): A cartoon girl character icon on a soft pink pastel gradient circle.
+- **API Selection Updates**: Modified `/api/users/[id]/family-tree` inside [route.ts](file:///c:/VYANAMICS/Vyanamics-Project/CommunityCircle/src/app/api/users/%5Bid%5D/family-tree/route.ts) to query and select the `sex` (gender) property for all ancestors and descendants in the tree structure.
+- **Dynamic Fallback Rendering**:
+  - Refined [directory/page.tsx](file:///c:/VYANAMICS/Vyanamics-Project/CommunityCircle/src/app/directory/page.tsx) tree nodes and contact list rows to check `contact.sex`/`nodeUser.sex`.
+  - Refined [TopAppBar.tsx](file:///c:/VYANAMICS/Vyanamics-Project/CommunityCircle/src/components/TopAppBar.tsx) profile bubbles to check `user.sex`.
+  - Displays the **Male Cartoon Avatar** if `sex` equals `"Male"`, the **Female Cartoon Avatar** if `sex` equals `"Female"`, and the standard general avatar if unspecified.
 
 ### 2. Hindi Default Translation for Donations
 - **Devanagari Localized Request Note**: Translated the main donation platform note inside [page.tsx](file:///c:/VYANAMICS/Vyanamics-Project/CommunityCircle/src/app/donate/page.tsx) to polite, formal Hindi Devanagari script:

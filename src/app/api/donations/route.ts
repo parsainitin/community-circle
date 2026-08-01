@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   try {
     await dbConnect();
     const donations = await Donation.find()
-      .populate("donor", "name mobileNumber gotra")
+      .populate("donor", "name mobileNumber gotra kulDevi")
       .sort({ createdAt: -1 });
 
     return Response.json(donations);
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Populate donor info for response
-    const populated = await Donation.findById(newDonation._id).populate("donor", "name mobileNumber gotra");
+    const populated = await Donation.findById(newDonation._id).populate("donor", "name mobileNumber gotra kulDevi");
 
     return Response.json(populated, { status: 201 });
   } catch (error: any) {

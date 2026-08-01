@@ -9,12 +9,20 @@ interface UserType {
   phone: string;
   mobileNumber: string;
   gotra?: string;
+  kulDevi?: string;
   address?: string;
+  city?: string;
+  village?: string;
   age?: number;
   sex?: string;
   maritalStatus?: string;
   bloodGroup?: string;
   avatar?: string;
+  education?: string;
+  institution?: string;
+  occupationType?: string;
+  profession?: string;
+  company?: string;
 }
 
 interface AuthContextProps {

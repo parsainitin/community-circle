@@ -30,6 +30,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     if (relationshipType === "parent") {
       // Set user's parent to relative
       user.parent = relativeId as any;
+      user.parentRelationship = relative.sex === "Female" ? "Mother" : "Father";
       
       // Update user's familyMembers
       if (!user.familyMembers.some((fid) => fid.toString() === relativeId)) {
@@ -45,6 +46,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     } else if (relationshipType === "child") {
       // Set relative's parent to user
       relative.parent = id as any;
+      relative.parentRelationship = relative.sex === "Female" ? "Daughter" : "Son";
 
       // Update relative's familyMembers
       if (!relative.familyMembers.some((fid) => fid.toString() === id)) {
