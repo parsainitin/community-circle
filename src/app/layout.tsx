@@ -1,8 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Outfit, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import AppLayout from "@/components/AppLayout";
+import PWARegister from "@/components/PWARegister";
 
 const outfit = Outfit({
   variable: "--font-outfit",
@@ -17,6 +18,21 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Jambu Community Circle",
   description: "A mobile-first community portal mimicking WhatsApp's clean interface",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "ComCircle",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#128C7E",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -31,6 +47,7 @@ export default function RootLayout({
     >
       <body className="bg-slate-100 flex justify-center min-h-screen w-full">
         <AuthProvider>
+          <PWARegister />
           <AppLayout>{children}</AppLayout>
         </AuthProvider>
       </body>
