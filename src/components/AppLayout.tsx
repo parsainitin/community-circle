@@ -35,6 +35,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return null;
   }
 
+  // If logged in as super-admin and trying to access a non-admin page,
+  // render nothing (the AuthProvider will handle the redirect to /admin).
+  if (user?.role === "super-admin" && !isAdminPage && !isAuthPage) {
+    return null;
+  }
+
   // Auth/signup and admin pages render without top/bottom navigation
   if (isAuthPage || isAdminPage) {
     return (
