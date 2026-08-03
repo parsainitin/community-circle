@@ -26,19 +26,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const isAuthPage = pathname === "/auth";
+  const isAuthPage = pathname === "/auth" || pathname === "/signup";
+  const isAdminPage = pathname.startsWith("/admin");
 
-  // If not logged in and not on auth page, the AuthProvider will redirect.
+  // If not logged in and not on auth/signup page, the AuthProvider will redirect.
   // We render nothing in the transition period.
-  if (!user && !isAuthPage) {
+  if (!user && !isAuthPage && !isAdminPage) {
     return null;
   }
 
-  // Auth pages should not show the TopAppBar or BottomNavBar
-  if (isAuthPage) {
+  // Auth/signup and admin pages render without top/bottom navigation
+  if (isAuthPage || isAdminPage) {
     return (
-      <div className="w-full max-w-md bg-slate-50 flex flex-col min-h-screen shadow-xl relative border-x border-slate-200">
-        <main className="flex-1 overflow-y-auto p-4 flex items-center justify-center bg-slate-50">
+      <div className="w-full max-w-md bg-white flex flex-col min-h-screen shadow-xl relative border-x border-slate-200 overflow-hidden">
+        <main className="flex-1 overflow-y-auto">
           {children}
         </main>
       </div>

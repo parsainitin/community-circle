@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { Post } from "@/models/Post";
+import { getTenantId } from "@/lib/tenant";
 import crypto from "crypto";
 
 function hashPassword(password: string): string {
@@ -33,7 +34,8 @@ export async function POST(request: NextRequest) {
       institution,
       occupationType,
       profession,
-      company
+      company,
+      email,
     } = body;
 
     const isChild = parentRelationship === "Son" || parentRelationship === "Daughter";
@@ -84,8 +86,17 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: "User already exists with this mobile number" }, { status: 400 });
     }
 
+    if (email) {
+      const emailTaken = await User.findOne({ email: email.toLowerCase() });
+      if (emailTaken) {
+        return Response.json({ error: "This email address is already registered" }, { status: 400 });
+      }
+    }
+
     // Hash the password before saving
     const hashedPassword = hashPassword(finalPassword);
+
+    const communityId = await getTenantId(request);
 
     const newUser = await User.create({
       name,
@@ -110,6 +121,8 @@ export async function POST(request: NextRequest) {
       occupationType,
       profession,
       company,
+      email: email ? email.toLowerCase() : undefined,
+      communityId: communityId ?? undefined,
     });
 
     if (parentId) {

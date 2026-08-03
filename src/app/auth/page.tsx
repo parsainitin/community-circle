@@ -1,18 +1,36 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { MessageSquare, Phone, Lock, User, Home, Shield, Award, Heart, Camera, GraduationCap, Briefcase, MapPin } from "lucide-react";
 import { compressImage, checkFileSize } from "@/lib/imageCompression";
+import CommunityBrand from "@/components/CommunityBrand";
 
 type AuthTab = "signin" | "signup" | "forgot";
 
+interface CurrentCommunity {
+  name: string;
+  subdomain: string;
+  logo?: string;
+  description?: string;
+}
+
 export default function AuthPage() {
   const { login, signup, forgotPassword } = useAuth();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<AuthTab>("signin");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [community, setCommunity] = useState<CurrentCommunity | null>(null);
+
+  useEffect(() => {
+    fetch("/api/community/current")
+      .then((res) => res.json())
+      .then((data) => setCommunity(data.community))
+      .catch(() => setCommunity(null));
+  }, []);
 
   // Form states
   const [mobileNumber, setMobileNumber] = useState("");
@@ -249,16 +267,7 @@ export default function AuthPage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[80vh] px-4 py-8">
       {/* Brand Header */}
-      <div className="flex flex-col items-center mb-6 text-center">
-        <img
-          src="/logo.png"
-          alt="Jambu Community Circle Logo"
-          className="h-16 w-auto object-contain max-w-[240px] mb-3"
-        />
-        <p className="text-xs text-slate-500 mt-1 max-w-xs font-semibold">
-          Connect, collaborate, and share with your local circle
-        </p>
-      </div>
+      <CommunityBrand variant="auth" />
 
       {/* Auth Card */}
       <div className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
@@ -279,10 +288,7 @@ export default function AuthPage() {
               Sign In
             </button>
             <button
-              onClick={() => {
-                setActiveTab("signup");
-                setError(null);
-              }}
+              onClick={() => router.push("/signup")}
               className={`flex-1 py-4 text-sm font-semibold transition-all ${
                 activeTab === "signup"
                   ? "text-whatsapp-green border-b-2 border-whatsapp-green bg-whatsapp-green/[0.02]"

@@ -17,13 +17,10 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: "Missing mobileNumber or password" }, { status: 400 });
     }
 
-    const user = await User.findOne({ mobileNumber });
-    if (!user) {
-      return Response.json({ error: "Invalid mobile number or password" }, { status: 401 });
-    }
-
     const hashedPassword = hashPassword(password);
-    if (user.password !== hashedPassword) {
+    const candidates = await User.find({ mobileNumber });
+    const user = candidates.find((u) => u.password === hashedPassword);
+    if (!user) {
       return Response.json({ error: "Invalid mobile number or password" }, { status: 401 });
     }
 

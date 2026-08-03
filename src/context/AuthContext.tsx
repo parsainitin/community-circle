@@ -8,6 +8,8 @@ interface UserType {
   name: string;
   phone: string;
   mobileNumber: string;
+  role?: "super-admin" | "admin" | "member";
+  communityId?: string;
   gotra?: string;
   kulDevi?: string;
   address?: string;
@@ -58,11 +60,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!loading) {
-      const isAuthPage = pathname === "/auth";
+      const isAuthPage = pathname === "/auth" || pathname === "/signup";
+      const isAdminPage = pathname.startsWith("/admin");
       if (!user && !isAuthPage) {
         router.replace("/auth");
-      } else if (user && isAuthPage) {
-        router.replace("/");
+      } else if (user) {
+        if (user.role === "super-admin" && !isAdminPage) {
+          router.replace("/admin");
+        } else if (user.role !== "super-admin" && isAdminPage) {
+          router.replace("/");
+        } else if (isAuthPage) {
+          router.replace(user.role === "super-admin" ? "/admin" : "/");
+        }
       }
     }
   }, [user, loading, pathname, router]);
@@ -82,7 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       localStorage.setItem("cc_user", JSON.stringify(data));
       setUser(data);
-      router.replace("/");
+      router.replace(data.role === "super-admin" ? "/admin" : "/");
       return { success: true };
     } catch (e: any) {
       return { success: false, error: e.message || "An error occurred during sign in" };
@@ -102,10 +111,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: false, error: data.error || "Registration failed" };
       }
 
-      // Automatically sign in upon successful sign up
       localStorage.setItem("cc_user", JSON.stringify(data));
       setUser(data);
-      router.replace("/");
+      router.replace(data.role === "super-admin" ? "/admin" : "/");
       return { success: true };
     } catch (e: any) {
       return { success: false, error: e.message || "An error occurred during sign up" };

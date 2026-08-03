@@ -18,11 +18,14 @@ export interface IUser extends Document {
   parentRelationship?: string;
   familyMembers: mongoose.Types.ObjectId[] | IUser[];
   avatar?: string;
+  email?: string;
   education?: string;
   institution?: string;
   occupationType?: string;
   profession?: string;
   company?: string;
+  role?: "super-admin" | "admin" | "member";
+  communityId?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -63,6 +66,8 @@ const UserSchema: Schema<IUser> = new Schema(
     mobileNumber: {
       type: String,
       trim: true,
+      unique: true,
+      sparse: true,
     },
     age: {
       type: Number,
@@ -133,6 +138,22 @@ const UserSchema: Schema<IUser> = new Schema(
     company: {
       type: String,
       trim: true,
+    },
+    email: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      sparse: true,
+      unique: true,
+    },
+    role: {
+      type: String,
+      enum: ["super-admin", "admin", "member"],
+      default: "member",
+    },
+    communityId: {
+      type: Schema.Types.ObjectId,
+      ref: "Community",
     },
   },
   {

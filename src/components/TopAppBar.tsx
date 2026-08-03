@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { LogOut, User, Phone, ShieldAlert, Camera, Heart } from "lucide-react";
 import { compressImage, checkFileSize } from "@/lib/imageCompression";
+import CommunityBrand from "@/components/CommunityBrand";
 
 export default function TopAppBar() {
   const { user, logout, updateUser } = useAuth();
@@ -75,11 +76,7 @@ export default function TopAppBar() {
   return (
     <header className="sticky top-0 z-50 flex items-center justify-between bg-white px-4 py-3 shadow-xs border-b border-slate-100 select-none">
       <div className="flex items-center">
-        <img
-          src="/logo.png"
-          alt="Jambu Community Circle Logo"
-          className="h-10 w-auto object-contain max-w-[180px]"
-        />
+        <CommunityBrand />
       </div>
       <div className="flex items-center space-x-4 relative" ref={dropdownRef}>
         {/* Support Platform donation link */}

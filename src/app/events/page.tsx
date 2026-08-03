@@ -89,11 +89,10 @@ export default function EventsAndAnnouncementsPage() {
 
   const fetchEvents = async () => {
     try {
-      const res = await fetch("/api/posts");
+      const res = await fetch("/api/posts?type=event&limit=100");
       if (res.ok) {
         const data = await res.json();
-        const eventPosts = (data || []).filter((p: PostType) => p.type === "event");
-        setEvents(eventPosts);
+        setEvents(data.posts || []);
       }
     } catch (e) {
       console.error("Failed to load events", e);
@@ -104,10 +103,10 @@ export default function EventsAndAnnouncementsPage() {
 
   const fetchAnnouncements = async () => {
     try {
-      const res = await fetch("/api/posts?type=announcement");
+      const res = await fetch("/api/posts?type=announcement&limit=100");
       if (res.ok) {
         const data = await res.json();
-        setAnnouncements(data || []);
+        setAnnouncements(data.posts || []);
       }
     } catch (e) {
       console.error("Failed to load announcements", e);

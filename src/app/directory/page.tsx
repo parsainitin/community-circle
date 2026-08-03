@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { Search, Heart, X, Phone, Shield, MapPin, User, ChevronRight, UserPlus, Users, Link2, Plus, GraduationCap, Briefcase } from "lucide-react";
@@ -58,7 +58,11 @@ export default function DirectoryPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBloodGroup, setSelectedBloodGroup] = useState<string | null>(null);
-  
+
+  const VISIBLE_SIZE = 20;
+  const [visibleCount, setVisibleCount] = useState(VISIBLE_SIZE);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
   // Modals state
   const [sosModalOpen, setSosModalOpen] = useState(false);
   const [linkageError, setLinkageError] = useState<string | null>(null);
@@ -73,6 +77,23 @@ export default function DirectoryPage() {
 
   useEffect(() => {
     fetchUsers();
+  }, []);
+
+  // Reset visible count when search or blood filter changes
+  useEffect(() => {
+    setVisibleCount(VISIBLE_SIZE);
+  }, [searchQuery, selectedBloodGroup]);
+
+  // Infinite scroll
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setVisibleCount((c) => c + VISIBLE_SIZE); },
+      { rootMargin: "200px" }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
   }, []);
 
   const fetchUsers = async () => {
@@ -201,7 +222,7 @@ export default function DirectoryPage() {
             No contacts found
           </div>
         ) : (
-          filteredUsers.map((contact) => (
+          filteredUsers.slice(0, visibleCount).map((contact) => (
             <div
               key={contact._id}
               onClick={() => handleOpenProfile(contact)}
@@ -238,6 +259,16 @@ export default function DirectoryPage() {
               </div>
             </div>
           ))
+        )}
+      </div>
+
+      {/* Sentinel: load more on scroll */}
+      <div ref={sentinelRef} className="flex justify-center py-3">
+        {!loading && visibleCount < filteredUsers.length && (
+          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-whatsapp-green" />
+        )}
+        {!loading && visibleCount >= filteredUsers.length && filteredUsers.length > VISIBLE_SIZE && (
+          <p className="text-[10px] font-semibold text-slate-400">All {filteredUsers.length} contacts shown</p>
         )}
       </div>
 

@@ -1,18 +1,19 @@
 import { NextRequest } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { User } from "@/models/User";
+import { getTenantId } from "@/lib/tenant";
 
-// GET /api/users - List all users
+// GET /api/users - List users scoped to the current community
 export async function GET(request: NextRequest) {
   try {
     await dbConnect();
     const { searchParams } = new URL(request.url);
     const query = searchParams.get("query");
-    
-    let filter = {};
-    if (query) {
-      filter = { name: { $regex: query, $options: "i" } };
-    }
+
+    const communityId = await getTenantId(request);
+    const filter: Record<string, any> = {};
+    if (communityId) filter.communityId = communityId;
+    if (query) filter.name = { $regex: query, $options: "i" };
 
     const users = await User.find(filter).populate("familyMembers", "name phone");
     return Response.json(users);

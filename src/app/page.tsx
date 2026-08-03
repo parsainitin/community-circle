@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Heart, Calendar, MapPin, Plus, Megaphone, MessageSquare, X } from "lucide-react";
 
@@ -40,18 +40,28 @@ export default function WallPage() {
   const { user } = useAuth();
   const [posts, setPosts] = useState<PostType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  // Refs avoid stale closures inside the IntersectionObserver callback
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const pageRef = useRef(1);
+  const hasMoreRef = useRef(true);
+  const loadingMoreRef = useRef(false);
 
   // Comments and accordion toggles
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
   const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
 
-  // Fetch posts on load
   const fetchPosts = async () => {
+    setLoading(true);
     try {
-      const res = await fetch("/api/posts");
+      const res = await fetch("/api/posts?page=1&limit=10");
       if (res.ok) {
         const data = await res.json();
-        setPosts(data || []);
+        setPosts(data.posts || []);
+        hasMoreRef.current = data.hasMore ?? false;
+        pageRef.current = 1;
+        setHasMore(data.hasMore ?? false);
       }
     } catch (e) {
       console.error("Failed to fetch posts", e);
@@ -62,6 +72,37 @@ export default function WallPage() {
 
   useEffect(() => {
     fetchPosts();
+  }, []);
+
+  // Infinite scroll — uses refs so the observer never goes stale
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && hasMoreRef.current && !loadingMoreRef.current) {
+          const nextPage = pageRef.current + 1;
+          loadingMoreRef.current = true;
+          setLoadingMore(true);
+          fetch(`/api/posts?page=${nextPage}&limit=10`)
+            .then((r) => r.json())
+            .then((data) => {
+              setPosts((prev) => [...prev, ...(data.posts || [])]);
+              hasMoreRef.current = data.hasMore ?? false;
+              pageRef.current = nextPage;
+              setHasMore(data.hasMore ?? false);
+            })
+            .catch(console.error)
+            .finally(() => {
+              loadingMoreRef.current = false;
+              setLoadingMore(false);
+            });
+        }
+      },
+      { rootMargin: "300px" }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
   }, []);
 
   // Format time (e.g. 10:45 AM)
@@ -232,7 +273,12 @@ export default function WallPage() {
       });
 
       if (res.ok) {
-        fetchPosts(); // Reload posts to update replies array list nested populated
+        const newReply = await res.json();
+        setPosts((prev) =>
+          prev.map((p) =>
+            p._id === postId ? { ...p, replies: [...(p.replies || []), newReply] } : p
+          )
+        );
       }
     } catch (err) {
       console.error("Add comment error", err);
@@ -534,6 +580,16 @@ export default function WallPage() {
           })}
         </div>
       )}
+
+      {/* Infinite scroll sentinel */}
+      <div ref={sentinelRef} className="flex justify-center py-4">
+        {loadingMore && (
+          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-whatsapp-green" />
+        )}
+        {!hasMore && posts.length > 0 && !loading && (
+          <p className="text-[10px] font-semibold text-slate-400">You&apos;re all caught up ✓</p>
+        )}
+      </div>
 
     </div>
   );

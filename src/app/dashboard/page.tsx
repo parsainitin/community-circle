@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -44,6 +44,10 @@ export default function DashboardPage() {
   const [users, setUsers] = useState<UserType[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const VISIBLE_SIZE = 15;
+  const [visibleCount, setVisibleCount] = useState(VISIBLE_SIZE);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
   // Filters State
   const [filterCity, setFilterCity] = useState("");
   const [filterAddress, setFilterAddress] = useState("");
@@ -53,6 +57,23 @@ export default function DashboardPage() {
 
   const [showFilters, setShowFilters] = useState(true);
   const [showStats, setShowStats] = useState(true);
+
+  // Reset visible count whenever filters change
+  useEffect(() => {
+    setVisibleCount(VISIBLE_SIZE);
+  }, [filterCity, filterAddress, filterSex, filterMarital, filterEmployment]);
+
+  // Infinite scroll
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setVisibleCount((c) => c + VISIBLE_SIZE); },
+      { rootMargin: "200px" }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     fetchUsers();
@@ -384,7 +405,7 @@ export default function DashboardPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {filteredUsers.map((member) => (
+            {filteredUsers.slice(0, visibleCount).map((member) => (
               <div
                 key={member._id}
                 onClick={() => router.push(`/profile/${member._id}`)}
@@ -476,6 +497,15 @@ export default function DashboardPage() {
             ))}
           </div>
         )}
+        {/* Sentinel: load more on scroll */}
+        <div ref={sentinelRef} className="flex justify-center py-3">
+          {!loading && visibleCount < filteredUsers.length && (
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-whatsapp-green" />
+          )}
+          {!loading && visibleCount >= filteredUsers.length && filteredUsers.length > VISIBLE_SIZE && (
+            <p className="text-[10px] font-semibold text-slate-400">All {filteredUsers.length} members shown</p>
+          )}
+        </div>
       </div>
     </div>
   );
