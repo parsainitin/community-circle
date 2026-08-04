@@ -85,6 +85,7 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const [isPendingApproval, setIsPendingApproval] = useState(false);
 
   // Form fields
   const [name, setName] = useState("");
@@ -115,11 +116,28 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
+  const [communityCities, setCommunityCities] = useState<string[]>([]);
+  const [communityGotras, setCommunityGotras] = useState<string[]>([]);
+  const [communityKulDevis, setCommunityKulDevis] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetch("/api/community/current")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.community) {
+          if (d.community.cities && d.community.cities.length > 0) setCommunityCities(d.community.cities);
+          if (d.community.gotras && d.community.gotras.length > 0) setCommunityGotras(d.community.gotras);
+          if (d.community.kulDevis && d.community.kulDevis.length > 0) setCommunityKulDevis(d.community.kulDevis);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     fetch("/api/users")
       .then((r) => r.json())
       .then((d) => {
-        const filtered = (d || []).filter((u: { role?: string }) => !["admin", "super-admin"].includes(u.role || ""));
+        const filtered = (d || []).filter((u: { role?: string }) => u.role !== "super-admin");
         setUsersList(filtered);
       })
       .catch(() => {});
@@ -253,13 +271,46 @@ export default function SignupPage() {
     });
     setLoading(false);
     if (res.success) {
-      setDone(true);
+      if (res.pendingApproval) {
+        setIsPendingApproval(true);
+      } else {
+        setDone(true);
+      }
     } else {
       setError(res.error || "Failed to create account");
     }
   };
 
-  // ── Success screen ────────────────────────────────────────────────
+  // ── Pending Approval screen ───────────────────────────────────────
+  if (isPendingApproval) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-amber-50 via-white to-orange-50 p-6 text-center select-none">
+        <div className="w-20 h-20 bg-amber-100 text-amber-600 rounded-3xl flex items-center justify-center text-4xl mb-5 shadow-sm">
+          ⏳
+        </div>
+        <h1 className="text-2xl font-black text-slate-800">Registration Submitted!</h1>
+        <p className="text-sm text-slate-600 font-medium mt-2 max-w-xs leading-relaxed">
+          Thank you, <strong className="text-slate-800">{name}</strong>! Your registration is currently <strong>pending approval</strong> by your community admin.
+        </p>
+        <div className="my-6 p-4 bg-white/80 rounded-2xl border border-amber-200/60 text-xs text-slate-500 font-medium max-w-xs text-left space-y-2 shadow-xs">
+          <div className="flex items-center space-x-2 text-amber-700 font-bold">
+            <span>📌 Next Steps</span>
+          </div>
+          <p>• Your community admin will review your registration request.</p>
+          <p>• Once approved, you will be able to sign in using your mobile number.</p>
+        </div>
+        <button
+          onClick={() => router.push("/auth")}
+          className="w-full max-w-xs py-4 text-white rounded-2xl font-extrabold text-base shadow-lg transition-transform active:scale-[0.98] border-0 cursor-pointer"
+          style={{ backgroundColor: "#f97316" }}
+        >
+          Return to Sign In →
+        </button>
+      </div>
+    );
+  }
+
+  // ── Immediate Success screen (Auto-Approved) ─────────────────────
   if (done) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-rose-50 via-white to-pink-50 p-8 text-center">
@@ -469,12 +520,32 @@ export default function SignupPage() {
             <>
               <div>
                 <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">City *</label>
-                <input
-                  type="text" autoFocus required placeholder="e.g. Indore, Bhopal, Mumbai"
-                  value={city} onChange={(e) => setCity(e.target.value)}
-                  className={inputBase}
-                  style={{ borderColor: city ? meta.accent : undefined }}
-                />
+                {communityCities.length > 0 ? (
+                  <select
+                    required
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    className={`${inputBase} cursor-pointer`}
+                    style={{ borderColor: city ? meta.accent : undefined }}
+                  >
+                    <option value="">— Select City —</option>
+                    {communityCities.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                    {city && !communityCities.includes(city) && (
+                      <option value={city}>{city}</option>
+                    )}
+                  </select>
+                ) : (
+                  <input
+                    type="text" autoFocus required placeholder="e.g. Indore, Bhopal, Mumbai"
+                    value={city} onChange={(e) => setCity(e.target.value)}
+                    className={inputBase}
+                    style={{ borderColor: city ? meta.accent : undefined }}
+                  />
+                )}
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Village / Town</label>
@@ -599,21 +670,59 @@ export default function SignupPage() {
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Gotra</label>
-                <input
-                  type="text" placeholder="Enter Gotra (optional)"
-                  value={gotra} onChange={(e) => setGotra(e.target.value)}
-                  className={inputBase}
-                  style={{ borderColor: gotra ? meta.accent : undefined }}
-                />
+                {communityGotras.length > 0 ? (
+                  <select
+                    value={gotra}
+                    onChange={(e) => setGotra(e.target.value)}
+                    className={`${inputBase} cursor-pointer`}
+                    style={{ borderColor: gotra ? meta.accent : undefined }}
+                  >
+                    <option value="">— Select Gotra —</option>
+                    {communityGotras.map((g) => (
+                      <option key={g} value={g}>
+                        {g}
+                      </option>
+                    ))}
+                    {gotra && !communityGotras.includes(gotra) && (
+                      <option value={gotra}>{gotra}</option>
+                    )}
+                  </select>
+                ) : (
+                  <input
+                    type="text" placeholder="Enter Gotra (optional)"
+                    value={gotra} onChange={(e) => setGotra(e.target.value)}
+                    className={inputBase}
+                    style={{ borderColor: gotra ? meta.accent : undefined }}
+                  />
+                )}
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">KulDevi</label>
-                <input
-                  type="text" placeholder="Enter KulDevi (optional)"
-                  value={kulDevi} onChange={(e) => setKulDevi(e.target.value)}
-                  className={inputBase}
-                  style={{ borderColor: kulDevi ? meta.accent : undefined }}
-                />
+                {communityKulDevis.length > 0 ? (
+                  <select
+                    value={kulDevi}
+                    onChange={(e) => setKulDevi(e.target.value)}
+                    className={`${inputBase} cursor-pointer`}
+                    style={{ borderColor: kulDevi ? meta.accent : undefined }}
+                  >
+                    <option value="">— Select KulDevi —</option>
+                    {communityKulDevis.map((k) => (
+                      <option key={k} value={k}>
+                        {k}
+                      </option>
+                    ))}
+                    {kulDevi && !communityKulDevis.includes(kulDevi) && (
+                      <option value={kulDevi}>{kulDevi}</option>
+                    )}
+                  </select>
+                ) : (
+                  <input
+                    type="text" placeholder="Enter KulDevi (optional)"
+                    value={kulDevi} onChange={(e) => setKulDevi(e.target.value)}
+                    className={inputBase}
+                    style={{ borderColor: kulDevi ? meta.accent : undefined }}
+                  />
+                )}
               </div>
             </>
           )}

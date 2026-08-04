@@ -30,7 +30,7 @@ export default function BottomNavBar() {
       icon: Briefcase,
     },
     {
-      label: "Events",
+      label: "Hubs",
       href: "/events",
       icon: Calendar,
     },

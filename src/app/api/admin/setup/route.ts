@@ -38,6 +38,7 @@ export async function POST(request: NextRequest) {
       password: hashPassword(password),
       city: "Platform",
       role: "super-admin",
+      status: "approved",
     });
 
     const response = superAdmin.toObject();

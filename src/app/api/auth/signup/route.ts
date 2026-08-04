@@ -122,6 +122,7 @@ export async function POST(request: NextRequest) {
       profession,
       company,
       email: email ? email.toLowerCase() : undefined,
+      status: "pending",
       communityId: communityId ?? undefined,
     });
 
@@ -132,20 +133,13 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Auto post welcome update to Wall page
-    try {
-      await Post.create({
-        author: newUser._id,
-        content: `👋 Welcome **${newUser.name}** to Jambu Community Circle! Let's welcome our new member! 🎉`,
-        type: "text",
-      });
-    } catch (postErr) {
-      console.error("Failed to auto-post welcome to Wall:", postErr);
-    }
+    // Explicitly update status in database to pending to ensure field is set in MongoDB
+    await User.updateOne({ _id: newUser._id }, { $set: { status: "pending" } });
 
-    // Remove password from response
+    // Remove password from response and ensure status is pending
     const userResponse = newUser.toObject();
     delete userResponse.password;
+    userResponse.status = "pending";
 
     return Response.json(userResponse, { status: 201 });
   } catch (error: any) {

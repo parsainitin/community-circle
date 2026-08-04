@@ -5,6 +5,9 @@ export interface ICommunity extends Document {
   subdomain: string;
   description?: string;
   logo?: string;
+  cities?: string[];
+  gotras?: string[];
+  kulDevis?: string[];
   admins: mongoose.Types.ObjectId[];
   isActive: boolean;
   createdAt: Date;
@@ -24,11 +27,18 @@ const CommunitySchema: Schema<ICommunity> = new Schema(
     },
     description: { type: String, trim: true },
     logo: { type: String, trim: true },
+    cities: [{ type: String, trim: true }],
+    gotras: [{ type: String, trim: true }],
+    kulDevis: [{ type: String, trim: true }],
     admins: [{ type: Schema.Types.ObjectId, ref: "User" }],
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }
 );
+
+if (mongoose.models.Community && !mongoose.models.Community.schema.path("cities")) {
+  delete (mongoose.models as any).Community;
+}
 
 export const Community: Model<ICommunity> =
   mongoose.models.Community || mongoose.model<ICommunity>("Community", CommunitySchema);

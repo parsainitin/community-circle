@@ -1,9 +1,10 @@
 import { NextRequest } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { User } from "@/models/User";
+import { Community } from "@/models/Community";
 import { getTenantId } from "@/lib/tenant";
 
-// GET /api/users - List users scoped to the current community
+// GET /api/users - List users scoped to the current community (including community admins)
 export async function GET(request: NextRequest) {
   try {
     await dbConnect();
@@ -11,9 +12,32 @@ export async function GET(request: NextRequest) {
     const query = searchParams.get("query");
 
     const communityId = await getTenantId(request);
-    const filter: Record<string, any> = {};
-    if (communityId) filter.communityId = communityId;
-    if (query) filter.name = { $regex: query, $options: "i" };
+
+    let adminUserIds: any[] = [];
+    if (communityId) {
+      const community = await Community.findById(communityId).select("admins").lean();
+      if (community && community.admins && community.admins.length > 0) {
+        adminUserIds = community.admins;
+        // Backfill communityId, role: "admin", and status: "approved" for all assigned community admins
+        await User.updateMany(
+          { _id: { $in: adminUserIds } },
+          { $set: { communityId, role: "admin", status: "approved" } }
+        );
+      }
+    }
+
+    const filter: Record<string, any> = {
+      role: { $ne: "super-admin" },
+      status: { $nin: ["pending", "rejected"] },
+    };
+
+    if (communityId) {
+      filter.$or = [{ communityId }, { _id: { $in: adminUserIds } }];
+    }
+
+    if (query) {
+      filter.name = { $regex: query, $options: "i" };
+    }
 
     const users = await User.find(filter).populate("familyMembers", "name phone");
     return Response.json(users);

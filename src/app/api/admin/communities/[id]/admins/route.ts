@@ -49,6 +49,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       password: hashPassword(password),
       city: "—",
       role: "admin",
+      status: "approved",
       communityId: community._id,
     });
 

@@ -9,6 +9,7 @@ interface UserType {
   phone: string;
   mobileNumber: string;
   role?: "super-admin" | "admin" | "member";
+  status?: "pending" | "approved" | "rejected";
   communityId?: string;
   gotra?: string;
   kulDevi?: string;
@@ -31,7 +32,7 @@ interface AuthContextProps {
   user: UserType | null;
   loading: boolean;
   login: (mobileNumber: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  signup: (userData: any) => Promise<{ success: boolean; error?: string }>;
+  signup: (userData: any) => Promise<{ success: boolean; pendingApproval?: boolean; error?: string }>;
   forgotPassword: (mobileNumber: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   updateUser: (userData: Partial<UserType>) => void;
@@ -61,13 +62,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!loading) {
       const isAuthPage = pathname === "/auth" || pathname === "/signup";
-      const isAdminPage = pathname.startsWith("/admin");
+      const isAdminPage = pathname.startsWith("/admin") || pathname.startsWith("/community-admin");
       if (!user && !isAuthPage) {
         router.replace("/auth");
       } else if (user) {
         if (user.role === "super-admin" && !isAdminPage) {
           router.replace("/admin");
-        } else if (user.role !== "super-admin" && isAdminPage) {
+        } else if (user.role !== "super-admin" && pathname.startsWith("/admin")) {
           router.replace("/");
         } else if (isAuthPage) {
           router.replace(user.role === "super-admin" ? "/admin" : "/");
@@ -100,6 +101,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signup = async (userData: any) => {
     try {
+      localStorage.removeItem("cc_user");
+      setUser(null);
+
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -109,6 +113,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (!res.ok) {
         return { success: false, error: data.error || "Registration failed" };
+      }
+
+      // New member registrations require admin approval — do NOT log in session
+      if (data.role !== "super-admin" && data.status !== "approved") {
+        return { success: true, pendingApproval: true };
       }
 
       localStorage.setItem("cc_user", JSON.stringify(data));

@@ -24,6 +24,21 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: "Invalid mobile number or password" }, { status: 401 });
     }
 
+    if (user.role !== "super-admin" && user.status && user.status !== "approved") {
+      if (user.status === "pending") {
+        return Response.json(
+          { error: "Your account registration is pending approval by your community admin." },
+          { status: 403 }
+        );
+      }
+      if (user.status === "rejected") {
+        return Response.json(
+          { error: "Your registration request was rejected by your community admin." },
+          { status: 403 }
+        );
+      }
+    }
+
     // Remove password from response
     const userResponse = user.toObject();
     delete userResponse.password;

@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { callerMobile, name, subdomain, description, logo } = body;
+    const { callerMobile, name, subdomain, description, logo, cities, gotras, kulDevis } = body;
 
     if (!(await assertSuperAdmin(callerMobile))) {
       return Response.json({ error: "Forbidden" }, { status: 403 });
@@ -53,6 +53,9 @@ export async function POST(request: NextRequest) {
       subdomain: slug,
       description: description?.trim() || undefined,
       logo: logo?.trim() || undefined,
+      cities: Array.isArray(cities) ? cities.map((c: string) => c.trim()).filter(Boolean) : [],
+      gotras: Array.isArray(gotras) ? gotras.map((g: string) => g.trim()).filter(Boolean) : [],
+      kulDevis: Array.isArray(kulDevis) ? kulDevis.map((k: string) => k.trim()).filter(Boolean) : [],
     });
     return Response.json(community, { status: 201 });
   } catch (e: any) {

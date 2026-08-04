@@ -13,7 +13,7 @@ export default function AnnouncementsRedirectPage() {
   return (
     <div className="py-16 flex flex-col justify-center items-center space-y-4">
       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-whatsapp-green"></div>
-      <p className="text-xs text-slate-400 font-semibold">Redirecting to Events & Announcements...</p>
+      <p className="text-xs text-slate-400 font-semibold">Redirecting to Hubs & Announcements...</p>
     </div>
   );
 }

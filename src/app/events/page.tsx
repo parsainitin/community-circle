@@ -1,436 +1,415 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import {
+  Search,
   Plus,
   X,
-  Calendar,
+  Building2,
+  UtensilsCrossed,
+  GraduationCap,
+  ShoppingBag,
+  Phone,
   MapPin,
-  Clock,
-  CheckCircle,
-  HelpCircle,
-  XCircle,
-  Search,
-  User,
-  Heart,
-  Megaphone,
-  MessageSquare,
   IndianRupee,
+  ImagePlus,
+  Send,
+  User,
+  ExternalLink,
+  Layers,
 } from "lucide-react";
 import { compressImage, checkFileSize } from "@/lib/imageCompression";
 
-interface RsvpUser {
+interface HubItem {
   _id: string;
-  name: string;
-}
-
-interface PostType {
-  _id: string;
-  content: string;
-  author: {
+  owner: {
     _id: string;
     name: string;
+    mobileNumber: string;
     phone?: string;
+    avatar?: string;
+    city?: string;
+    gotra?: string;
   };
-  type: string;
-  likes: string[];
+  hubType: "organization" | "showcase_business" | "tutor_service" | "online_sale";
+  title: string;
+  category?: string;
+  description: string;
+  price?: number;
+  priceUnit?: string;
+  contactPhone?: string;
+  whatsappNumber?: string;
+  location?: string;
+  images: string[];
   createdAt: string;
-  eventDetails?: {
-    title: string;
-    date: string;
-    location: string;
-    poster?: string;
-    contributionFee?: number;
-  };
-  rsvps?: {
-    going: (string | RsvpUser)[];
-    maybe: (string | RsvpUser)[];
-    cant: (string | RsvpUser)[];
-  };
-  replies?: any[];
 }
 
-export default function EventsAndAnnouncementsPage() {
+export default function HubsPage() {
   const { user } = useAuth();
-  
-  // Navigation tab state
-  const [activeTab, setActiveTab] = useState<"events" | "announcements">("events");
-  
-  // Lists and loading states
-  const [events, setEvents] = useState<PostType[]>([]);
-  const [announcements, setAnnouncements] = useState<PostType[]>([]);
+
+  // Active Category Filter Tab
+  const [activeTab, setActiveTab] = useState<
+    "all" | "organization" | "showcase_business" | "tutor_service" | "online_sale"
+  >("all");
+
+  // Hub items list state
+  const [hubs, setHubs] = useState<HubItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  
-  // Modals and notifications
-  const [modalType, setModalType] = useState<"event" | "announcement" | null>(null);
-  const [creating, setCreating] = useState(false);
+
+  // Create Modal State
+  const [modalOpen, setModalOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Event Creation states
-  const [eventTitle, setEventTitle] = useState("");
-  const [eventDate, setEventDate] = useState("");
-  const [eventLocation, setEventLocation] = useState("");
-  const [eventFee, setEventFee] = useState("");
-  const [eventDesc, setEventDesc] = useState("");
-  const [posterFile, setPosterFile] = useState<File | null>(null);
-  const [posterFileUrl, setPosterFileUrl] = useState("");
+  // Form Fields
+  const [hubType, setHubType] = useState<
+    "organization" | "showcase_business" | "tutor_service" | "online_sale"
+  >("showcase_business");
+  const [title, setTitle] = useState("");
+  const [category, setCategory] = useState("");
+  const [description, setDescription] = useState("");
+  const [price, setPrice] = useState("");
+  const [priceUnit, setPriceUnit] = useState("");
+  const [location, setLocation] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+  const [whatsappNumber, setWhatsappNumber] = useState("");
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
-  // Announcement Creation & Reply states
-  const [announcementContent, setAnnouncementContent] = useState("");
-  const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
-  const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
 
-  useEffect(() => {
-    fetchEvents();
-    fetchAnnouncements();
-  }, []);
-
-  const fetchEvents = async () => {
+  const fetchHubs = async () => {
+    setLoading(true);
     try {
-      const res = await fetch("/api/posts?type=event&limit=100");
+      let url = `/api/hubs?hubType=${activeTab}`;
+      if (searchQuery.trim()) {
+        url += `&search=${encodeURIComponent(searchQuery.trim())}`;
+      }
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
-        setEvents(data.posts || []);
+        setHubs(data.hubs || []);
       }
     } catch (e) {
-      console.error("Failed to load events", e);
+      console.error("Failed to load hubs", e);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchAnnouncements = async () => {
+  useEffect(() => {
+    fetchHubs();
+  }, [activeTab, searchQuery]);
+
+  // Pre-fill phone & whatsapp when user opens modal
+  const handleOpenModal = (
+    type: "organization" | "showcase_business" | "tutor_service" | "online_sale" = "showcase_business"
+  ) => {
+    setHubType(type);
+    setTitle("");
+    setCategory("");
+    setDescription("");
+    setPrice("");
+    setPriceUnit("");
+    setLocation(user?.city || "");
+    setContactPhone(user?.mobileNumber || user?.phone || "");
+    setWhatsappNumber(user?.mobileNumber || user?.phone || "");
+    setUploadedImages([]);
+    setModalOpen(true);
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadingImage(true);
     try {
-      const res = await fetch("/api/posts?type=announcement&limit=100");
-      if (res.ok) {
-        const data = await res.json();
-        setAnnouncements(data.posts || []);
-      }
-    } catch (e) {
-      console.error("Failed to load announcements", e);
-    }
-  };
-
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => {
-      setToastMessage(null);
-    }, 3000);
-  };
-
-  const formatEventDate = (dateStr?: string) => {
-    if (!dateStr) return "TBD";
-    try {
-      const d = new Date(dateStr);
-      if (isNaN(d.getTime())) return dateStr;
-      return d.toLocaleString([], {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch {
-      return dateStr;
-    }
-  };
-
-  const formatTime = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      return (
-        date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) +
-        " - " +
-        date.toLocaleDateString([], { month: "short", day: "numeric" })
-      );
-    } catch (e) {
-      return "";
-    }
-  };
-
-  const getRsvpId = (u: string | RsvpUser) => (typeof u === "string" ? u : u._id);
-  const getRsvpName = (u: string | RsvpUser) => (typeof u === "string" ? u : u.name);
-
-  // RSVP Handler
-  const handleRsvp = async (postId: string, status: "going" | "maybe" | "cant") => {
-    if (!user) return;
-    const previousEvents = [...events];
-
-    setEvents((prev) =>
-      prev.map((event) => {
-        if (event._id === postId) {
-          const rsvps = {
-            going: event.rsvps?.going ? [...event.rsvps.going] : [],
-            maybe: event.rsvps?.maybe ? [...event.rsvps.maybe] : [],
-            cant: event.rsvps?.cant ? [...event.rsvps.cant] : [],
-          };
-
-          const isGoing = rsvps.going.some((u) => getRsvpId(u) === user._id);
-          const isMaybe = rsvps.maybe.some((u) => getRsvpId(u) === user._id);
-          const isCant = rsvps.cant.some((u) => getRsvpId(u) === user._id);
-          const currentStatus = isGoing ? "going" : isMaybe ? "maybe" : isCant ? "cant" : null;
-
-          rsvps.going = rsvps.going.filter((u) => getRsvpId(u) !== user._id);
-          rsvps.maybe = rsvps.maybe.filter((u) => getRsvpId(u) !== user._id);
-          rsvps.cant = rsvps.cant.filter((u) => getRsvpId(u) !== user._id);
-
-          if (currentStatus !== status) {
-            const me: RsvpUser = { _id: user._id, name: user.name };
-            if (status === "going") rsvps.going.push(me);
-            if (status === "maybe") rsvps.maybe.push(me);
-            if (status === "cant") rsvps.cant.push(me);
-          }
-
-          return { ...event, rsvps };
+      const newUrls: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const compressed = await compressImage(file);
+        if (!checkFileSize(compressed, 5)) {
+          alert(`Image ${file.name} exceeds 5MB limit`);
+          continue;
         }
-        return event;
-      })
-    );
-
-    const statusLabel = status === "going" ? "Going" : status === "maybe" ? "Maybe" : "Can't Go";
-    showToast(`RSVP updated to: ${statusLabel}`);
-
-    try {
-      const res = await fetch(`/api/posts/${postId}/rsvp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user._id, status }),
-      });
-      if (!res.ok) setEvents(previousEvents);
-    } catch (error) {
-      console.error("RSVP error", error);
-      setEvents(previousEvents);
-    }
-  };
-
-  // Like Announcement Handler
-  const handleLikeAnnouncement = async (postId: string) => {
-    if (!user) return;
-    const previousAnnouncements = [...announcements];
-
-    setAnnouncements((prev) =>
-      prev.map((post) => {
-        if (post._id === postId) {
-          const likes = [...post.likes];
-          const index = likes.indexOf(user._id);
-          if (index > -1) {
-            likes.splice(index, 1);
-          } else {
-            likes.push(user._id);
-          }
-          return { ...post, likes };
-        }
-        return post;
-      })
-    );
-
-    try {
-      const res = await fetch(`/api/posts/${postId}/like`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user._id }),
-      });
-      if (!res.ok) setAnnouncements(previousAnnouncements);
-    } catch (error) {
-      setAnnouncements(previousAnnouncements);
-    }
-  };
-
-  // Add Announcement Comment Handler
-  const handleAddComment = async (e: React.FormEvent, postId: string) => {
-    e.preventDefault();
-    const text = commentInputs[postId];
-    if (!text || !text.trim() || !user) return;
-
-    setCommentInputs((prev) => ({ ...prev, [postId]: "" }));
-
-    try {
-      const res = await fetch(`/api/posts/${postId}/reply`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: user._id,
-          content: text.trim(),
-        }),
-      });
-
-      if (res.ok) {
-        fetchAnnouncements();
-      }
-    } catch (err) {
-      console.error("Add comment error", err);
-    }
-  };
-
-  // Create Event Submit
-  const handleCreateEvent = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!eventTitle.trim() || !eventDesc.trim() || !user) return;
-
-    setCreating(true);
-
-    let finalPosterUrl = "";
-    if (posterFile) {
-      try {
         const formData = new FormData();
-        formData.append("file", posterFile);
-        const uploadRes = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-        });
-        const uploadData = await uploadRes.json();
-        if (uploadRes.ok) {
-          finalPosterUrl = uploadData.url;
-        } else {
-          showToast(uploadData.error || "Failed to upload event poster");
+        formData.append("file", compressed);
+        const res = await fetch("/api/upload", { method: "POST", body: formData });
+        const data = await res.json();
+        if (res.ok && data.url) {
+          newUrls.push(data.url);
         }
-      } catch (err) {
-        console.error("Failed to upload event poster:", err);
       }
-    }
-
-    try {
-      const res = await fetch("/api/posts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          content: eventDesc.trim(),
-          author: user._id,
-          type: "event",
-          eventDetails: {
-            title: eventTitle.trim(),
-            date: eventDate.trim() || "TBD",
-            location: eventLocation.trim() || "Online",
-            poster: finalPosterUrl || undefined,
-            contributionFee: eventFee ? parseFloat(eventFee) : 0,
-          },
-        }),
-      });
-
-      if (res.ok) {
-        showToast("New event shared on Wall page!");
-        setEventTitle("");
-        setEventDate("");
-        setEventLocation("");
-        setEventFee("");
-        setEventDesc("");
-        setPosterFile(null);
-        setPosterFileUrl("");
-        setModalType(null);
-        fetchEvents();
-      } else {
-        showToast("Failed to create event.");
-      }
-    } catch (e) {
-      console.error("Create event error", e);
-      showToast("Error creating event.");
+      setUploadedImages((prev) => [...prev, ...newUrls]);
+    } catch (err) {
+      console.error("Image upload failed", err);
     } finally {
-      setCreating(false);
+      setUploadingImage(false);
     }
   };
 
-  // Create Announcement Submit
-  const handleCreateAnnouncement = async (e: React.FormEvent) => {
+  const handleCreateHub = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!announcementContent.trim() || !user) return;
+    if (!title.trim() || !description.trim() || !user) return;
 
-    setCreating(true);
+    setSubmitting(true);
     try {
-      const res = await fetch("/api/posts", {
+      const res = await fetch("/api/hubs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          content: announcementContent.trim(),
-          author: user._id,
-          type: "announcement",
+          owner: user._id,
+          hubType,
+          title: title.trim(),
+          category: category.trim() || undefined,
+          description: description.trim(),
+          price: price ? parseFloat(price) : undefined,
+          priceUnit: priceUnit.trim() || undefined,
+          contactPhone: contactPhone.trim() || undefined,
+          whatsappNumber: whatsappNumber.trim() || undefined,
+          location: location.trim() || undefined,
+          images: uploadedImages,
         }),
       });
 
       if (res.ok) {
-        showToast("Announcement published successfully!");
-        setAnnouncementContent("");
-        setModalType(null);
-        fetchAnnouncements();
+        showToast("🎉 Published on Community Hubs!");
+        setModalOpen(false);
+        fetchHubs();
       } else {
-        showToast("Failed to post announcement.");
+        const data = await res.json();
+        alert(data.error || "Failed to publish hub listing");
       }
     } catch (err) {
-      console.error("Create announcement error", err);
-      showToast("Error creating announcement.");
+      console.error("Error creating hub listing", err);
+      alert("Error publishing hub listing");
     } finally {
-      setCreating(false);
+      setSubmitting(false);
     }
   };
 
-  // Filters
-  const filteredEvents = events.filter((e) => {
-    const titleMatch = e.eventDetails?.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const descMatch = e.content.toLowerCase().includes(searchQuery.toLowerCase());
-    const locMatch = e.eventDetails?.location.toLowerCase().includes(searchQuery.toLowerCase());
-    return titleMatch || descMatch || locMatch;
-  });
+  const formatWhatsAppUrl = (waNumber?: string, hubTitle?: string, ownerName?: string) => {
+    if (!waNumber) return "#";
+    const digits = waNumber.replace(/\D/g, "");
+    if (!digits) return "#";
+    const formatted = digits.length === 10 ? `91${digits}` : digits;
+    const msg = encodeURIComponent(
+      `Hello ${ownerName || ""}, I saw your listing "${hubTitle || "Hub Listing"}" on Community Circle Hubs and would like to place an order / inquire for details.`
+    );
+    return `https://wa.me/${formatted}?text=${msg}`;
+  };
 
-  const filteredAnnouncements = announcements.filter((a) => {
-    const contentMatch = a.content.toLowerCase().includes(searchQuery.toLowerCase());
-    const authorMatch = a.author?.name?.toLowerCase().includes(searchQuery.toLowerCase());
-    return contentMatch || authorMatch;
-  });
+  const getHubTypeBadge = (type: string) => {
+    switch (type) {
+      case "organization":
+        return {
+          label: "Organization",
+          icon: Building2,
+          color: "bg-purple-50 text-purple-700 border-purple-200",
+        };
+      case "showcase_business":
+        return {
+          label: "Food & Showcase",
+          icon: UtensilsCrossed,
+          color: "bg-amber-50 text-amber-700 border-amber-200",
+        };
+      case "tutor_service":
+        return {
+          label: "Tutor Service",
+          icon: GraduationCap,
+          color: "bg-blue-50 text-blue-700 border-blue-200",
+        };
+      case "online_sale":
+        return {
+          label: "Online Sale",
+          icon: ShoppingBag,
+          color: "bg-emerald-50 text-emerald-700 border-emerald-200",
+        };
+      default:
+        return {
+          label: "Listing",
+          icon: Layers,
+          color: "bg-slate-50 text-slate-700 border-slate-200",
+        };
+    }
+  };
 
   return (
-    <div className="flex flex-col space-y-4 pb-24 relative min-h-[75vh]">
-      {/* Toast alert */}
+    <div className="space-y-4 pb-24 relative select-none">
+      {/* Toast Alert */}
       {toastMessage && (
-        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-slate-800 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-lg transition-all animate-bounce">
-          {toastMessage}
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-xl text-xs font-bold flex items-center space-x-2 animate-bounce">
+          <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* Tab Switcher */}
-      <div className="bg-white p-1 rounded-2xl border border-slate-100 shadow-xs select-none flex">
-        <button
-          onClick={() => {
-            setActiveTab("events");
-            setSearchQuery("");
-          }}
-          className={`flex-1 py-2 text-center text-xs font-bold rounded-xl transition-all cursor-pointer border-0 ${
-            activeTab === "events"
-              ? "bg-whatsapp-green text-white shadow-sm font-extrabold"
-              : "bg-transparent text-slate-500 hover:bg-slate-50"
-          }`}
-        >
-          📅 Events
-        </button>
-        <button
-          onClick={() => {
-            setActiveTab("announcements");
-            setSearchQuery("");
-          }}
-          className={`flex-1 py-2 text-center text-xs font-bold rounded-xl transition-all cursor-pointer border-0 ${
-            activeTab === "announcements"
-              ? "bg-whatsapp-green text-white shadow-sm font-extrabold"
-              : "bg-transparent text-slate-500 hover:bg-slate-50"
-          }`}
-        >
-          📢 Announcements
-        </button>
+      {/* Hero Header */}
+      <div className="bg-gradient-to-r from-amber-700 via-orange-600 to-amber-800 rounded-3xl p-4.5 text-white shadow-md border border-amber-500/30">
+        <h2 className="text-base font-black tracking-wide">Community Hubs</h2>
+        <p className="text-[11px] text-amber-100 font-medium mt-0.5 leading-relaxed">
+          Showcase home businesses & food orders, find tutors, connect with organizations, or buy & sell items.
+        </p>
       </div>
 
-      {/* Unified Search Input */}
-      <div className="bg-white rounded-2xl p-2 shadow-xs border border-slate-100/80 flex items-center space-x-2">
-        <Search className="w-4.5 h-4.5 text-slate-400 shrink-0 ml-2" />
+      {/* Visual Category Hub Cards */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* Card 1: Organizations */}
+        <div
+          onClick={() => setActiveTab("organization")}
+          className={`group rounded-3xl p-4 border transition-all cursor-pointer shadow-xs hover:shadow-md relative overflow-hidden flex flex-col justify-between ${
+            activeTab === "organization"
+              ? "bg-gradient-to-br from-purple-700 to-indigo-800 text-white border-purple-500 ring-2 ring-purple-400"
+              : "bg-gradient-to-br from-purple-50 to-indigo-50/70 hover:from-purple-100 hover:to-indigo-100 text-purple-950 border-purple-200/60"
+          }`}
+        >
+          <div className="flex justify-between items-start">
+            <div className={`p-2.5 rounded-2xl ${activeTab === "organization" ? "bg-white/20 text-white" : "bg-purple-600 text-white shadow-xs"}`}>
+              <Building2 className="w-5 h-5" />
+            </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenModal("organization");
+              }}
+              className="text-[9px] font-extrabold px-2.5 py-1 rounded-full bg-purple-600 hover:bg-purple-700 text-white shadow-2xs active:scale-95 transition-all border-0 cursor-pointer"
+            >
+              + Create
+            </button>
+          </div>
+          <div className="mt-3">
+            <h3 className="text-xs font-black leading-tight">🏛️ Organizations</h3>
+            <p className={`text-[10px] font-medium mt-0.5 leading-relaxed ${activeTab === "organization" ? "text-purple-100" : "text-purple-700/80"}`}>
+              Clubs, Trusts, Committees & Welfare Groups
+            </p>
+          </div>
+        </div>
+
+        {/* Card 2: Food & Showcase */}
+        <div
+          onClick={() => setActiveTab("showcase_business")}
+          className={`group rounded-3xl p-4 border transition-all cursor-pointer shadow-xs hover:shadow-md relative overflow-hidden flex flex-col justify-between ${
+            activeTab === "showcase_business"
+              ? "bg-gradient-to-br from-amber-600 to-orange-700 text-white border-amber-500 ring-2 ring-amber-400"
+              : "bg-gradient-to-br from-amber-50 to-orange-50/70 hover:from-amber-100 hover:to-orange-100 text-amber-950 border-amber-200/60"
+          }`}
+        >
+          <div className="flex justify-between items-start">
+            <div className={`p-2.5 rounded-2xl ${activeTab === "showcase_business" ? "bg-white/20 text-white" : "bg-amber-600 text-white shadow-xs"}`}>
+              <UtensilsCrossed className="w-5 h-5" />
+            </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenModal("showcase_business");
+              }}
+              className="text-[9px] font-extrabold px-2.5 py-1 rounded-full bg-amber-600 hover:bg-amber-700 text-white shadow-2xs active:scale-95 transition-all border-0 cursor-pointer"
+            >
+              + Create
+            </button>
+          </div>
+          <div className="mt-3">
+            <h3 className="text-xs font-black leading-tight">🍳 Food & Showcase</h3>
+            <p className={`text-[10px] font-medium mt-0.5 leading-relaxed ${activeTab === "showcase_business" ? "text-amber-100" : "text-amber-700/80"}`}>
+              Home Cooking, Catering & Custom Orders
+            </p>
+          </div>
+        </div>
+
+        {/* Card 3: Tutor Services */}
+        <div
+          onClick={() => setActiveTab("tutor_service")}
+          className={`group rounded-3xl p-4 border transition-all cursor-pointer shadow-xs hover:shadow-md relative overflow-hidden flex flex-col justify-between ${
+            activeTab === "tutor_service"
+              ? "bg-gradient-to-br from-blue-600 to-indigo-700 text-white border-blue-500 ring-2 ring-blue-400"
+              : "bg-gradient-to-br from-blue-50 to-indigo-50/70 hover:from-blue-100 hover:to-indigo-100 text-blue-950 border-blue-200/60"
+          }`}
+        >
+          <div className="flex justify-between items-start">
+            <div className={`p-2.5 rounded-2xl ${activeTab === "tutor_service" ? "bg-white/20 text-white" : "bg-blue-600 text-white shadow-xs"}`}>
+              <GraduationCap className="w-5 h-5" />
+            </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenModal("tutor_service");
+              }}
+              className="text-[9px] font-extrabold px-2.5 py-1 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-2xs active:scale-95 transition-all border-0 cursor-pointer"
+            >
+              + Create
+            </button>
+          </div>
+          <div className="mt-3">
+            <h3 className="text-xs font-black leading-tight">📚 Tutor Services</h3>
+            <p className={`text-[10px] font-medium mt-0.5 leading-relaxed ${activeTab === "tutor_service" ? "text-blue-100" : "text-blue-700/80"}`}>
+              Tuition Classes, Coaching & Workshops
+            </p>
+          </div>
+        </div>
+
+        {/* Card 4: Online Sale Marketplace */}
+        <div
+          onClick={() => setActiveTab("online_sale")}
+          className={`group rounded-3xl p-4 border transition-all cursor-pointer shadow-xs hover:shadow-md relative overflow-hidden flex flex-col justify-between ${
+            activeTab === "online_sale"
+              ? "bg-gradient-to-br from-emerald-600 to-teal-700 text-white border-emerald-500 ring-2 ring-emerald-400"
+              : "bg-gradient-to-br from-emerald-50 to-teal-50/70 hover:from-emerald-100 hover:to-teal-100 text-emerald-950 border-emerald-200/60"
+          }`}
+        >
+          <div className="flex justify-between items-start">
+            <div className={`p-2.5 rounded-2xl ${activeTab === "online_sale" ? "bg-white/20 text-white" : "bg-emerald-600 text-white shadow-xs"}`}>
+              <ShoppingBag className="w-5 h-5" />
+            </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenModal("online_sale");
+              }}
+              className="text-[9px] font-extrabold px-2.5 py-1 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs active:scale-95 transition-all border-0 cursor-pointer"
+            >
+              + Create
+            </button>
+          </div>
+          <div className="mt-3">
+            <h3 className="text-xs font-black leading-tight">🛍️ Sale Online Stuffs</h3>
+            <p className={`text-[10px] font-medium mt-0.5 leading-relaxed ${activeTab === "online_sale" ? "text-emerald-100" : "text-emerald-700/80"}`}>
+              Marketplace, Buy & Sell Pre-owned Items
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Search Input Bar & Filter Indicator */}
+      <div className="bg-white rounded-2xl p-2 shadow-xs border border-slate-100 flex items-center space-x-2">
+        <Search className="w-4 h-4 text-slate-400 shrink-0 ml-2" />
         <input
           type="text"
           placeholder={
-            activeTab === "events"
-              ? "Search events by title, location..."
-              : "Search announcements by content or author..."
+            activeTab === "all"
+              ? "Search all hubs by title, service, category..."
+              : `Search in ${getHubTypeBadge(activeTab).label}...`
           }
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="flex-1 bg-transparent border-0 outline-hidden text-xs placeholder-slate-400 text-slate-800 font-medium"
         />
+        {activeTab !== "all" && (
+          <button
+            onClick={() => setActiveTab("all")}
+            className="text-[9px] font-extrabold bg-slate-100 hover:bg-slate-200 text-slate-600 px-2 py-1 rounded-lg border-0 cursor-pointer transition-all shrink-0"
+          >
+            Show All
+          </button>
+        )}
         {searchQuery && (
           <button
             onClick={() => setSearchQuery("")}
@@ -441,437 +420,408 @@ export default function EventsAndAnnouncementsPage() {
         )}
       </div>
 
-      {/* Loader */}
+      {/* Hub Items Grid / Feed */}
       {loading ? (
-        <div className="py-16 flex justify-center items-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-whatsapp-green"></div>
+        <div className="py-16 flex flex-col items-center justify-center space-y-3 bg-white rounded-3xl border border-slate-100">
+          <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-amber-600" />
+          <span className="text-xs text-slate-400 font-semibold">Loading Hub Listings...</span>
         </div>
-      ) : activeTab === "events" ? (
-        /* ==================== EVENTS SECTION ==================== */
-        filteredEvents.length === 0 ? (
-          <div className="py-16 text-center text-slate-400 text-xs font-semibold bg-white rounded-3xl p-6 border border-slate-100 shadow-xs">
-            {searchQuery ? "No matching events found." : "No upcoming events scheduled. Create one below!"}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {filteredEvents.map((evt) => {
-              const rsvps = {
-                going: evt.rsvps?.going || [],
-                maybe: evt.rsvps?.maybe || [],
-                cant: evt.rsvps?.cant || [],
-              };
+      ) : hubs.length === 0 ? (
+        <div className="py-16 text-center bg-white rounded-3xl p-6 border border-slate-100 space-y-2">
+          <p className="text-xs text-slate-500 font-bold">
+            {searchQuery ? "No matching hub listings found." : "No hub listings published in this category yet."}
+          </p>
+          <p className="text-[10px] text-slate-400 font-medium">
+            Be the first to list your organization, food service, tuition class, or products below!
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {hubs.map((item) => {
+            const badge = getHubTypeBadge(item.hubType);
+            const BadgeIcon = badge.icon;
+            const waUrl = formatWhatsAppUrl(
+              item.whatsappNumber || item.contactPhone || item.owner?.mobileNumber,
+              item.title,
+              item.owner?.name
+            );
 
-              const isGoing = rsvps.going.some((u) => getRsvpId(u) === user?._id);
-              const isMaybe = rsvps.maybe.some((u) => getRsvpId(u) === user?._id);
-              const isCant = rsvps.cant.some((u) => getRsvpId(u) === user?._id);
-
-              return (
-                <div
-                  key={evt._id}
-                  className="bg-white rounded-3xl overflow-hidden border border-slate-100/80 shadow-xs flex flex-col p-4.5 select-none hover:shadow-md transition-shadow"
-                >
-                  <div className="flex items-start space-x-3.5">
-                    <div className="w-12 h-12 bg-whatsapp-green text-white rounded-2xl flex flex-col items-center justify-center shrink-0 shadow-sm border border-whatsapp-teal/20">
-                      <Calendar className="w-5.5 h-5.5" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-sm font-extrabold text-slate-800 leading-tight">
-                        {evt.eventDetails?.title}
-                      </h3>
-                      <div className="flex items-center text-[10px] text-whatsapp-green font-bold mt-1 space-x-1">
-                        <Clock className="w-3 h-3 text-whatsapp-green shrink-0" />
-                        <span>{formatEventDate(evt.eventDetails?.date)}</span>
-                      </div>
-                      <div className="flex items-center text-[10px] text-slate-500 font-semibold mt-0.5 space-x-1">
-                        <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
-                        <span className="truncate">{evt.eventDetails?.location}</span>
-                      </div>
-                      {(evt.eventDetails?.contributionFee ?? 0) > 0 && (
-                        <div className="flex items-center text-[10px] text-amber-600 font-bold mt-0.5 space-x-1">
-                          <IndianRupee className="w-3 h-3 shrink-0" />
-                          <span>{evt.eventDetails!.contributionFee} per person</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {evt.eventDetails?.poster && (
-                    <div className="mb-3 rounded-2xl overflow-hidden border border-slate-100 max-h-[160px] relative mt-3 select-none">
+            return (
+              <div
+                key={item._id}
+                className="bg-white rounded-3xl p-4.5 border border-slate-100 shadow-xs hover:shadow-md transition-shadow select-none space-y-3"
+              >
+                {/* Header Badge & Owner Info */}
+                <div className="flex justify-between items-start pb-2 border-b border-slate-100">
+                  <div className="flex items-center space-x-2.5">
+                    <div className="w-9 h-9 rounded-full bg-slate-100 overflow-hidden border border-slate-200 shrink-0">
                       <img
-                        src={evt.eventDetails.poster}
-                        alt="Event Poster"
-                        className="w-full object-cover h-[160px]"
+                        src={
+                          item.owner?.avatar ||
+                          "/avatar.jpg"
+                        }
+                        alt={item.owner?.name || "Owner"}
+                        className="w-full h-full object-cover"
                       />
                     </div>
-                  )}
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-800 leading-tight">
+                        {item.owner?.name || "Community Member"}
+                      </h4>
+                      <span className="text-[9px] text-slate-400 font-medium block mt-0.5">
+                        {item.owner?.city ? `${item.owner.city} • ` : ""}
+                        {item.owner?.gotra ? `Gotra: ${item.owner.gotra}` : ""}
+                      </span>
+                    </div>
+                  </div>
 
-                  <p className="text-xs text-slate-600 leading-relaxed font-medium mt-3 bg-slate-50 p-3 rounded-2xl border border-slate-100/50">
-                    {evt.content}
-                  </p>
-
-                  <span className="text-[9px] text-slate-400 font-bold mt-2.5 flex items-center space-x-1 select-none">
-                    <User className="w-2.5 h-2.5 text-slate-400 inline shrink-0" />
-                    <span>Shared by: {evt.author?.name || "System"}</span>
+                  <span
+                    className={`text-[9px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider border flex items-center space-x-1 ${badge.color}`}
+                  >
+                    <BadgeIcon className="w-3 h-3 shrink-0" />
+                    <span>{badge.label}</span>
                   </span>
-
-                  <div className="grid grid-cols-3 gap-2 mt-4.5 border-t border-slate-100 pt-3">
-                    <button
-                      onClick={() => handleRsvp(evt._id, "going")}
-                      className={`py-2 px-1 rounded-xl text-[10px] font-extrabold transition-all border active:scale-95 text-center flex items-center justify-center space-x-1.5 cursor-pointer ${
-                        isGoing
-                          ? "bg-whatsapp-green text-white border-whatsapp-green shadow-xs"
-                          : "bg-slate-50 border-slate-100 text-slate-600 hover:bg-slate-100"
-                      }`}
-                    >
-                      <CheckCircle className={`w-3.5 h-3.5 shrink-0 ${isGoing ? "text-white" : "text-slate-400"}`} />
-                      <span>Going ({rsvps.going.length})</span>
-                    </button>
-
-                    <button
-                      onClick={() => handleRsvp(evt._id, "maybe")}
-                      className={`py-2 px-1 rounded-xl text-[10px] font-extrabold transition-all border active:scale-95 text-center flex items-center justify-center space-x-1.5 cursor-pointer ${
-                        isMaybe
-                          ? "bg-amber-500 text-white border-amber-500 shadow-xs"
-                          : "bg-slate-50 border-slate-100 text-slate-600 hover:bg-slate-100"
-                      }`}
-                    >
-                      <HelpCircle className={`w-3.5 h-3.5 shrink-0 ${isMaybe ? "text-white" : "text-slate-400"}`} />
-                      <span>Maybe ({rsvps.maybe.length})</span>
-                    </button>
-
-                    <button
-                      onClick={() => handleRsvp(evt._id, "cant")}
-                      className={`py-2 px-1 rounded-xl text-[10px] font-extrabold transition-all border active:scale-95 text-center flex items-center justify-center space-x-1.5 cursor-pointer ${
-                        isCant
-                          ? "bg-red-500 text-white border-red-500 shadow-xs"
-                          : "bg-slate-50 border-slate-100 text-slate-600 hover:bg-slate-100"
-                      }`}
-                    >
-                      <XCircle className={`w-3.5 h-3.5 shrink-0 ${isCant ? "text-white" : "text-slate-400"}`} />
-                      <span>No ({rsvps.cant.length})</span>
-                    </button>
-                  </div>
-
-                  {/* Live attendee list */}
-                  {(rsvps.going.length > 0 || rsvps.cant.length > 0) && (
-                    <div className="mt-3 pt-3 border-t border-slate-100 space-y-2.5">
-                      {rsvps.going.length > 0 && (
-                        <div>
-                          <p className="text-[9px] font-bold text-emerald-600 uppercase tracking-wider mb-1.5 flex items-center space-x-1">
-                            <CheckCircle className="w-3 h-3" />
-                            <span>Attending · {rsvps.going.length}</span>
-                          </p>
-                          <div className="flex flex-wrap gap-1">
-                            {rsvps.going.map((u, i) => (
-                              <span key={i} className="text-[9px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100 px-2 py-0.5 rounded-full">
-                                {getRsvpName(u)}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {rsvps.cant.length > 0 && (
-                        <div>
-                          <p className="text-[9px] font-bold text-red-500 uppercase tracking-wider mb-1.5 flex items-center space-x-1">
-                            <XCircle className="w-3 h-3" />
-                            <span>Declined · {rsvps.cant.length}</span>
-                          </p>
-                          <div className="flex flex-wrap gap-1">
-                            {rsvps.cant.map((u, i) => (
-                              <span key={i} className="text-[9px] font-semibold bg-red-50 text-red-600 border border-red-100 px-2 py-0.5 rounded-full">
-                                {getRsvpName(u)}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
-              );
-            })}
-          </div>
-        )
-      ) : (
-        /* ==================== ANNOUNCEMENTS SECTION ==================== */
-        filteredAnnouncements.length === 0 ? (
-          <div className="py-16 text-center text-slate-400 text-xs font-semibold bg-white rounded-3xl p-6 border border-slate-100 shadow-xs">
-            {searchQuery ? "No matching announcements found." : "No announcements published yet. Add one below!"}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {filteredAnnouncements.map((post) => {
-              const hasLiked = post.likes.includes(user?._id || "");
-              const isCommentsExpanded = expandedComments[post._id] || false;
 
-              return (
-                <div
-                  key={post._id}
-                  className="bg-white rounded-3xl p-4.5 border border-slate-100 shadow-xs hover:shadow-md transition-shadow select-none"
-                >
-                  <div className="flex justify-between items-center pb-2 mb-2.5 border-b border-slate-55 animate-fade-in">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-8 h-8 rounded-full bg-whatsapp-light flex items-center justify-center font-bold text-xs text-whatsapp-green uppercase">
-                        {post.author?.name ? post.author.name.charAt(0) : "S"}
+                {/* Listing Images Carousel / Thumbnail */}
+                {item.images && item.images.length > 0 && (
+                  <div className="flex space-x-2 overflow-x-auto no-scrollbar py-1">
+                    {item.images.map((imgUrl, i) => (
+                      <div
+                        key={i}
+                        className="w-full max-h-[220px] rounded-2xl overflow-hidden border border-slate-100 shrink-0 select-none"
+                      >
+                        <img
+                          src={imgUrl}
+                          alt={item.title}
+                          className="w-full h-[220px] object-cover"
+                        />
                       </div>
-                      <div>
-                        <span className="text-xs font-bold text-slate-700 block">
-                          {post.author?.name || "System"}
-                        </span>
-                        <span className="text-[9px] text-slate-400 font-semibold block mt-0.5">
-                          {formatTime(post.createdAt)}
-                        </span>
-                      </div>
-                    </div>
+                    ))}
                   </div>
+                )}
 
-                  <div className="space-y-3">
-                    <div className="bg-amber-50 border border-amber-200/60 p-3.5 rounded-2xl flex items-start space-x-3">
-                      <Megaphone className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                      <div className="flex-1">
-                        <span className="text-[10px] font-extrabold text-amber-700 uppercase tracking-wider block mb-1">
-                          Community Announcement
+                {/* Title & Price Header */}
+                <div className="space-y-1">
+                  <div className="flex justify-between items-start">
+                    <h3 className="text-sm font-black text-slate-800 leading-snug">
+                      {item.title}
+                    </h3>
+
+                    {item.price !== undefined && item.price > 0 && (
+                      <div className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-xl text-xs font-black shrink-0 ml-2 flex items-center space-x-0.5">
+                        <IndianRupee className="w-3.5 h-3.5" />
+                        <span>
+                          {item.price} {item.priceUnit ? `/${item.priceUnit}` : ""}
                         </span>
-                        <p className="text-xs text-slate-700 leading-relaxed font-semibold whitespace-pre-wrap">
-                          {post.content}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center space-x-4 pt-1">
-                      <button
-                        onClick={() => handleLikeAnnouncement(post._id)}
-                        className={`flex items-center space-x-1.5 text-[10px] font-bold py-1 px-2.5 rounded-lg transition-all border border-slate-100/50 cursor-pointer ${
-                          hasLiked
-                            ? "bg-red-50 text-red-500 border-red-200"
-                            : "bg-slate-50 text-slate-500 hover:bg-slate-100"
-                        }`}
-                      >
-                        <Heart className={`w-3.5 h-3.5 ${hasLiked ? "fill-red-500 text-red-500" : ""}`} />
-                        <span>Like ({post.likes?.length || 0})</span>
-                      </button>
-
-                      <button
-                        onClick={() =>
-                          setExpandedComments((prev) => ({ ...prev, [post._id]: !isCommentsExpanded }))
-                        }
-                        className={`flex items-center space-x-1.5 text-[10px] font-bold py-1 px-2.5 rounded-lg transition-all border border-slate-100/50 cursor-pointer ${
-                          isCommentsExpanded
-                            ? "bg-whatsapp-light text-whatsapp-green border-whatsapp-teal/20"
-                            : "bg-slate-50 text-slate-500 hover:bg-slate-100"
-                        }`}
-                      >
-                        <MessageSquare className="w-3.5 h-3.5" />
-                        <span>Comment ({post.replies?.length || 0})</span>
-                      </button>
-                    </div>
-
-                    {isCommentsExpanded && (
-                      <div className="mt-3 pt-3 border-t border-slate-100 space-y-2.5 animate-fade-in">
-                        {post.replies && post.replies.length > 0 ? (
-                          <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
-                            {post.replies.map((reply: any) => (
-                              <div
-                                key={reply._id}
-                                className="bg-slate-50/70 hover:bg-slate-50 p-2.5 rounded-xl text-[11px] leading-relaxed text-slate-600 border border-slate-100/50"
-                              >
-                                <div className="flex justify-between items-center mb-0.5">
-                                  <span className="font-bold text-slate-800">
-                                    {reply.author?.name || "Member"}
-                                  </span>
-                                  <span className="text-[8px] text-slate-400 font-medium">
-                                    {formatTime(reply.createdAt)}
-                                  </span>
-                                </div>
-                                <p className="font-medium text-slate-700">{reply.content}</p>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-[10px] text-slate-400 italic text-center py-1 font-semibold">
-                            No comments yet. Be the first to comment!
-                          </p>
-                        )}
-
-                        <form
-                          onSubmit={(e) => handleAddComment(e, post._id)}
-                          className="flex items-center space-x-2 pt-1 border-t border-slate-50"
-                        >
-                          <input
-                            type="text"
-                            required
-                            placeholder="Write a comment..."
-                            value={commentInputs[post._id] || ""}
-                            onChange={(e) =>
-                              setCommentInputs({ ...commentInputs, [post._id]: e.target.value })
-                            }
-                            className="flex-1 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 px-3 py-2 text-xs focus:border-whatsapp-green outline-hidden text-slate-800 font-medium"
-                          />
-                          <button
-                            type="submit"
-                            className="py-2 px-3.5 bg-whatsapp-green hover:bg-whatsapp-teal text-white font-bold rounded-xl text-[11px] transition-transform active:scale-95 border-0 cursor-pointer shadow-xs"
-                          >
-                            Post
-                          </button>
-                        </form>
                       </div>
                     )}
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        )
-      )}
 
-      {/* FAB button */}
-      <button
-        onClick={() => setModalType(activeTab === "events" ? "event" : "announcement")}
-        className="absolute bottom-4 right-4 w-12 h-12 bg-whatsapp-green text-white rounded-full flex items-center justify-center shadow-lg active:scale-90 hover:bg-whatsapp-teal transition-all z-40 cursor-pointer border-0"
-        aria-label="Create Post Button"
-      >
-        <Plus className="w-6 h-6" />
-      </button>
+                  {item.category && (
+                    <span className="inline-block text-[9px] font-bold uppercase tracking-wider text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                      {item.category}
+                    </span>
+                  )}
+                </div>
 
-      {/* Create Event Modal */}
-      {modalType === "event" && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-white w-full max-w-sm rounded-3xl p-5 shadow-2xl border border-slate-100 flex flex-col space-y-4">
-            <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-              <h3 className="font-extrabold text-slate-800 text-base">📅 Create Event</h3>
-              <button onClick={() => setModalType(null)} className="p-1 hover:bg-slate-100 rounded-full cursor-pointer bg-transparent border-0">
-                <X className="w-5 h-5 text-slate-500" />
-              </button>
-            </div>
-            <form onSubmit={handleCreateEvent} className="space-y-4">
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Event Title</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Annual General Meetup"
-                  value={eventTitle}
-                  onChange={(e) => setEventTitle(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-100 text-sm focus:border-whatsapp-green outline-hidden text-slate-800 font-semibold"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Date & Time</label>
-                  <input
-                    type="datetime-local"
-                    required
-                    value={eventDate}
-                    onChange={(e) => setEventDate(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-100 text-xs focus:border-whatsapp-green outline-hidden text-slate-800 font-semibold"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Location</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Community Hall"
-                    value={eventLocation}
-                    onChange={(e) => setEventLocation(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-100 text-xs focus:border-whatsapp-green outline-hidden text-slate-800 font-semibold"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                  Contribution Fee — Per Person <span className="normal-case text-slate-400">(optional)</span>
-                </label>
-                <div className="relative">
-                  <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    placeholder="0 = Free"
-                    value={eventFee}
-                    onChange={(e) => setEventFee(e.target.value)}
-                    className="w-full pl-8 pr-3 py-2 bg-slate-50 rounded-xl border border-slate-100 text-xs focus:border-whatsapp-green outline-hidden text-slate-800 font-semibold"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Description</label>
-                <textarea
-                  required
-                  placeholder="Agenda and other details..."
-                  value={eventDesc}
-                  onChange={(e) => setEventDesc(e.target.value)}
-                  rows={3}
-                  className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-100 text-xs focus:border-whatsapp-green outline-hidden resize-none text-slate-700 leading-normal"
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Event Poster (Optional)</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
+                {/* Description */}
+                <p className="text-xs text-slate-600 font-medium leading-relaxed bg-slate-50 p-3 rounded-2xl border border-slate-100/60 whitespace-pre-wrap">
+                  {item.description}
+                </p>
 
-                    setPosterFileUrl(URL.createObjectURL(file));
-                    const compressed = await compressImage(file);
-                    if (!checkFileSize(compressed, 5)) {
-                      alert("Selected file exceeds the maximum allowed size of 5MB");
-                      return;
-                    }
-                    setPosterFile(compressed);
-                  }}
-                  className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[10px] file:font-bold file:bg-whatsapp-light file:text-whatsapp-green hover:file:bg-slate-100 cursor-pointer"
-                />
-                {posterFileUrl && (
-                  <div className="mt-2.5 relative w-16 h-16 rounded-xl overflow-hidden border border-slate-100 shadow-xs">
-                    <img src={posterFileUrl} alt="Poster Preview" className="w-full h-full object-cover" />
+                {/* Location Footer */}
+                {item.location && (
+                  <div className="flex items-center text-[10px] text-slate-500 font-semibold space-x-1">
+                    <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                    <span>{item.location}</span>
                   </div>
                 )}
+
+                {/* Action Buttons: WhatsApp Order/Inquiry & Call */}
+                <div className="grid grid-cols-2 gap-2.5 pt-2 border-t border-slate-100">
+                  <a
+                    href={waUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs shadow-xs transition-transform active:scale-95 flex items-center justify-center space-x-1.5 cursor-pointer no-underline"
+                  >
+                    <svg className="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
+                      <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z" />
+                    </svg>
+                    <span>WhatsApp Order / Inquiry</span>
+                  </a>
+
+                  {(item.contactPhone || item.owner?.mobileNumber) && (
+                    <a
+                      href={`tel:${item.contactPhone || item.owner?.mobileNumber}`}
+                      className="py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold rounded-xl text-xs shadow-xs transition-transform active:scale-95 flex items-center justify-center space-x-1.5 cursor-pointer no-underline border border-slate-200/60"
+                    >
+                      <Phone className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                      <span>Call {item.contactPhone || item.owner?.mobileNumber}</span>
+                    </a>
+                  )}
+                </div>
               </div>
-              <button
-                type="submit"
-                disabled={creating}
-                className="w-full py-2.5 bg-whatsapp-green text-white font-bold rounded-xl text-sm shadow-md hover:bg-whatsapp-teal disabled:opacity-50 cursor-pointer border-0 active:scale-95 transition-transform"
-              >
-                {creating ? "Sharing..." : "Post & Share on Wall"}
-              </button>
-            </form>
-          </div>
+            );
+          })}
         </div>
       )}
 
-      {/* Create Announcement Modal */}
-      {modalType === "announcement" && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-white w-full max-w-sm rounded-3xl p-5 shadow-2xl border border-slate-100 flex flex-col space-y-4">
-            <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-              <h3 className="font-extrabold text-slate-800 text-base">📢 Create Announcement</h3>
-              <button onClick={() => setModalType(null)} className="p-1 hover:bg-slate-100 rounded-full cursor-pointer bg-transparent border-0">
-                <X className="w-5 h-5 text-slate-500" />
-              </button>
-            </div>
-            <form onSubmit={handleCreateAnnouncement} className="space-y-4">
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Announcement details</label>
-                <textarea
-                  required
-                  placeholder="Share what is happening in the community..."
-                  value={announcementContent}
-                  onChange={(e) => setAnnouncementContent(e.target.value)}
-                  rows={4}
-                  className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-100 text-xs focus:border-whatsapp-green outline-hidden resize-none text-slate-700 leading-normal"
-                />
+      {/* Floating Action Button (FAB) for Creating Hub Listing */}
+      <button
+        onClick={() => handleOpenModal()}
+        className="fixed bottom-20 right-5 z-40 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-extrabold text-xs px-4 py-3 rounded-full shadow-2xl flex items-center space-x-2 border-0 cursor-pointer active:scale-90 transition-all"
+      >
+        <Plus className="w-5 h-5" />
+        <span>Create Hub Listing</span>
+      </button>
+
+      {/* ── CREATE HUB LISTING MODAL ─────────────────────────────────── */}
+      {modalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white w-full max-w-md rounded-3xl p-5 shadow-2xl border border-slate-100 flex flex-col space-y-4 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-150">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+              <div className="flex items-center space-x-2 text-amber-700 font-black text-sm">
+                <Plus className="w-5 h-5" />
+                <span>Create Hub Listing</span>
               </div>
               <button
-                type="submit"
-                disabled={creating}
-                className="w-full py-2.5 bg-whatsapp-green text-white font-bold rounded-xl text-sm shadow-md hover:bg-whatsapp-teal disabled:opacity-50 cursor-pointer border-0 active:scale-95 transition-transform"
+                onClick={() => setModalOpen(false)}
+                className="p-1 rounded-full hover:bg-slate-100 text-slate-400 border-0 cursor-pointer"
               >
-                {creating ? "Publishing..." : "Post Announcement"}
+                <X className="w-5 h-5" />
               </button>
+            </div>
+
+            <form onSubmit={handleCreateHub} className="space-y-3.5">
+              {/* Category Selector Buttons */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                  Select Category *
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setHubType("showcase_business")}
+                    className={`p-2.5 rounded-2xl border text-xs font-bold flex items-center space-x-2 transition-all cursor-pointer ${
+                      hubType === "showcase_business"
+                        ? "bg-amber-500 text-white border-amber-500 shadow-xs"
+                        : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                    }`}
+                  >
+                    <UtensilsCrossed className="w-4 h-4 shrink-0" />
+                    <span className="text-[11px] leading-tight">🍳 Food & Showcase</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setHubType("tutor_service")}
+                    className={`p-2.5 rounded-2xl border text-xs font-bold flex items-center space-x-2 transition-all cursor-pointer ${
+                      hubType === "tutor_service"
+                        ? "bg-blue-600 text-white border-blue-600 shadow-xs"
+                        : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                    }`}
+                  >
+                    <GraduationCap className="w-4 h-4 shrink-0" />
+                    <span className="text-[11px] leading-tight">📚 Tutor Service</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setHubType("online_sale")}
+                    className={`p-2.5 rounded-2xl border text-xs font-bold flex items-center space-x-2 transition-all cursor-pointer ${
+                      hubType === "online_sale"
+                        ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
+                        : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                    }`}
+                  >
+                    <ShoppingBag className="w-4 h-4 shrink-0" />
+                    <span className="text-[11px] leading-tight">🛍️ Sale Online</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setHubType("organization")}
+                    className={`p-2.5 rounded-2xl border text-xs font-bold flex items-center space-x-2 transition-all cursor-pointer ${
+                      hubType === "organization"
+                        ? "bg-purple-600 text-white border-purple-600 shadow-xs"
+                        : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                    }`}
+                  >
+                    <Building2 className="w-4 h-4 shrink-0" />
+                    <span className="text-[11px] leading-tight">🏛️ Organization</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Title */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Title *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder={
+                    hubType === "showcase_business"
+                      ? "e.g. Grandma's Pure Veg Home Catering"
+                      : hubType === "tutor_service"
+                      ? "e.g. High School Physics & Math Tuitions"
+                      : hubType === "online_sale"
+                      ? "e.g. iPhone 13 Pro 128GB (Like New)"
+                      : "e.g. Jambu Community Youth Welfare Club"
+                  }
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 outline-hidden focus:border-amber-500"
+                />
+              </div>
+
+              {/* Sub-category & Price */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    Tag / Category
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Home Cook, Maths, Electronics"
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 outline-hidden focus:border-amber-500"
+                  />
+                </div>
+
+                {hubType !== "organization" && (
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                      Price / Fee (Optional)
+                    </label>
+                    <div className="relative">
+                      <IndianRupee className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                      <input
+                        type="number"
+                        placeholder="e.g. 250"
+                        value={price}
+                        onChange={(e) => setPrice(e.target.value)}
+                        className="w-full pl-7 pr-2 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 outline-hidden focus:border-amber-500"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {hubType !== "organization" && (
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    Price Unit (e.g. per dish, per month, per item)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. per dish / per month / fixed"
+                    value={priceUnit}
+                    onChange={(e) => setPriceUnit(e.target.value)}
+                    className="w-full px-3.5 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 outline-hidden focus:border-amber-500"
+                  />
+                </div>
+              )}
+
+              {/* Location & Contact Info */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    City / Area Location
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Indore, Vijay Nagar"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 outline-hidden focus:border-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    WhatsApp Mobile Number
+                  </label>
+                  <input
+                    type="tel"
+                    placeholder="e.g. 9826017177"
+                    value={whatsappNumber}
+                    onChange={(e) => setWhatsappNumber(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 outline-hidden focus:border-amber-500"
+                  />
+                </div>
+              </div>
+
+              {/* Photos Upload */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Upload Product / Showcase Photos
+                </label>
+                <div className="flex items-center space-x-2 overflow-x-auto py-1">
+                  <button
+                    type="button"
+                    onClick={() => imageInputRef.current?.click()}
+                    disabled={uploadingImage}
+                    className="w-16 h-16 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 hover:border-amber-500 flex flex-col items-center justify-center cursor-pointer shrink-0"
+                  >
+                    <ImagePlus className="w-5 h-5 text-slate-400" />
+                    <span className="text-[8px] font-bold text-slate-400 mt-1">
+                      {uploadingImage ? "Uploading..." : "+ Add"}
+                    </span>
+                  </button>
+
+                  {uploadedImages.map((imgUrl, idx) => (
+                    <div key={idx} className="relative w-16 h-16 rounded-2xl overflow-hidden border border-slate-200 shrink-0">
+                      <img src={imgUrl} className="w-full h-full object-cover" alt="" />
+                      <button
+                        type="button"
+                        onClick={() => setUploadedImages((prev) => prev.filter((_, i) => i !== idx))}
+                        className="absolute top-0.5 right-0.5 p-0.5 bg-black/60 text-white rounded-full cursor-pointer border-0"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={handleImageUpload}
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Description & Details *
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  placeholder="Describe your service, food menu, tutoring subjects, organization goals, or item condition..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 outline-hidden focus:border-amber-500 resize-none"
+                />
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full py-3 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 disabled:opacity-50 text-white font-extrabold text-xs rounded-2xl shadow-md transition-all flex items-center justify-center space-x-2 border-0 cursor-pointer"
+                >
+                  <Send className="w-4 h-4" />
+                  <span>{submitting ? "Publishing..." : "Publish Hub Listing"}</span>
+                </button>
+              </div>
             </form>
           </div>
         </div>

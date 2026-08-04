@@ -15,6 +15,7 @@ import {
   TrendingUp,
   ChevronUp,
   ChevronDown,
+  Download,
 } from "lucide-react";
 
 interface UserType {
@@ -162,14 +163,88 @@ export default function DashboardPage() {
       .join("");
   };
 
+  // Export filtered users to CSV/Excel file
+  const exportToCSV = () => {
+    if (!filteredUsers || filteredUsers.length === 0) return;
+
+    const headers = [
+      "Name",
+      "Mobile Number",
+      "Alternate Phone",
+      "City",
+      "Village",
+      "Address",
+      "Gotra",
+      "KulDevi",
+      "Blood Group",
+      "Gender",
+      "Age",
+      "Marital Status",
+      "Occupation Type",
+      "Profession",
+      "Company",
+    ];
+
+    const escapeCSV = (str: any) => {
+      if (str === null || str === undefined) return '""';
+      const val = String(str).replace(/"/g, '""');
+      return `"${val}"`;
+    };
+
+    const csvRows = [
+      headers.join(","),
+      ...filteredUsers.map((row) =>
+        [
+          escapeCSV(row.name),
+          escapeCSV(row.mobileNumber),
+          escapeCSV(row.phone),
+          escapeCSV(row.city),
+          escapeCSV(row.village),
+          escapeCSV(row.address),
+          escapeCSV(row.gotra),
+          escapeCSV(row.kulDevi),
+          escapeCSV(row.bloodGroup),
+          escapeCSV(row.sex),
+          escapeCSV(row.age),
+          escapeCSV(row.maritalStatus),
+          escapeCSV(row.occupationType),
+          escapeCSV(row.profession),
+          escapeCSV(row.company),
+        ].join(",")
+      ),
+    ];
+
+    const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const filename = `community_dashboard_filtered_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-4 pb-6">
       {/* Header */}
-      <div className="bg-white rounded-3xl p-4 shadow-xs border border-slate-100">
-        <h2 className="text-base font-extrabold text-slate-800">Platform Dashboard</h2>
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mt-0.5">
-          Jambu Community Circle Insights
-        </p>
+      <div className="bg-white rounded-3xl p-4 shadow-xs border border-slate-100 flex items-center justify-between">
+        <div>
+          <h2 className="text-base font-extrabold text-slate-800">Platform Dashboard</h2>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mt-0.5">
+            Jambu Community Circle Insights
+          </p>
+        </div>
+        <button
+          onClick={exportToCSV}
+          disabled={filteredUsers.length === 0}
+          title="Download Filtered Results as CSV/Excel"
+          className="py-2 px-3 bg-whatsapp-green hover:bg-emerald-700 active:scale-95 text-white font-extrabold text-xs rounded-2xl shadow-xs transition-all flex items-center space-x-1.5 border-0 cursor-pointer disabled:opacity-40"
+        >
+          <Download className="w-4 h-4" />
+          <span>Export Excel / CSV</span>
+        </button>
       </div>
 
       {/* Collapsible Stats/Data Cards Container */}
@@ -387,9 +462,15 @@ export default function DashboardPage() {
           <span className="text-[10px] font-extrabold text-slate-450 uppercase tracking-wider">
             Matching Members ({filteredUsers.length})
           </span>
-          <span className="text-[9px] text-slate-400 font-semibold">
-            Click user card to view profile
-          </span>
+          
+          <button
+            onClick={exportToCSV}
+            disabled={filteredUsers.length === 0}
+            className="py-1.5 px-3 bg-whatsapp-green hover:bg-emerald-700 active:scale-95 text-white font-extrabold text-[11px] rounded-xl shadow-xs transition-all flex items-center space-x-1.5 border-0 cursor-pointer disabled:opacity-40"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Download Filtered CSV</span>
+          </button>
         </div>
 
         {loading ? (

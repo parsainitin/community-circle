@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { Plus, Globe, Users, ChevronDown, ChevronUp, Trash2, LogOut, CheckCircle2, ImagePlus, Pencil } from "lucide-react";
+import { Plus, Globe, Users, ChevronDown, ChevronUp, Trash2, LogOut, CheckCircle2, ImagePlus, Pencil, MapPin, ShieldAlert, Heart } from "lucide-react";
 
 interface AdminUser {
   _id: string;
@@ -16,6 +16,9 @@ interface Community {
   subdomain: string;
   description?: string;
   logo?: string;
+  cities?: string[];
+  gotras?: string[];
+  kulDevis?: string[];
   admins: AdminUser[];
   isActive: boolean;
   createdAt: string;
@@ -34,6 +37,9 @@ export default function SuperAdminPage() {
   const [newName, setNewName] = useState("");
   const [newSubdomain, setNewSubdomain] = useState("");
   const [newDesc, setNewDesc] = useState("");
+  const [newCities, setNewCities] = useState("Ahmedabad, Rajkot, Surat, Jamnagar, Vadodara, Mumbai, Pune, Delhi");
+  const [newGotras, setNewGotras] = useState("Kashyap, Vashishtha, Bharadwaj, Garg, Gautam, Parashar, Shandilya");
+  const [newKulDevis, setNewKulDevis] = useState("Ashapura Mata, Meldi Mata, Amba Mata, Harsiddhi Mata, Bahuchar Mata, Chamunda Mata");
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -52,6 +58,9 @@ export default function SuperAdminPage() {
   const [editName, setEditName] = useState("");
   const [editSubdomain, setEditSubdomain] = useState("");
   const [editDesc, setEditDesc] = useState("");
+  const [editCities, setEditCities] = useState("");
+  const [editGotras, setEditGotras] = useState("");
+  const [editKulDevis, setEditKulDevis] = useState("");
   const [editLogoFile, setEditLogoFile] = useState<File | null>(null);
   const [editLogoPreview, setEditLogoPreview] = useState<string | null>(null);
   const editLogoInputRef = useRef<HTMLInputElement>(null);
@@ -105,6 +114,9 @@ export default function SuperAdminPage() {
           subdomain: newSubdomain,
           description: newDesc,
           logo: logoUrl,
+          cities: newCities ? newCities.split(",").map((s) => s.trim()).filter(Boolean) : [],
+          gotras: newGotras ? newGotras.split(",").map((s) => s.trim()).filter(Boolean) : [],
+          kulDevis: newKulDevis ? newKulDevis.split(",").map((s) => s.trim()).filter(Boolean) : [],
         }),
       });
       const data = await res.json();
@@ -138,12 +150,11 @@ export default function SuperAdminPage() {
       const data = await res.json();
       if (!res.ok) { setAdminError(data.error); return; }
       setAdminName(""); setAdminMobile(""); setAdminPassword("");
-      setAdminError(null);
       setExpandedAdminForm(null);
-      showToast(`✅ Admin "${data.name}" added!`);
+      showToast(`✅ Admin ${data.name} added!`);
       fetchCommunities();
     } catch {
-      setAdminError("Failed to add admin. Please try again.");
+      setAdminError("Failed to add admin");
     } finally {
       setAddingAdmin(false);
     }
@@ -166,6 +177,9 @@ export default function SuperAdminPage() {
     setEditName(c.name);
     setEditSubdomain(c.subdomain);
     setEditDesc(c.description || "");
+    setEditCities((c.cities || []).join(", "));
+    setEditGotras((c.gotras || []).join(", "));
+    setEditKulDevis((c.kulDevis || []).join(", "));
     setEditLogoPreview(c.logo || null);
     setEditLogoFile(null);
     setEditError(null);
@@ -194,6 +208,9 @@ export default function SuperAdminPage() {
           subdomain: editSubdomain,
           description: editDesc,
           logo: logoUrl,
+          cities: editCities ? editCities.split(",").map((s) => s.trim()).filter(Boolean) : [],
+          gotras: editGotras ? editGotras.split(",").map((s) => s.trim()).filter(Boolean) : [],
+          kulDevis: editKulDevis ? editKulDevis.split(",").map((s) => s.trim()).filter(Boolean) : [],
         }),
       });
       const data = await res.json();
@@ -231,7 +248,14 @@ export default function SuperAdminPage() {
   const inputCls = "w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 placeholder-slate-400 outline-none focus:border-violet-500 focus:bg-white transition-all";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-violet-50 via-white to-indigo-50">
+    <div className="min-h-screen bg-gradient-to-br from-violet-50 via-white to-indigo-50 pb-20 select-none">
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-xl text-xs font-bold flex items-center space-x-2 animate-bounce">
+          <span>{toast}</span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-white border-b border-slate-200 shadow-xs sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-5 py-4 flex items-center justify-between">
@@ -249,34 +273,28 @@ export default function SuperAdminPage() {
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto px-5 py-6 space-y-5">
-
-        {/* Toast */}
-        {toast && (
-          <div className="flex items-center space-x-2 bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-2xl text-sm font-semibold">
-            <CheckCircle2 className="w-4 h-4 shrink-0" />
-            <span>{toast}</span>
-          </div>
-        )}
-
-        {/* Error */}
+      <div className="max-w-2xl mx-auto p-4 space-y-4">
+        {/* Error Alert */}
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl text-sm font-semibold">
+          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl text-xs font-semibold">
             {error}
           </div>
         )}
 
-        {/* Create Community */}
+        {/* Create Community Accordion */}
         <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
           <button
-            onClick={() => { setShowCreateForm(!showCreateForm); setError(null); }}
+            onClick={() => setShowCreateForm(!showCreateForm)}
             className="w-full flex items-center justify-between p-4 bg-transparent border-0 cursor-pointer text-left"
           >
-            <div className="flex items-center space-x-2.5">
-              <div className="w-8 h-8 bg-violet-100 rounded-xl flex items-center justify-center">
-                <Plus className="w-4 h-4 text-violet-600" />
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center font-bold">
+                <Plus className="w-4 h-4" />
               </div>
-              <span className="text-sm font-bold text-slate-700">Create New Community</span>
+              <div>
+                <h2 className="text-sm font-extrabold text-slate-800">Create New Community</h2>
+                <p className="text-[10px] text-slate-400 font-medium">Add a tenant & configure Cities, Gotras, KulDevis</p>
+              </div>
             </div>
             {showCreateForm
               ? <ChevronUp className="w-4 h-4 text-slate-400" />
@@ -343,6 +361,43 @@ export default function SuperAdminPage() {
                   className={inputCls}
                 />
               </div>
+
+              {/* Predefined Cities Dropdown List Config */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Predefined Cities (Comma-separated for profile dropdown)
+                </label>
+                <input
+                  placeholder="e.g. Ahmedabad, Rajkot, Surat, Jamnagar, Vadodara, Mumbai"
+                  value={newCities} onChange={(e) => setNewCities(e.target.value)}
+                  className={inputCls}
+                />
+              </div>
+
+              {/* Predefined Gotras Dropdown List Config */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Predefined Gotras (Comma-separated for profile dropdown)
+                </label>
+                <input
+                  placeholder="e.g. Kashyap, Vashishtha, Bharadwaj, Garg, Gautam"
+                  value={newGotras} onChange={(e) => setNewGotras(e.target.value)}
+                  className={inputCls}
+                />
+              </div>
+
+              {/* Predefined KulDevis Dropdown List Config */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Predefined KulDevis (Comma-separated for profile dropdown)
+                </label>
+                <input
+                  placeholder="e.g. Ashapura Mata, Meldi Mata, Amba Mata, Harsiddhi Mata"
+                  value={newKulDevis} onChange={(e) => setNewKulDevis(e.target.value)}
+                  className={inputCls}
+                />
+              </div>
+
               <button
                 type="submit" disabled={creating}
                 className="w-full py-3 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white rounded-xl font-bold text-sm border-0 cursor-pointer transition-all"
@@ -415,6 +470,22 @@ export default function SuperAdminPage() {
                     </div>
                   </div>
 
+                  {/* Configured Dropdown Options Badges */}
+                  <div className="mt-3 pt-2.5 border-t border-slate-100 flex flex-wrap gap-1.5 text-[10px]">
+                    <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-bold flex items-center space-x-1">
+                      <MapPin className="w-3 h-3 text-slate-400" />
+                      <span>Cities ({c.cities?.length || 0})</span>
+                    </span>
+                    <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-bold flex items-center space-x-1">
+                      <ShieldAlert className="w-3 h-3 text-slate-400" />
+                      <span>Gotras ({c.gotras?.length || 0})</span>
+                    </span>
+                    <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-bold flex items-center space-x-1">
+                      <Heart className="w-3 h-3 text-slate-400" />
+                      <span>KulDevis ({c.kulDevis?.length || 0})</span>
+                    </span>
+                  </div>
+
                   {/* Edit community form */}
                   {editingCommunity === c._id && (
                     <div className="mt-3 pt-3 border-t border-slate-100 space-y-3">
@@ -449,133 +520,163 @@ export default function SuperAdminPage() {
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Community Name *</label>
-                        <input value={editName} onChange={(e) => setEditName(e.target.value)} className={inputCls} />
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Community Name *</label>
+                        <input
+                          required value={editName} onChange={(e) => setEditName(e.target.value)}
+                          className={inputCls}
+                        />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Subdomain *</label>
-                        <div className="flex items-center space-x-2">
-                          <input
-                            value={editSubdomain}
-                            onChange={(e) => setEditSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
-                            className={`${inputCls} flex-1`}
-                          />
-                          <span className="text-xs font-semibold text-slate-400 whitespace-nowrap shrink-0">.communitycircle.com</span>
-                        </div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Subdomain *</label>
+                        <input
+                          required value={editSubdomain}
+                          onChange={(e) => setEditSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                          className={inputCls}
+                        />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Description</label>
-                        <input value={editDesc} onChange={(e) => setEditDesc(e.target.value)} className={inputCls} />
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Description</label>
+                        <input
+                          value={editDesc} onChange={(e) => setEditDesc(e.target.value)}
+                          className={inputCls}
+                        />
                       </div>
-                      <div className="flex items-center space-x-2">
+
+                      {/* Edit Cities */}
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                          Cities (Comma-separated dropdown options)
+                        </label>
+                        <input
+                          value={editCities} onChange={(e) => setEditCities(e.target.value)}
+                          placeholder="e.g. Ahmedabad, Rajkot, Surat, Jamnagar"
+                          className={inputCls}
+                        />
+                      </div>
+
+                      {/* Edit Gotras */}
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                          Gotras (Comma-separated dropdown options)
+                        </label>
+                        <input
+                          value={editGotras} onChange={(e) => setEditGotras(e.target.value)}
+                          placeholder="e.g. Kashyap, Vashishtha, Bharadwaj"
+                          className={inputCls}
+                        />
+                      </div>
+
+                      {/* Edit KulDevis */}
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                          KulDevis (Comma-separated dropdown options)
+                        </label>
+                        <input
+                          value={editKulDevis} onChange={(e) => setEditKulDevis(e.target.value)}
+                          placeholder="e.g. Ashapura Mata, Meldi Mata, Amba Mata"
+                          className={inputCls}
+                        />
+                      </div>
+
+                      <div className="flex space-x-2 pt-1">
                         <button
-                          onClick={() => setEditingCommunity(null)}
-                          className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-bold text-xs border-0 cursor-pointer transition-all"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={() => handleUpdateCommunity(c._id)}
-                          disabled={savingEdit || !editName.trim() || !editSubdomain.trim()}
+                          type="button" onClick={() => handleUpdateCommunity(c._id)} disabled={savingEdit}
                           className="flex-1 py-2.5 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white rounded-xl font-bold text-xs border-0 cursor-pointer transition-all"
                         >
                           {savingEdit ? "Saving…" : "Save Changes"}
                         </button>
+                        <button
+                          type="button" onClick={() => setEditingCommunity(null)}
+                          className="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-bold text-xs border-0 cursor-pointer transition-all"
+                        >
+                          Cancel
+                        </button>
                       </div>
                     </div>
                   )}
-
-                  {/* Stats row */}
-                  <div className="flex items-center space-x-4 mt-3 pt-3 border-t border-slate-50">
-                    <div className="flex items-center space-x-1.5 text-[10px] text-slate-500 font-semibold">
-                      <Users className="w-3.5 h-3.5" />
-                      <span>{c.admins.length} Admin{c.admins.length !== 1 ? "s" : ""}</span>
-                    </div>
-                    <div className="text-[10px] text-slate-400 font-medium">
-                      Created {new Date(c.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                    </div>
-                  </div>
                 </div>
 
-                {/* Admins list */}
-                {c.admins.length > 0 && (
-                  <div className="border-t border-slate-100 divide-y divide-slate-50">
-                    {c.admins.map((admin) => (
-                      <div key={admin._id} className="flex items-center justify-between px-4 py-2.5">
-                        <div className="flex items-center space-x-2.5">
-                          <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] font-black text-indigo-600 uppercase">
-                            {admin.name.charAt(0)}
-                          </div>
+                {/* Community admins list */}
+                <div className="bg-slate-50 p-4 border-t border-slate-100">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center space-x-1">
+                      <Users className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Community Admins ({c.admins?.length || 0})</span>
+                    </span>
+                    <button
+                      onClick={() => {
+                        if (expandedAdminForm === c._id) {
+                          setExpandedAdminForm(null);
+                        } else {
+                          setExpandedAdminForm(c._id);
+                          setAdminName(""); setAdminMobile(""); setAdminPassword(""); setAdminError(null);
+                        }
+                      }}
+                      className="text-xs font-bold text-violet-600 hover:text-violet-700 border-0 bg-transparent cursor-pointer flex items-center space-x-1"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add Admin</span>
+                    </button>
+                  </div>
+
+                  {c.admins && c.admins.length > 0 ? (
+                    <div className="space-y-1.5 mb-2">
+                      {c.admins.map((adm) => (
+                        <div key={adm._id} className="flex items-center justify-between bg-white px-3 py-2 rounded-xl border border-slate-200/60 text-xs">
                           <div>
-                            <p className="text-xs font-bold text-slate-700">{admin.name}</p>
-                            <p className="text-[10px] text-slate-400 font-medium">{admin.mobileNumber}</p>
+                            <span className="font-bold text-slate-800">{adm.name}</span>
+                            <span className="text-slate-400 ml-2 font-mono text-[11px]">{adm.mobileNumber}</span>
                           </div>
+                          <button
+                            onClick={() => handleRemoveAdmin(c._id, adm._id, adm.name)}
+                            className="text-red-400 hover:text-red-600 p-1 border-0 bg-transparent cursor-pointer"
+                            title="Remove admin"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-slate-400 italic mb-2">No admin credentials assigned yet.</p>
+                  )}
+
+                  {/* Add admin form for this community */}
+                  {expandedAdminForm === c._id && (
+                    <div className="bg-white p-3.5 rounded-2xl border border-violet-200 shadow-xs space-y-2.5 mt-2 animate-fade-in">
+                      <p className="text-[10px] font-bold text-violet-600 uppercase tracking-wider">New Admin Credentials</p>
+                      {adminError && (
+                        <p className="text-xs font-semibold text-red-600 bg-red-50 p-2 rounded-lg">{adminError}</p>
+                      )}
+                      <input
+                        placeholder="Admin Full Name *"
+                        value={adminName} onChange={(e) => setAdminName(e.target.value)}
+                        className={inputCls}
+                      />
+                      <input
+                        placeholder="Admin Mobile Number *"
+                        value={adminMobile} onChange={(e) => setAdminMobile(e.target.value)}
+                        className={inputCls}
+                      />
+                      <input
+                        type="password" placeholder="Admin Password *"
+                        value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)}
+                        className={inputCls}
+                      />
+                      <div className="flex space-x-2 pt-1">
                         <button
-                          onClick={() => handleRemoveAdmin(c._id, admin._id, admin.name)}
-                          className="p-1.5 text-slate-300 hover:text-red-400 hover:bg-red-50 rounded-lg transition-all border-0 cursor-pointer bg-transparent"
-                          title="Remove admin"
+                          onClick={() => handleAddAdmin(c._id)} disabled={addingAdmin}
+                          className="flex-1 py-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white rounded-xl font-bold text-xs border-0 cursor-pointer"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          {addingAdmin ? "Adding..." : "Save Admin Credentials"}
+                        </button>
+                        <button
+                          onClick={() => setExpandedAdminForm(null)}
+                          className="py-2 px-3 bg-slate-100 text-slate-600 rounded-xl font-bold text-xs border-0 cursor-pointer"
+                        >
+                          Cancel
                         </button>
                       </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Add Admin toggle */}
-                <div className="border-t border-slate-100">
-                  <button
-                    onClick={() => {
-                      setExpandedAdminForm(expandedAdminForm === c._id ? null : c._id);
-                      setAdminName(""); setAdminMobile(""); setAdminPassword(""); setAdminError(null);
-                    }}
-                    className="w-full flex items-center justify-center space-x-2 py-3 text-xs font-bold text-violet-600 hover:bg-violet-50 bg-transparent border-0 cursor-pointer transition-colors"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Add Admin</span>
-                  </button>
-
-                  {expandedAdminForm === c._id && (
-                    <div className="px-4 pb-4 space-y-3 border-t border-slate-100 pt-3">
-                      {adminError && (
-                        <div className="bg-red-50 border border-red-200 text-red-600 px-3 py-2.5 rounded-xl text-xs font-semibold leading-relaxed">
-                          {adminError}
-                        </div>
-                      )}
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Full Name *</label>
-                          <input
-                            placeholder="Admin name"
-                            value={adminName} onChange={(e) => setAdminName(e.target.value)}
-                            className={inputCls}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Mobile *</label>
-                          <input
-                            type="tel" placeholder="10-digit mobile"
-                            value={adminMobile} onChange={(e) => setAdminMobile(e.target.value)}
-                            className={inputCls}
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Password *</label>
-                        <input
-                          type="password" placeholder="Temporary password"
-                          value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)}
-                          className={inputCls}
-                        />
-                      </div>
-                      <button
-                        onClick={() => handleAddAdmin(c._id)}
-                        disabled={addingAdmin || !adminName || !adminMobile || !adminPassword}
-                        className="w-full py-2.5 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white rounded-xl font-bold text-xs border-0 cursor-pointer transition-all"
-                      >
-                        {addingAdmin ? "Adding…" : "Add Admin →"}
-                      </button>
                     </div>
                   )}
                 </div>

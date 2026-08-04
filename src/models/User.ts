@@ -25,6 +25,7 @@ export interface IUser extends Document {
   profession?: string;
   company?: string;
   role?: "super-admin" | "admin" | "member";
+  status?: "pending" | "approved" | "rejected";
   communityId?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -151,6 +152,11 @@ const UserSchema: Schema<IUser> = new Schema(
       enum: ["super-admin", "admin", "member"],
       default: "member",
     },
+    status: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
     communityId: {
       type: Schema.Types.ObjectId,
       ref: "Community",
@@ -160,6 +166,10 @@ const UserSchema: Schema<IUser> = new Schema(
     timestamps: true,
   }
 );
+
+if (mongoose.models.User && !mongoose.models.User.schema.path("status")) {
+  delete (mongoose.models as any).User;
+}
 
 export const User: Model<IUser> =
   mongoose.models.User || mongoose.model<IUser>("User", UserSchema);

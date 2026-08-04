@@ -3,13 +3,27 @@
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
-import { LogOut, User, Phone, ShieldAlert, Camera, Heart } from "lucide-react";
+import { LogOut, User, Phone, ShieldAlert, Camera, Heart, UserCheck } from "lucide-react";
 import { compressImage, checkFileSize } from "@/lib/imageCompression";
 import CommunityBrand from "@/components/CommunityBrand";
 
 export default function TopAppBar() {
   const { user, logout, updateUser } = useAuth();
   const [updating, setUpdating] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    if (user && (user.role === "admin" || user.role === "super-admin")) {
+      fetch(`/api/community/members?status=pending`, {
+        headers: { "x-caller-mobile": user.mobileNumber },
+      })
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.pendingCount !== undefined) setPendingCount(d.pendingCount);
+        })
+        .catch(() => {});
+    }
+  }, [user]);
 
   const handleEditAvatar = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -99,6 +113,9 @@ export default function TopAppBar() {
             alt="User Profile"
             className="w-full h-full object-cover"
           />
+          {pendingCount > 0 && (
+            <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-amber-500 rounded-full ring-2 ring-white animate-pulse" />
+          )}
           {updating && (
             <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -165,7 +182,25 @@ export default function TopAppBar() {
             </div>
 
             {/* Actions */}
-            <div className="pt-2">
+            <div className="pt-2 space-y-1">
+              {(user?.role === "admin" || user?.role === "super-admin") && (
+                <Link
+                  href={user.role === "super-admin" ? "/admin" : "/community-admin"}
+                  onClick={() => setDropdownOpen(false)}
+                  className="w-full flex items-center justify-between px-3 py-2 text-sm text-whatsapp-green hover:bg-emerald-50 rounded-xl transition-colors font-bold"
+                >
+                  <div className="flex items-center space-x-2.5">
+                    <UserCheck className="w-4 h-4 text-whatsapp-green" />
+                    <span>{user.role === "super-admin" ? "Super Admin Portal" : "Member Approvals"}</span>
+                  </div>
+                  {pendingCount > 0 && (
+                    <span className="bg-amber-500 text-white text-[10px] font-extrabold px-1.5 py-0.2 rounded-full">
+                      {pendingCount}
+                    </span>
+                  )}
+                </Link>
+              )}
+
               <button
                 onClick={() => {
                   setDropdownOpen(false);

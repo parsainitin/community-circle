@@ -260,6 +260,23 @@ export default function UserProfilePage() {
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
 
+  const [communityCities, setCommunityCities] = useState<string[]>([]);
+  const [communityGotras, setCommunityGotras] = useState<string[]>([]);
+  const [communityKulDevis, setCommunityKulDevis] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetch("/api/community/current")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.community) {
+          if (d.community.cities && d.community.cities.length > 0) setCommunityCities(d.community.cities);
+          if (d.community.gotras && d.community.gotras.length > 0) setCommunityGotras(d.community.gotras);
+          if (d.community.kulDevis && d.community.kulDevis.length > 0) setCommunityKulDevis(d.community.kulDevis);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const canEditProfile = () => {
     if (!currentUser || !profileUser) return false;
     if (currentUser._id === profileUser._id) return true;
@@ -1477,26 +1494,62 @@ export default function UserProfilePage() {
                   <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                     Gotra
                   </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Kashyap"
-                    value={editGotra}
-                    onChange={(e) => setEditGotra(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800"
-                  />
+                  {communityGotras.length > 0 ? (
+                    <select
+                      value={editGotra}
+                      onChange={(e) => setEditGotra(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800 cursor-pointer"
+                    >
+                      <option value="">— Select Gotra —</option>
+                      {communityGotras.map((g) => (
+                        <option key={g} value={g}>
+                          {g}
+                        </option>
+                      ))}
+                      {editGotra && !communityGotras.includes(editGotra) && (
+                        <option value={editGotra}>{editGotra}</option>
+                      )}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="e.g. Kashyap"
+                      value={editGotra}
+                      onChange={(e) => setEditGotra(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800"
+                    />
+                  )}
                 </div>
 
                 <div className="space-y-1">
                   <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                     KulDevi
                   </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Bijasan"
-                    value={editKulDevi}
-                    onChange={(e) => setEditKulDevi(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800"
-                  />
+                  {communityKulDevis.length > 0 ? (
+                    <select
+                      value={editKulDevi}
+                      onChange={(e) => setEditKulDevi(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800 cursor-pointer"
+                    >
+                      <option value="">— Select KulDevi —</option>
+                      {communityKulDevis.map((k) => (
+                        <option key={k} value={k}>
+                          {k}
+                        </option>
+                      ))}
+                      {editKulDevi && !communityKulDevis.includes(editKulDevi) && (
+                        <option value={editKulDevi}>{editKulDevi}</option>
+                      )}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="e.g. Bijasan"
+                      value={editKulDevi}
+                      onChange={(e) => setEditKulDevi(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800"
+                    />
+                  )}
                 </div>
               </div>
 
@@ -1519,14 +1572,33 @@ export default function UserProfilePage() {
                   <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                     City *
                   </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Indore"
-                    value={editCity}
-                    onChange={(e) => setEditCity(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800"
-                  />
+                  {communityCities.length > 0 ? (
+                    <select
+                      required
+                      value={editCity}
+                      onChange={(e) => setEditCity(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800 cursor-pointer"
+                    >
+                      <option value="">— Select City —</option>
+                      {communityCities.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                      {editCity && !communityCities.includes(editCity) && (
+                        <option value={editCity}>{editCity}</option>
+                      )}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Indore"
+                      value={editCity}
+                      onChange={(e) => setEditCity(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800"
+                    />
+                  )}
                 </div>
 
                 <div className="space-y-1">
