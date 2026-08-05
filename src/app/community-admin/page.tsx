@@ -27,6 +27,11 @@ import {
   Home,
   User,
   Download,
+  Upload,
+  FileSpreadsheet,
+  FileText,
+  Sparkles,
+  Plus,
 } from "lucide-react";
 
 interface Member {
@@ -229,6 +234,176 @@ export default function CommunityAdminPage() {
     URL.revokeObjectURL(url);
   };
 
+  // Bulk Upload States
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
+  const [bulkFile, setBulkFile] = useState<File | null>(null);
+  const [parsedRows, setParsedRows] = useState<any[]>([]);
+  const [bulkUploading, setBulkUploading] = useState(false);
+  const [bulkResult, setBulkResult] = useState<{ addedCount: number; skippedCount: number; errors: string[] } | null>(null);
+
+  const downloadCSVTemplate = () => {
+    const headers = [
+      "Name",
+      "Mobile Number",
+      "City",
+      "Village",
+      "Address",
+      "Gotra",
+      "KulDevi",
+      "Age",
+      "Sex",
+      "Marital Status",
+      "Blood Group",
+      "Education",
+      "Institution",
+      "Occupation Type",
+      "Profession",
+      "Company",
+    ];
+
+    const sampleRow1 = [
+      '"Rajesh Sharma"',
+      '"9876543210"',
+      '"Indore"',
+      '"Ashta"',
+      '"123 M.G. Road"',
+      '"Kashyap"',
+      '"Bijasan"',
+      '"35"',
+      '"Male"',
+      '"Married"',
+      '"B+"',
+      '"B.Tech"',
+      '"IIT Indore"',
+      '"Business"',
+      '"Entrepreneur"',
+      '"Sharma Enterprises"',
+    ];
+
+    const sampleRow2 = [
+      '"Priya Verma"',
+      '"9876543211"',
+      '"Bhopal"',
+      '"Sehore"',
+      '"45 Park Street"',
+      '"Vatsa"',
+      '"Bhavani"',
+      '"28"',
+      '"Female"',
+      '"Single"',
+      '"O+"',
+      '"M.Sc"',
+      '"Bhopal University"',
+      '"Service"',
+      '"Software Engineer"',
+      '"TCS"',
+    ];
+
+    const csvContent = [headers.join(","), sampleRow1.join(","), sampleRow2.join(",")].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `community_members_upload_template.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const parseCSVText = (text: string) => {
+    const lines = text.split(/\r\n|\n/);
+    if (lines.length <= 1) return [];
+
+    const parseCSVLine = (line: string): string[] => {
+      const result: string[] = [];
+      let current = "";
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          result.push(current.trim());
+          current = "";
+        } else {
+          current += char;
+        }
+      }
+      result.push(current.trim());
+      return result.map((col) => col.replace(/^"|"$/g, "").trim());
+    };
+
+    const headers = parseCSVLine(lines[0]);
+    const rows: any[] = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      const values = parseCSVLine(line);
+      const rowObj: Record<string, string> = {};
+      headers.forEach((h, idx) => {
+        if (h) {
+          rowObj[h] = values[idx] || "";
+        }
+      });
+      rows.push(rowObj);
+    }
+    return rows;
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBulkFile(file);
+    setBulkResult(null);
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const text = evt.target?.result as string;
+      if (text) {
+        const rows = parseCSVText(text);
+        setParsedRows(rows);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleConfirmBulkUpload = async () => {
+    if (!user || parsedRows.length === 0) return;
+    setBulkUploading(true);
+    try {
+      const res = await fetch("/api/community/members/bulk-upload", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-caller-mobile": user.mobileNumber,
+        },
+        body: JSON.stringify({
+          callerMobile: user.mobileNumber,
+          membersData: parsedRows,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setBulkResult({
+          addedCount: data.addedCount,
+          skippedCount: data.skippedCount,
+          errors: data.errors || [],
+        });
+        showToast(`🎉 Bulk import finished: ${data.addedCount} members added!`);
+        fetchMembers();
+      } else {
+        alert(data.error || "Failed to bulk upload members");
+      }
+    } catch {
+      alert("Network error during bulk upload");
+    } finally {
+      setBulkUploading(false);
+    }
+  };
+
   const getParentName = (m: Member): string | null => {
     if (!m.parent) return null;
     if (typeof m.parent === "object" && m.parent.name) {
@@ -325,8 +500,8 @@ export default function CommunityAdminPage() {
 
       {/* Main Body */}
       <div className="p-4 flex-1 flex flex-col space-y-4">
-        {/* Search Input & CSV Export Button */}
-        <div className="flex items-center space-x-2">
+        {/* Search Input & Action Buttons */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <div className="flex-1 bg-white rounded-2xl p-2.5 shadow-xs border border-slate-200/80 flex items-center space-x-2">
             <Search className="w-4.5 h-4.5 text-slate-400 shrink-0 ml-1.5" />
             <input
@@ -338,15 +513,40 @@ export default function CommunityAdminPage() {
             />
           </div>
 
-          <button
-            onClick={exportToCSV}
-            disabled={filteredMembers.length === 0}
-            title="Download Filtered Members as CSV"
-            className="py-2.5 px-3 bg-whatsapp-green hover:bg-emerald-700 text-white font-extrabold text-xs rounded-2xl shadow-xs transition-all flex items-center space-x-1.5 border-0 cursor-pointer disabled:opacity-40 shrink-0 active:scale-95"
-          >
-            <Download className="w-4 h-4" />
-            <span className="hidden sm:inline">Export CSV</span>
-          </button>
+          <div className="flex items-center space-x-2 shrink-0">
+            <button
+              onClick={downloadCSVTemplate}
+              title="Download Ready-to-Fill Excel/CSV Upload Template"
+              className="flex-1 sm:flex-none py-2.5 px-3 bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-xs rounded-2xl shadow-xs transition-all flex items-center justify-center space-x-1.5 border-0 cursor-pointer active:scale-95"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              <span>Download Template</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setBulkModalOpen(true);
+                setBulkFile(null);
+                setParsedRows([]);
+                setBulkResult(null);
+              }}
+              title="Bulk Import Members via CSV/Excel"
+              className="flex-1 sm:flex-none py-2.5 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-2xl shadow-xs transition-all flex items-center justify-center space-x-1.5 border-0 cursor-pointer active:scale-95"
+            >
+              <Upload className="w-4 h-4" />
+              <span>Bulk Upload</span>
+            </button>
+
+            <button
+              onClick={exportToCSV}
+              disabled={filteredMembers.length === 0}
+              title="Download Filtered Members as CSV"
+              className="py-2.5 px-3 bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-xs rounded-2xl shadow-xs transition-all flex items-center space-x-1.5 border-0 cursor-pointer disabled:opacity-40 shrink-0 active:scale-95"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">Export</span>
+            </button>
+          </div>
         </div>
 
         {/* Error State */}
@@ -839,6 +1039,136 @@ export default function CommunityAdminPage() {
               )}
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* BULK UPLOAD MEMBERS MODAL */}
+      {bulkModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-lg rounded-3xl p-5 shadow-2xl border border-slate-100 flex flex-col space-y-4 max-h-[85vh] overflow-y-auto select-none animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+              <div className="flex items-center space-x-2 text-indigo-700 font-extrabold text-sm">
+                <Upload className="w-5 h-5" />
+                <h3>Bulk Upload Community Members</h3>
+              </div>
+              <button
+                onClick={() => setBulkModalOpen(false)}
+                className="p-1 hover:bg-slate-100 rounded-full cursor-pointer bg-transparent border-0 text-slate-400"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Instruction Banner */}
+            <div className="bg-amber-50 border border-amber-200/80 rounded-2xl p-3.5 space-y-1 text-xs text-amber-900 font-medium">
+              <div className="flex items-center space-x-1.5 font-extrabold text-amber-950">
+                <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>Bulk Import Rules & Password Strategy</span>
+              </div>
+              <p className="text-[11px] text-amber-800 leading-relaxed">
+                1. Download our ready-to-fill <strong>CSV Template</strong> to populate member rows.<br />
+                2. <strong>No Password Column Required:</strong> All bulk uploaded members will receive the default secure password (<code>Community123</code>) and can reset it anytime via Forgot Password.<br />
+                3. Members uploaded by Admin are automatically set to <strong>Approved</strong>.
+              </p>
+              <button
+                type="button"
+                onClick={downloadCSVTemplate}
+                className="mt-2 py-1.5 px-3 bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-[11px] rounded-xl shadow-xs transition-all flex items-center space-x-1 border-0 cursor-pointer"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                <span>📥 Download Sample CSV Template</span>
+              </button>
+            </div>
+
+            {/* File Dropzone */}
+            <div className="border-2 border-dashed border-indigo-200 hover:border-indigo-500 bg-indigo-50/40 rounded-2xl p-4 text-center space-y-2 transition-all">
+              <input
+                type="file"
+                accept=".csv"
+                id="bulk-csv-input"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              <label htmlFor="bulk-csv-input" className="cursor-pointer block space-y-2">
+                <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto shadow-2xs">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-indigo-700 block">
+                    {bulkFile ? bulkFile.name : "Click to select or drop CSV file"}
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-medium">Supports .csv files</span>
+                </div>
+              </label>
+            </div>
+
+            {/* Parsed Rows Preview */}
+            {parsedRows.length > 0 && (
+              <div className="space-y-2 border-t border-slate-100 pt-3">
+                <div className="flex items-center justify-between text-xs font-black text-slate-800">
+                  <span>Parsed Members Preview ({parsedRows.length} rows)</span>
+                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    Ready to Upload
+                  </span>
+                </div>
+
+                <div className="max-h-48 overflow-y-auto border border-slate-200 rounded-2xl divide-y divide-slate-100 no-scrollbar">
+                  {parsedRows.slice(0, 10).map((r, idx) => (
+                    <div key={idx} className="p-2 bg-slate-50 text-[11px] flex justify-between items-center">
+                      <div className="truncate pr-2">
+                        <span className="font-bold text-slate-800">{r.Name || r.name || "Unnamed"}</span>
+                        <span className="text-[10px] text-slate-400 block font-mono">{r["Mobile Number"] || r.mobileNumber} &bull; {r.City || r.city}</span>
+                      </div>
+                      <span className="text-[9px] font-extrabold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-lg border border-indigo-100 shrink-0">
+                        Row #{idx + 1}
+                      </span>
+                    </div>
+                  ))}
+                  {parsedRows.length > 10 && (
+                    <div className="p-2 bg-slate-100 text-center text-[10px] text-slate-500 font-bold">
+                      + {parsedRows.length - 10} more rows ready
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleConfirmBulkUpload}
+                  disabled={bulkUploading}
+                  className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 active:scale-98 text-white font-extrabold text-xs rounded-2xl shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer border-0 disabled:opacity-50 mt-2"
+                >
+                  {bulkUploading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Importing Members...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4" />
+                      <span>Confirm & Upload {parsedRows.length} Members</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+
+            {/* Upload Results Log */}
+            {bulkResult && (
+              <div className="p-3.5 bg-slate-900 text-white rounded-2xl text-xs space-y-2 border border-slate-800 animate-in fade-in">
+                <div className="flex items-center justify-between font-extrabold">
+                  <span className="text-emerald-400">✅ Import Summary:</span>
+                  <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded-md">{bulkResult.addedCount} Added / {bulkResult.skippedCount} Skipped</span>
+                </div>
+                {bulkResult.errors.length > 0 && (
+                  <div className="max-h-28 overflow-y-auto text-[10px] text-red-300 font-mono space-y-0.5 bg-black/40 p-2 rounded-xl border border-white/10">
+                    {bulkResult.errors.map((err, i) => (
+                      <div key={i}>• {err}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
