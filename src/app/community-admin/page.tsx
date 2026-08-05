@@ -444,13 +444,28 @@ export default function CommunityAdminPage() {
               </p>
             </div>
           </div>
-          <button
-            onClick={fetchMembers}
-            className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors border-0 text-white cursor-pointer"
-            title="Refresh list"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => {
+                setBulkModalOpen(true);
+                setBulkFile(null);
+                setParsedRows([]);
+                setBulkResult(null);
+              }}
+              className="py-1.5 px-3 bg-white/20 hover:bg-white/30 rounded-xl transition-all border-0 text-white font-extrabold text-xs flex items-center space-x-1 cursor-pointer active:scale-95 shadow-xs"
+              title="Bulk Import Members via CSV/Excel"
+            >
+              <Upload className="w-4 h-4" />
+              <span>Bulk Upload</span>
+            </button>
+            <button
+              onClick={fetchMembers}
+              className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors border-0 text-white cursor-pointer"
+              title="Refresh list"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+            </button>
+          </div>
         </div>
 
         {/* Tab Navigation */}
@@ -500,6 +515,45 @@ export default function CommunityAdminPage() {
 
       {/* Main Body */}
       <div className="p-4 flex-1 flex flex-col space-y-4">
+        {/* 📤 BULK UPLOAD QUICK ACCESS BANNER */}
+        <div className="bg-gradient-to-r from-indigo-900 via-indigo-800 to-indigo-950 text-white rounded-3xl p-4 shadow-md border border-indigo-700/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-white/10 rounded-2xl flex items-center justify-center shrink-0 border border-white/10">
+              <Upload className="w-5 h-5 text-indigo-300" />
+            </div>
+            <div>
+              <h3 className="text-xs font-black text-white flex items-center space-x-2">
+                <span>Bulk Upload Members (CSV / Excel)</span>
+                <span className="bg-emerald-500/30 text-emerald-300 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full border border-emerald-400/30">Auto Password</span>
+              </h3>
+              <p className="text-[11px] text-indigo-200 font-medium mt-0.5 leading-snug">
+                Upload entire member database at once using our CSV template without specifying passwords.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2 shrink-0 w-full sm:w-auto">
+            <button
+              onClick={downloadCSVTemplate}
+              className="flex-1 sm:flex-none py-2 px-3 bg-white/15 hover:bg-white/25 text-white font-extrabold text-[11px] rounded-xl transition-all border border-white/20 flex items-center justify-center space-x-1 cursor-pointer active:scale-95"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-amber-300" />
+              <span>Download Template</span>
+            </button>
+            <button
+              onClick={() => {
+                setBulkModalOpen(true);
+                setBulkFile(null);
+                setParsedRows([]);
+                setBulkResult(null);
+              }}
+              className="flex-1 sm:flex-none py-2 px-3.5 bg-indigo-500 hover:bg-indigo-600 text-white font-black text-[11px] rounded-xl shadow-xs transition-all flex items-center justify-center space-x-1 cursor-pointer active:scale-95 border-0"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              <span>Bulk Upload</span>
+            </button>
+          </div>
+        </div>
+
         {/* Search Input & Action Buttons */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <div className="flex-1 bg-white rounded-2xl p-2.5 shadow-xs border border-slate-200/80 flex items-center space-x-2">
