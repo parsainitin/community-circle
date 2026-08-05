@@ -19,7 +19,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
     await dbConnect();
     const { id } = await params;
-    const { callerMobile, name, subdomain, description, logo, cities, gotras, kulDevis } = await request.json();
+    const { callerMobile, name, subdomain, description, logo, cities, gotras, kulDevis, upiId } = await request.json();
 
     if (!(await assertSuperAdmin(callerMobile))) {
       return Response.json({ error: "Forbidden" }, { status: 403 });
@@ -49,6 +49,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (Array.isArray(cities)) community.cities = cities.map((c: string) => c.trim()).filter(Boolean);
     if (Array.isArray(gotras)) community.gotras = gotras.map((g: string) => g.trim()).filter(Boolean);
     if (Array.isArray(kulDevis)) community.kulDevis = kulDevis.map((k: string) => k.trim()).filter(Boolean);
+    if (typeof upiId === "string") community.upiId = upiId.trim() || undefined;
     await community.save();
 
     return Response.json(community);

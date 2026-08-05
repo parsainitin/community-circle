@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
 
     const community = await Community.findOne({ isActive: true })
       .sort({ createdAt: 1 })
-      .select("name subdomain logo description cities gotras kulDevis")
+      .select("name subdomain logo description cities gotras kulDevis upiId")
       .lean();
 
     if (community) {

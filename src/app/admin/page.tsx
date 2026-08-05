@@ -19,6 +19,7 @@ interface Community {
   cities?: string[];
   gotras?: string[];
   kulDevis?: string[];
+  upiId?: string;
   admins: AdminUser[];
   isActive: boolean;
   createdAt: string;
@@ -37,6 +38,7 @@ export default function SuperAdminPage() {
   const [newName, setNewName] = useState("");
   const [newSubdomain, setNewSubdomain] = useState("");
   const [newDesc, setNewDesc] = useState("");
+  const [newUpiId, setNewUpiId] = useState("");
   const [newCities, setNewCities] = useState("Ahmedabad, Rajkot, Surat, Jamnagar, Vadodara, Mumbai, Pune, Delhi");
   const [newGotras, setNewGotras] = useState("Kashyap, Vashishtha, Bharadwaj, Garg, Gautam, Parashar, Shandilya");
   const [newKulDevis, setNewKulDevis] = useState("Ashapura Mata, Meldi Mata, Amba Mata, Harsiddhi Mata, Bahuchar Mata, Chamunda Mata");
@@ -58,6 +60,7 @@ export default function SuperAdminPage() {
   const [editName, setEditName] = useState("");
   const [editSubdomain, setEditSubdomain] = useState("");
   const [editDesc, setEditDesc] = useState("");
+  const [editUpiId, setEditUpiId] = useState("");
   const [editCities, setEditCities] = useState("");
   const [editGotras, setEditGotras] = useState("");
   const [editKulDevis, setEditKulDevis] = useState("");
@@ -117,11 +120,12 @@ export default function SuperAdminPage() {
           cities: newCities ? newCities.split(",").map((s) => s.trim()).filter(Boolean) : [],
           gotras: newGotras ? newGotras.split(",").map((s) => s.trim()).filter(Boolean) : [],
           kulDevis: newKulDevis ? newKulDevis.split(",").map((s) => s.trim()).filter(Boolean) : [],
+          upiId: newUpiId.trim() || undefined,
         }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error); return; }
-      setNewName(""); setNewSubdomain(""); setNewDesc("");
+      setNewName(""); setNewSubdomain(""); setNewDesc(""); setNewUpiId("");
       setLogoFile(null); setLogoPreview(null);
       setShowCreateForm(false);
       showToast(`✅ Community "${data.name}" created!`);
@@ -177,6 +181,7 @@ export default function SuperAdminPage() {
     setEditName(c.name);
     setEditSubdomain(c.subdomain);
     setEditDesc(c.description || "");
+    setEditUpiId(c.upiId || "");
     setEditCities((c.cities || []).join(", "));
     setEditGotras((c.gotras || []).join(", "));
     setEditKulDevis((c.kulDevis || []).join(", "));
@@ -211,6 +216,7 @@ export default function SuperAdminPage() {
           cities: editCities ? editCities.split(",").map((s) => s.trim()).filter(Boolean) : [],
           gotras: editGotras ? editGotras.split(",").map((s) => s.trim()).filter(Boolean) : [],
           kulDevis: editKulDevis ? editKulDevis.split(",").map((s) => s.trim()).filter(Boolean) : [],
+          upiId: editUpiId.trim(),
         }),
       });
       const data = await res.json();
@@ -407,6 +413,18 @@ export default function SuperAdminPage() {
                 />
               </div>
 
+              {/* Donation UPI ID Config */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  💳 Community UPI ID for Member Donations (e.g. vyanamics@upi)
+                </label>
+                <input
+                  placeholder="e.g. community@upi or 9876543210@ybl"
+                  value={newUpiId} onChange={(e) => setNewUpiId(e.target.value)}
+                  className={inputCls}
+                />
+              </div>
+
               <button
                 type="submit" disabled={creating}
                 className="w-full py-3 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white rounded-xl font-bold text-sm border-0 cursor-pointer transition-all"
@@ -583,6 +601,18 @@ export default function SuperAdminPage() {
                         <input
                           value={editKulDevis} onChange={(e) => setEditKulDevis(e.target.value)}
                           placeholder="e.g. Ashapura Mata, Meldi Mata, Amba Mata"
+                          className={inputCls}
+                        />
+                      </div>
+
+                      {/* Edit UPI ID */}
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                          💳 Community UPI ID for Member Donations
+                        </label>
+                        <input
+                          value={editUpiId} onChange={(e) => setEditUpiId(e.target.value)}
+                          placeholder="e.g. community@upi or 9876543210@ybl"
                           className={inputCls}
                         />
                       </div>

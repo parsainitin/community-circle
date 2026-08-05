@@ -167,9 +167,23 @@ export default function HelpSupportPage() {
 
   const presetAmounts = ["100", "500", "1000", "5000"];
 
+  const [community, setCommunity] = useState<{ name?: string; upiId?: string } | null>(null);
+  const [copiedUpi, setCopiedUpi] = useState(false);
+
   useEffect(() => {
     fetchDonationReport();
+    fetchCommunityDetails();
   }, []);
+
+  const fetchCommunityDetails = async () => {
+    try {
+      const res = await fetch("/api/community/current");
+      if (res.ok) {
+        const data = await res.json();
+        setCommunity(data.community);
+      }
+    } catch {}
+  };
 
   const fetchDonationReport = async () => {
     try {
@@ -183,6 +197,12 @@ export default function HelpSupportPage() {
     } finally {
       setLoadingReport(false);
     }
+  };
+
+  const handleCopyUpi = (upiId: string) => {
+    navigator.clipboard.writeText(upiId);
+    setCopiedUpi(true);
+    setTimeout(() => setCopiedUpi(false), 2000);
   };
 
   const getActiveAmount = () => {
@@ -456,6 +476,45 @@ export default function HelpSupportPage() {
               आपका योगदान सीधे तौर पर हमारे डेटाबेस स्टोरेज, एपीआई इंटीग्रेशन और हमारे पारिवारिक इतिहास (Lineages) व बाजार कनेक्शनों (Marketplace) को सुरक्षित रखने के लिए मदद करता है! ❤️
             </p>
           </div>
+
+          {/* Community Official UPI Payment Card */}
+          {community?.upiId && (
+            <div className="bg-gradient-to-br from-emerald-700 to-teal-800 rounded-3xl p-5 text-white shadow-md space-y-3.5 select-none border border-emerald-600/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <span className="text-xl">💳</span>
+                  <h3 className="font-extrabold text-sm tracking-wide">Direct UPI Donation</h3>
+                </div>
+                <span className="bg-white/20 text-[10px] font-bold px-2 py-0.5 rounded-full text-emerald-100 uppercase tracking-wider">
+                  Official UPI
+                </span>
+              </div>
+
+              <div className="bg-black/20 backdrop-blur-xs rounded-2xl p-3.5 border border-white/10 flex items-center justify-between">
+                <div className="space-y-0.5 min-w-0">
+                  <span className="text-[10px] text-emerald-200 uppercase font-bold tracking-wider">Community UPI ID</span>
+                  <p className="font-mono font-black text-sm text-white truncate tracking-wider">
+                    {community.upiId}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleCopyUpi(community.upiId!)}
+                  className="px-3 py-1.5 bg-white hover:bg-emerald-50 text-emerald-900 rounded-xl font-bold text-xs shadow-xs transition-all active:scale-95 border-0 cursor-pointer shrink-0"
+                >
+                  {copiedUpi ? "✅ Copied!" : "📋 Copy UPI"}
+                </button>
+              </div>
+
+              {/* Direct Launch UPI App Button */}
+              <a
+                href={`upi://pay?pa=${encodeURIComponent(community.upiId)}&pn=${encodeURIComponent(community.name || "Community Welfare")}&cu=INR${getActiveAmount() ? `&am=${getActiveAmount()}` : ""}`}
+                className="w-full py-3 bg-white hover:bg-emerald-50 active:scale-[0.98] text-emerald-950 font-black text-xs rounded-2xl shadow-md transition-all flex items-center justify-center space-x-2 no-underline cursor-pointer"
+              >
+                <span>⚡ Pay ₹{getActiveAmount()} via GPay / PhonePe / Paytm</span>
+              </a>
+            </div>
+          )}
 
           {/* Donation Form Card */}
           {!paymentSuccess ? (

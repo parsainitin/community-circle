@@ -9,6 +9,7 @@ export interface ICommunity extends Document {
   gotras?: string[];
   kulDevis?: string[];
   passwordResetKey?: string;
+  upiId?: string;
   admins: mongoose.Types.ObjectId[];
   isActive: boolean;
   createdAt: Date;
@@ -32,13 +33,18 @@ const CommunitySchema: Schema<ICommunity> = new Schema(
     gotras: [{ type: String, trim: true }],
     kulDevis: [{ type: String, trim: true }],
     passwordResetKey: { type: String, trim: true, default: "RESET123" },
+    upiId: { type: String, trim: true },
     admins: [{ type: Schema.Types.ObjectId, ref: "User" }],
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }
 );
 
-if (mongoose.models.Community && !mongoose.models.Community.schema.path("cities")) {
+if (
+  mongoose.models.Community &&
+  (!mongoose.models.Community.schema.path("cities") ||
+   !mongoose.models.Community.schema.path("upiId"))
+) {
   delete (mongoose.models as any).Community;
 }
 
