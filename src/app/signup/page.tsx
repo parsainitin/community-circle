@@ -169,6 +169,12 @@ export default function SignupPage() {
     );
   };
 
+  // Parent Member Search States (On-demand searchable dropdown)
+  const [parentSearchQuery, setParentSearchQuery] = useState("");
+  const [parentSearchResults, setParentSearchResults] = useState<{ _id: string; name: string; mobileNumber: string; city?: string }[]>([]);
+  const [isSearchingParent, setIsSearchingParent] = useState(false);
+  const [selectedParentObj, setSelectedParentObj] = useState<{ _id: string; name: string; mobileNumber: string; city?: string } | null>(null);
+
   useEffect(() => {
     fetch("/api/community/current")
       .then((r) => r.json())
@@ -182,32 +188,26 @@ export default function SignupPage() {
       .catch(() => {});
   }, []);
 
+  // Debounced parent member search
   useEffect(() => {
-    fetch("/api/users")
-      .then((r) => r.json())
-      .then((d) => {
-        const filtered = (d || []).filter((u: { role?: string }) => u.role !== "super-admin");
-        setUsersList(filtered);
-
-        const vSet = new Set<string>();
-        const gSet = new Set<string>();
-        const kSet = new Set<string>();
-        const cSet = new Set<string>();
-
-        (d || []).forEach((u: { village?: string; gotra?: string; kulDevi?: string; city?: string }) => {
-          if (u.village && u.village.trim()) vSet.add(u.village.trim());
-          if (u.gotra && u.gotra.trim()) gSet.add(u.gotra.trim());
-          if (u.kulDevi && u.kulDevi.trim()) kSet.add(u.kulDevi.trim());
-          if (u.city && u.city.trim()) cSet.add(u.city.trim());
-        });
-
-        setExistingVillages(Array.from(vSet));
-        setCommunityGotras((prev) => Array.from(new Set([...prev, ...Array.from(gSet)])));
-        setCommunityKulDevis((prev) => Array.from(new Set([...prev, ...Array.from(kSet)])));
-        setCommunityCities((prev) => Array.from(new Set([...prev, ...Array.from(cSet)])));
-      })
-      .catch(() => {});
-  }, []);
+    if (!parentSearchQuery.trim()) {
+      setParentSearchResults([]);
+      setIsSearchingParent(false);
+      return;
+    }
+    setIsSearchingParent(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/users?query=${encodeURIComponent(parentSearchQuery.trim())}`);
+        if (res.ok) {
+          const data = await res.json();
+          setParentSearchResults(data || []);
+        }
+      } catch {}
+      setIsSearchingParent(false);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [parentSearchQuery]);
 
   // Pre-fill password with last 5 digits of mobile when the user reaches step 8
   useEffect(() => {
@@ -245,6 +245,20 @@ export default function SignupPage() {
         setAddressSameAsParent(true);
       }
     } catch {}
+  };
+
+  const handleSelectParentMember = (member: { _id: string; name: string; mobileNumber: string; city?: string }) => {
+    setSelectedParentObj(member);
+    setParentSearchQuery("");
+    setParentSearchResults([]);
+    handleParentChange(member._id);
+  };
+
+  const handleRemoveParentMember = () => {
+    setSelectedParentObj(null);
+    setParentSearchQuery("");
+    setParentSearchResults([]);
+    handleParentChange("");
   };
 
   const navigate = (newStep: number, dir: "forward" | "back") => {
@@ -483,18 +497,89 @@ export default function SignupPage() {
           {step === 0 && (
             <>
               <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Select Parent Member</label>
-                <select
-                  value={parentId} onChange={(e) => handleParentChange(e.target.value)}
-                  className={`${inputBase} cursor-pointer`}
-                >
-                  <option value="">— Skip (No Parent Link) —</option>
-                  {usersList.map((u) => (
-                    <option key={u._id} value={u._id}>
-                      {u.name} ({u.mobileNumber})
-                    </option>
-                  ))}
-                </select>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                  Search & Link Family Member
+                </label>
+
+                {selectedParentObj ? (
+                  /* Selected Parent Card */
+                  <div className="bg-white rounded-2xl p-4 border-2 border-orange-200 shadow-xs flex items-center justify-between">
+                    <div className="flex items-center space-x-3 min-w-0">
+                      <div className="w-10 h-10 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-black text-sm shrink-0">
+                        👤
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="text-xs font-black text-slate-800 truncate">{selectedParentObj.name}</h4>
+                        <p className="text-[10px] font-bold text-slate-500 font-mono">
+                          📱 {selectedParentObj.mobileNumber} {selectedParentObj.city ? `• ${selectedParentObj.city}` : ""}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRemoveParentMember}
+                      className="p-1.5 bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-600 rounded-xl transition-all border-0 cursor-pointer text-xs font-bold shrink-0 ml-2"
+                      title="Remove parent link"
+                    >
+                      ✕ Remove
+                    </button>
+                  </div>
+                ) : (
+                  /* Search Input & Live Results Dropdown */
+                  <div className="relative">
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={parentSearchQuery}
+                        onChange={(e) => setParentSearchQuery(e.target.value)}
+                        placeholder="🔍 Search member by name, mobile, or city..."
+                        className={`${inputBase} pr-10`}
+                      />
+                      {isSearchingParent && (
+                        <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold animate-pulse">
+                          Searching…
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Search Results Dropdown List */}
+                    {parentSearchQuery.trim() !== "" && (
+                      <div className="absolute left-0 right-0 top-full mt-1.5 bg-white rounded-2xl border border-slate-200 shadow-xl max-h-60 overflow-y-auto z-40 p-1.5 space-y-1">
+                        {isSearchingParent ? (
+                          <div className="p-3 text-center text-xs font-semibold text-slate-400">
+                            Searching community members…
+                          </div>
+                        ) : parentSearchResults.length === 0 ? (
+                          <div className="p-3 text-center text-xs font-semibold text-slate-400">
+                            No members found matching &quot;{parentSearchQuery}&quot;
+                          </div>
+                        ) : (
+                          parentSearchResults.map((m) => (
+                            <div
+                              key={m._id}
+                              onClick={() => handleSelectParentMember(m)}
+                              className="p-2.5 hover:bg-orange-50 rounded-xl cursor-pointer transition-colors flex items-center justify-between text-xs border border-transparent hover:border-orange-100"
+                            >
+                              <div className="min-w-0">
+                                <p className="font-extrabold text-slate-800 truncate">{m.name}</p>
+                                <p className="text-[10px] text-slate-500 font-mono">
+                                  📱 {m.mobileNumber} {m.city ? `• ${m.city}` : ""}
+                                </p>
+                              </div>
+                              <span className="text-[10px] font-bold text-orange-600 bg-orange-100 px-2 py-0.5 rounded-md shrink-0">
+                                + Select
+                              </span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+
+                    <p className="text-[10px] text-slate-400 font-medium mt-1.5 leading-relaxed">
+                      Optional: Search and link to your parent or spouse to build your family tree. If skipping, leave blank.
+                    </p>
+                  </div>
+                )}
               </div>
               {parentId && (
                 <>

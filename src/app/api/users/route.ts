@@ -35,11 +35,23 @@ export async function GET(request: NextRequest) {
       filter.$or = [{ communityId }, { _id: { $in: adminUserIds } }];
     }
 
-    if (query) {
-      filter.name = { $regex: query, $options: "i" };
+    if (query && query.trim()) {
+      const qRegex = { $regex: query.trim(), $options: "i" };
+      if (filter.$or) {
+        filter.$and = [
+          { $or: filter.$or },
+          { $or: [{ name: qRegex }, { mobileNumber: qRegex }, { city: qRegex }, { village: qRegex }] },
+        ];
+        delete filter.$or;
+      } else {
+        filter.$or = [{ name: qRegex }, { mobileNumber: qRegex }, { city: qRegex }, { village: qRegex }];
+      }
     }
 
-    const users = await User.find(filter).populate("familyMembers", "name phone");
+    const users = await User.find(filter)
+      .select("name mobileNumber phone city address village gotra kulDevi avatar role status")
+      .limit(query ? 20 : 100)
+      .lean();
     return Response.json(users);
   } catch (error: any) {
     return Response.json({ error: error.message || "Internal Server Error" }, { status: 500 });
