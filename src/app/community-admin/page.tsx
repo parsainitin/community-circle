@@ -32,6 +32,7 @@ import {
   FileText,
   Sparkles,
   Plus,
+  Trash2,
 } from "lucide-react";
 
 interface Member {
@@ -160,6 +161,42 @@ export default function CommunityAdminPage() {
       }
     } catch {
       alert(`Network error trying to ${action} member`);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleDeleteMember = async (memberId: string, memberName: string) => {
+    if (!user) return;
+    if (
+      !confirm(
+        `⚠️ Are you sure you want to PERMANENTLY delete member "${memberName}"?\n\nThis action will remove the user account and member details permanently.`
+      )
+    ) {
+      return;
+    }
+
+    setProcessingId(memberId);
+    try {
+      const res = await fetch(`/api/users/${memberId}`, {
+        method: "DELETE",
+        headers: {
+          "x-caller-mobile": user.mobileNumber,
+        },
+      });
+
+      if (res.ok) {
+        showToast(`🗑️ Member ${memberName} deleted successfully!`);
+        if (inspectMember && inspectMember._id === memberId) {
+          setInspectMember(null);
+        }
+        fetchMembers();
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to delete member");
+      }
+    } catch {
+      alert("Network error while trying to delete member");
     } finally {
       setProcessingId(null);
     }
@@ -806,6 +843,16 @@ export default function CommunityAdminPage() {
                         <Check className="w-4.5 h-4.5 stroke-[2.5]" />
                       </button>
                     )}
+
+                    {/* Delete Member Button */}
+                    <button
+                      onClick={() => handleDeleteMember(member._id, member.name)}
+                      disabled={processingId === member._id}
+                      className="w-8.5 h-8.5 rounded-xl bg-red-600 hover:bg-red-700 active:scale-90 text-white shadow-xs flex items-center justify-center transition-all border-0 cursor-pointer disabled:opacity-40"
+                      title="Permanently Delete Member"
+                    >
+                      <Trash2 className="w-4.5 h-4.5" />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1092,12 +1139,23 @@ export default function CommunityAdminPage() {
                 <button
                   onClick={() => handleApprovalAction(inspectMember._id, "approve")}
                   disabled={processingId === inspectMember._id}
-                  className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-2xl shadow-sm transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50 active:scale-95"
+                  className="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-2xl shadow-sm transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50 active:scale-95 border-0"
                 >
                   <Check className="w-4.5 h-4.5 stroke-[2.5]" />
                   <span>Approve Member</span>
                 </button>
               )}
+
+              {/* Permanently Delete Member */}
+              <button
+                onClick={() => handleDeleteMember(inspectMember._id, inspectMember.name)}
+                disabled={processingId === inspectMember._id}
+                className="py-2.5 px-3 bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs rounded-2xl shadow-xs transition-all flex items-center justify-center space-x-1.5 cursor-pointer disabled:opacity-50 active:scale-95 border-0"
+                title="Permanently Delete Member"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Delete</span>
+              </button>
             </div>
 
           </div>

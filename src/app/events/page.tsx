@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import {
   Search,
@@ -18,6 +19,10 @@ import {
   User,
   ExternalLink,
   Layers,
+  Sparkles,
+  CalendarCheck,
+  Landmark,
+  Megaphone,
 } from "lucide-react";
 import { compressImage, checkFileSize } from "@/lib/imageCompression";
 
@@ -32,7 +37,17 @@ interface HubItem {
     city?: string;
     gotra?: string;
   };
-  hubType: "organization" | "showcase_business" | "tutor_service" | "online_sale";
+  hubType:
+    | "mahurth_panchang"
+    | "bookings"
+    | "organization"
+    | "shopping"
+    | "training"
+    | "banking"
+    | "classified"
+    | "showcase_business"
+    | "tutor_service"
+    | "online_sale";
   title: string;
   category?: string;
   description: string;
@@ -50,7 +65,17 @@ export default function HubsPage() {
 
   // Active Category Filter Tab
   const [activeTab, setActiveTab] = useState<
-    "all" | "organization" | "showcase_business" | "tutor_service" | "online_sale"
+    | "all"
+    | "mahurth_panchang"
+    | "bookings"
+    | "organization"
+    | "shopping"
+    | "training"
+    | "banking"
+    | "classified"
+    | "showcase_business"
+    | "tutor_service"
+    | "online_sale"
   >("all");
 
   // Hub items list state
@@ -65,8 +90,17 @@ export default function HubsPage() {
 
   // Form Fields
   const [hubType, setHubType] = useState<
-    "organization" | "showcase_business" | "tutor_service" | "online_sale"
-  >("showcase_business");
+    | "mahurth_panchang"
+    | "bookings"
+    | "organization"
+    | "shopping"
+    | "training"
+    | "banking"
+    | "classified"
+    | "showcase_business"
+    | "tutor_service"
+    | "online_sale"
+  >("organization");
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
@@ -109,7 +143,17 @@ export default function HubsPage() {
 
   // Pre-fill phone & whatsapp when user opens modal
   const handleOpenModal = (
-    type: "organization" | "showcase_business" | "tutor_service" | "online_sale" = "showcase_business"
+    type:
+      | "mahurth_panchang"
+      | "bookings"
+      | "organization"
+      | "shopping"
+      | "training"
+      | "banking"
+      | "classified"
+      | "showcase_business"
+      | "tutor_service"
+      | "online_sale" = "organization"
   ) => {
     setHubType(type);
     setTitle("");
@@ -207,11 +251,47 @@ export default function HubsPage() {
 
   const getHubTypeBadge = (type: string) => {
     switch (type) {
+      case "mahurth_panchang":
+        return {
+          label: "Mahurth & Panchang",
+          icon: Sparkles,
+          color: "bg-amber-50 text-amber-700 border-amber-200",
+        };
+      case "bookings":
+        return {
+          label: "Bookings",
+          icon: CalendarCheck,
+          color: "bg-indigo-50 text-indigo-700 border-indigo-200",
+        };
       case "organization":
         return {
-          label: "Organization",
+          label: "Organizations",
           icon: Building2,
           color: "bg-purple-50 text-purple-700 border-purple-200",
+        };
+      case "shopping":
+        return {
+          label: "Shoping",
+          icon: ShoppingBag,
+          color: "bg-emerald-50 text-emerald-700 border-emerald-200",
+        };
+      case "training":
+        return {
+          label: "Training",
+          icon: GraduationCap,
+          color: "bg-sky-50 text-sky-700 border-sky-200",
+        };
+      case "banking":
+        return {
+          label: "Banking",
+          icon: Landmark,
+          color: "bg-rose-50 text-rose-700 border-rose-200",
+        };
+      case "classified":
+        return {
+          label: "Classified",
+          icon: Megaphone,
+          color: "bg-slate-100 text-slate-700 border-slate-300",
         };
       case "showcase_business":
         return {
@@ -253,136 +333,225 @@ export default function HubsPage() {
       <div className="bg-gradient-to-r from-amber-700 via-orange-600 to-amber-800 rounded-3xl p-4.5 text-white shadow-md border border-amber-500/30">
         <h2 className="text-base font-black tracking-wide">Community Hubs</h2>
         <p className="text-[11px] text-amber-100 font-medium mt-0.5 leading-relaxed">
-          Showcase home businesses & food orders, find tutors, connect with organizations, or buy & sell items.
+          Explore Panchang & Mahurth, Bookings, Organizations, Shoping, Training, Banking, and Classifieds.
         </p>
       </div>
 
-      {/* Visual Category Hub Cards */}
-      <div className="grid grid-cols-2 gap-3">
-        {/* Card 1: Organizations */}
+      {/* Visual Category Hub Cards - Horizontal layout (without create button) */}
+      <div className="space-y-2.5">
+        {/* Card 0: Mahurth & Panchang */}
+        <Link
+          href="/mahurth-panchang"
+          className="group rounded-2xl p-3.5 border transition-all cursor-pointer shadow-xs hover:shadow-md relative overflow-hidden flex items-center space-x-3.5 bg-gradient-to-r from-amber-50/90 to-orange-50/70 hover:from-amber-100 hover:to-orange-100 text-amber-950 border-amber-200/60 no-underline"
+        >
+          <div className="p-3 rounded-2xl shrink-0 transition-transform duration-200 group-hover:scale-105 bg-amber-600 text-white shadow-xs">
+            <Sparkles className="w-5 h-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-black leading-tight tracking-wide">🗓️ Mahurth & Panchang</h3>
+              <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-amber-600 text-white shrink-0">
+                View Panchang & Muhurat →
+              </span>
+            </div>
+            <p className="text-[10px] text-amber-800/80 font-medium mt-0.5 leading-relaxed">
+              Today's Panchang, Shubh Timings & Shadi Muhurat Finder
+            </p>
+          </div>
+        </Link>
+
+        {/* Card 1: Bookings */}
+        <Link
+          href="/bookings"
+          className="group rounded-2xl p-3.5 border transition-all cursor-pointer shadow-xs hover:shadow-md relative overflow-hidden flex items-center space-x-3.5 bg-gradient-to-r from-indigo-50/90 to-blue-50/70 hover:from-indigo-100 hover:to-blue-100 text-indigo-950 border-indigo-200/60 no-underline"
+        >
+          <div className="p-3 rounded-2xl shrink-0 transition-transform duration-200 group-hover:scale-105 bg-indigo-600 text-white shadow-xs">
+            <CalendarCheck className="w-5 h-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-black leading-tight tracking-wide">📅 Bookings</h3>
+              <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-indigo-600 text-white shrink-0">
+                View & Manage →
+              </span>
+            </div>
+            <p className="text-[10px] text-indigo-800/80 font-medium mt-0.5 leading-relaxed">
+              Property Booked/Free Days Calendar & Management
+            </p>
+          </div>
+        </Link>
+
+        {/* Card 2: Organizations */}
         <div
           onClick={() => setActiveTab("organization")}
-          className={`group rounded-3xl p-4 border transition-all cursor-pointer shadow-xs hover:shadow-md relative overflow-hidden flex flex-col justify-between ${
+          className={`group rounded-2xl p-3.5 border transition-all cursor-pointer shadow-xs hover:shadow-md relative overflow-hidden flex items-center space-x-3.5 ${
             activeTab === "organization"
-              ? "bg-gradient-to-br from-purple-700 to-indigo-800 text-white border-purple-500 ring-2 ring-purple-400"
-              : "bg-gradient-to-br from-purple-50 to-indigo-50/70 hover:from-purple-100 hover:to-indigo-100 text-purple-950 border-purple-200/60"
+              ? "bg-gradient-to-r from-purple-700 to-indigo-800 text-white border-purple-500 ring-2 ring-purple-400"
+              : "bg-gradient-to-r from-purple-50/90 to-indigo-50/70 hover:from-purple-100 hover:to-indigo-100 text-purple-950 border-purple-200/60"
           }`}
         >
-          <div className="flex justify-between items-start">
-            <div className={`p-2.5 rounded-2xl ${activeTab === "organization" ? "bg-white/20 text-white" : "bg-purple-600 text-white shadow-xs"}`}>
-              <Building2 className="w-5 h-5" />
-            </div>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleOpenModal("organization");
-              }}
-              className="text-[9px] font-extrabold px-2.5 py-1 rounded-full bg-purple-600 hover:bg-purple-700 text-white shadow-2xs active:scale-95 transition-all border-0 cursor-pointer"
-            >
-              + Create
-            </button>
+          <div
+            className={`p-3 rounded-2xl shrink-0 transition-transform duration-200 group-hover:scale-105 ${
+              activeTab === "organization" ? "bg-white/20 text-white" : "bg-purple-600 text-white shadow-xs"
+            }`}
+          >
+            <Building2 className="w-5 h-5" />
           </div>
-          <div className="mt-3">
-            <h3 className="text-xs font-black leading-tight">🏛️ Organizations</h3>
-            <p className={`text-[10px] font-medium mt-0.5 leading-relaxed ${activeTab === "organization" ? "text-purple-100" : "text-purple-700/80"}`}>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-black leading-tight tracking-wide">🏛️ Organizations</h3>
+              {activeTab === "organization" && (
+                <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-white/25 text-white shrink-0">
+                  Active
+                </span>
+              )}
+            </div>
+            <p
+              className={`text-[10px] font-medium mt-0.5 leading-relaxed ${
+                activeTab === "organization" ? "text-purple-100" : "text-purple-700/80"
+              }`}
+            >
               Clubs, Trusts, Committees & Welfare Groups
             </p>
           </div>
         </div>
 
-        {/* Card 2: Food & Showcase */}
+        {/* Card 3: Shoping */}
         <div
-          onClick={() => setActiveTab("showcase_business")}
-          className={`group rounded-3xl p-4 border transition-all cursor-pointer shadow-xs hover:shadow-md relative overflow-hidden flex flex-col justify-between ${
-            activeTab === "showcase_business"
-              ? "bg-gradient-to-br from-amber-600 to-orange-700 text-white border-amber-500 ring-2 ring-amber-400"
-              : "bg-gradient-to-br from-amber-50 to-orange-50/70 hover:from-amber-100 hover:to-orange-100 text-amber-950 border-amber-200/60"
+          onClick={() => setActiveTab("shopping")}
+          className={`group rounded-2xl p-3.5 border transition-all cursor-pointer shadow-xs hover:shadow-md relative overflow-hidden flex items-center space-x-3.5 ${
+            activeTab === "shopping"
+              ? "bg-gradient-to-r from-emerald-600 to-teal-700 text-white border-emerald-500 ring-2 ring-emerald-400"
+              : "bg-gradient-to-r from-emerald-50/90 to-teal-50/70 hover:from-emerald-100 hover:to-teal-100 text-emerald-950 border-emerald-200/60"
           }`}
         >
-          <div className="flex justify-between items-start">
-            <div className={`p-2.5 rounded-2xl ${activeTab === "showcase_business" ? "bg-white/20 text-white" : "bg-amber-600 text-white shadow-xs"}`}>
-              <UtensilsCrossed className="w-5 h-5" />
-            </div>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleOpenModal("showcase_business");
-              }}
-              className="text-[9px] font-extrabold px-2.5 py-1 rounded-full bg-amber-600 hover:bg-amber-700 text-white shadow-2xs active:scale-95 transition-all border-0 cursor-pointer"
-            >
-              + Create
-            </button>
+          <div
+            className={`p-3 rounded-2xl shrink-0 transition-transform duration-200 group-hover:scale-105 ${
+              activeTab === "shopping" ? "bg-white/20 text-white" : "bg-emerald-600 text-white shadow-xs"
+            }`}
+          >
+            <ShoppingBag className="w-5 h-5" />
           </div>
-          <div className="mt-3">
-            <h3 className="text-xs font-black leading-tight">🍳 Food & Showcase</h3>
-            <p className={`text-[10px] font-medium mt-0.5 leading-relaxed ${activeTab === "showcase_business" ? "text-amber-100" : "text-amber-700/80"}`}>
-              Home Cooking, Catering & Custom Orders
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-black leading-tight tracking-wide">🛍️ Shoping</h3>
+              {activeTab === "shopping" && (
+                <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-white/25 text-white shrink-0">
+                  Active
+                </span>
+              )}
+            </div>
+            <p
+              className={`text-[10px] font-medium mt-0.5 leading-relaxed ${
+                activeTab === "shopping" ? "text-emerald-100" : "text-emerald-700/80"
+              }`}
+            >
+              Community Stores, Products & Local Vendors
             </p>
           </div>
         </div>
 
-        {/* Card 3: Tutor Services */}
+        {/* Card 4: Training */}
         <div
-          onClick={() => setActiveTab("tutor_service")}
-          className={`group rounded-3xl p-4 border transition-all cursor-pointer shadow-xs hover:shadow-md relative overflow-hidden flex flex-col justify-between ${
-            activeTab === "tutor_service"
-              ? "bg-gradient-to-br from-blue-600 to-indigo-700 text-white border-blue-500 ring-2 ring-blue-400"
-              : "bg-gradient-to-br from-blue-50 to-indigo-50/70 hover:from-blue-100 hover:to-indigo-100 text-blue-950 border-blue-200/60"
+          onClick={() => setActiveTab("training")}
+          className={`group rounded-2xl p-3.5 border transition-all cursor-pointer shadow-xs hover:shadow-md relative overflow-hidden flex items-center space-x-3.5 ${
+            activeTab === "training"
+              ? "bg-gradient-to-r from-sky-600 to-blue-700 text-white border-sky-500 ring-2 ring-sky-400"
+              : "bg-gradient-to-r from-sky-50/90 to-blue-50/70 hover:from-sky-100 hover:to-blue-100 text-sky-950 border-sky-200/60"
           }`}
         >
-          <div className="flex justify-between items-start">
-            <div className={`p-2.5 rounded-2xl ${activeTab === "tutor_service" ? "bg-white/20 text-white" : "bg-blue-600 text-white shadow-xs"}`}>
-              <GraduationCap className="w-5 h-5" />
-            </div>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleOpenModal("tutor_service");
-              }}
-              className="text-[9px] font-extrabold px-2.5 py-1 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-2xs active:scale-95 transition-all border-0 cursor-pointer"
-            >
-              + Create
-            </button>
+          <div
+            className={`p-3 rounded-2xl shrink-0 transition-transform duration-200 group-hover:scale-105 ${
+              activeTab === "training" ? "bg-white/20 text-white" : "bg-sky-600 text-white shadow-xs"
+            }`}
+          >
+            <GraduationCap className="w-5 h-5" />
           </div>
-          <div className="mt-3">
-            <h3 className="text-xs font-black leading-tight">📚 Tutor Services</h3>
-            <p className={`text-[10px] font-medium mt-0.5 leading-relaxed ${activeTab === "tutor_service" ? "text-blue-100" : "text-blue-700/80"}`}>
-              Tuition Classes, Coaching & Workshops
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-black leading-tight tracking-wide">🎓 Training</h3>
+              {activeTab === "training" && (
+                <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-white/25 text-white shrink-0">
+                  Active
+                </span>
+              )}
+            </div>
+            <p
+              className={`text-[10px] font-medium mt-0.5 leading-relaxed ${
+                activeTab === "training" ? "text-sky-100" : "text-sky-700/80"
+              }`}
+            >
+              Skill Courses, Tuitions, Coaching & Workshops
             </p>
           </div>
         </div>
 
-        {/* Card 4: Online Sale Marketplace */}
+        {/* Card 5: Banking */}
         <div
-          onClick={() => setActiveTab("online_sale")}
-          className={`group rounded-3xl p-4 border transition-all cursor-pointer shadow-xs hover:shadow-md relative overflow-hidden flex flex-col justify-between ${
-            activeTab === "online_sale"
-              ? "bg-gradient-to-br from-emerald-600 to-teal-700 text-white border-emerald-500 ring-2 ring-emerald-400"
-              : "bg-gradient-to-br from-emerald-50 to-teal-50/70 hover:from-emerald-100 hover:to-teal-100 text-emerald-950 border-emerald-200/60"
+          onClick={() => setActiveTab("banking")}
+          className={`group rounded-2xl p-3.5 border transition-all cursor-pointer shadow-xs hover:shadow-md relative overflow-hidden flex items-center space-x-3.5 ${
+            activeTab === "banking"
+              ? "bg-gradient-to-r from-rose-600 to-pink-700 text-white border-rose-500 ring-2 ring-rose-400"
+              : "bg-gradient-to-r from-rose-50/90 to-pink-50/70 hover:from-rose-100 hover:to-pink-100 text-rose-950 border-rose-200/60"
           }`}
         >
-          <div className="flex justify-between items-start">
-            <div className={`p-2.5 rounded-2xl ${activeTab === "online_sale" ? "bg-white/20 text-white" : "bg-emerald-600 text-white shadow-xs"}`}>
-              <ShoppingBag className="w-5 h-5" />
-            </div>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleOpenModal("online_sale");
-              }}
-              className="text-[9px] font-extrabold px-2.5 py-1 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs active:scale-95 transition-all border-0 cursor-pointer"
-            >
-              + Create
-            </button>
+          <div
+            className={`p-3 rounded-2xl shrink-0 transition-transform duration-200 group-hover:scale-105 ${
+              activeTab === "banking" ? "bg-white/20 text-white" : "bg-rose-600 text-white shadow-xs"
+            }`}
+          >
+            <Landmark className="w-5 h-5" />
           </div>
-          <div className="mt-3">
-            <h3 className="text-xs font-black leading-tight">🛍️ Sale Online Stuffs</h3>
-            <p className={`text-[10px] font-medium mt-0.5 leading-relaxed ${activeTab === "online_sale" ? "text-emerald-100" : "text-emerald-700/80"}`}>
-              Marketplace, Buy & Sell Pre-owned Items
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-black leading-tight tracking-wide">🏦 Banking</h3>
+              {activeTab === "banking" && (
+                <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-white/25 text-white shrink-0">
+                  Active
+                </span>
+              )}
+            </div>
+            <p
+              className={`text-[10px] font-medium mt-0.5 leading-relaxed ${
+                activeTab === "banking" ? "text-rose-100" : "text-rose-700/80"
+              }`}
+            >
+              Financial Services, Loans & Community Credit
+            </p>
+          </div>
+        </div>
+
+        {/* Card 6: Classified */}
+        <div
+          onClick={() => setActiveTab("classified")}
+          className={`group rounded-2xl p-3.5 border transition-all cursor-pointer shadow-xs hover:shadow-md relative overflow-hidden flex items-center space-x-3.5 ${
+            activeTab === "classified"
+              ? "bg-gradient-to-r from-slate-700 to-slate-900 text-white border-slate-600 ring-2 ring-slate-400"
+              : "bg-gradient-to-r from-slate-100 to-slate-200/80 hover:from-slate-200 hover:to-slate-300/80 text-slate-950 border-slate-300/70"
+          }`}
+        >
+          <div
+            className={`p-3 rounded-2xl shrink-0 transition-transform duration-200 group-hover:scale-105 ${
+              activeTab === "classified" ? "bg-white/20 text-white" : "bg-slate-800 text-white shadow-xs"
+            }`}
+          >
+            <Megaphone className="w-5 h-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-black leading-tight tracking-wide">📢 Classified</h3>
+              {activeTab === "classified" && (
+                <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-white/25 text-white shrink-0">
+                  Active
+                </span>
+              )}
+            </div>
+            <p
+              className={`text-[10px] font-medium mt-0.5 leading-relaxed ${
+                activeTab === "classified" ? "text-slate-200" : "text-slate-700"
+              }`}
+            >
+              Buy & Sell, Rental Listings & Community Ads
             </p>
           </div>
         </div>
@@ -432,7 +601,7 @@ export default function HubsPage() {
             {searchQuery ? "No matching hub listings found." : "No hub listings published in this category yet."}
           </p>
           <p className="text-[10px] text-slate-400 font-medium">
-            Be the first to list your organization, food service, tuition class, or products below!
+            Be the first to create a listing in Mahurth & Panchang, Bookings, Organizations, Shoping, Training, Banking, or Classified!
           </p>
         </div>
       ) : (
@@ -456,10 +625,7 @@ export default function HubsPage() {
                   <div className="flex items-center space-x-2.5">
                     <div className="w-9 h-9 rounded-full bg-slate-100 overflow-hidden border border-slate-200 shrink-0">
                       <img
-                        src={
-                          item.owner?.avatar ||
-                          "/avatar.jpg"
-                        }
+                        src={item.owner?.avatar || "/avatar.jpg"}
                         alt={item.owner?.name || "Owner"}
                         className="w-full h-full object-cover"
                       />
@@ -566,266 +732,6 @@ export default function HubsPage() {
             );
           })}
         </div>
-      )}
-
-      {/* Floating Action Button (FAB) for Creating Hub Listing */}
-      <button
-        onClick={() => handleOpenModal()}
-        className="fixed bottom-20 right-5 z-40 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-extrabold text-xs px-4 py-3 rounded-full shadow-2xl flex items-center space-x-2 border-0 cursor-pointer active:scale-90 transition-all"
-      >
-        <Plus className="w-5 h-5" />
-        <span>Create Hub Listing</span>
-      </button>
-
-      {/* ── CREATE HUB LISTING MODAL ─────────────────────────────────── */}
-      {modalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white w-full max-w-md rounded-3xl p-5 shadow-2xl border border-slate-100 flex flex-col space-y-4 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-150">
-            <div className="flex justify-between items-center pb-3 border-b border-slate-100">
-              <div className="flex items-center space-x-2 text-amber-700 font-black text-sm">
-                <Plus className="w-5 h-5" />
-                <span>Create Hub Listing</span>
-              </div>
-              <button
-                onClick={() => setModalOpen(false)}
-                className="p-1 rounded-full hover:bg-slate-100 text-slate-400 border-0 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateHub} className="space-y-3.5">
-              {/* Category Selector Buttons */}
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                  Select Category *
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setHubType("showcase_business")}
-                    className={`p-2.5 rounded-2xl border text-xs font-bold flex items-center space-x-2 transition-all cursor-pointer ${
-                      hubType === "showcase_business"
-                        ? "bg-amber-500 text-white border-amber-500 shadow-xs"
-                        : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
-                    }`}
-                  >
-                    <UtensilsCrossed className="w-4 h-4 shrink-0" />
-                    <span className="text-[11px] leading-tight">🍳 Food & Showcase</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setHubType("tutor_service")}
-                    className={`p-2.5 rounded-2xl border text-xs font-bold flex items-center space-x-2 transition-all cursor-pointer ${
-                      hubType === "tutor_service"
-                        ? "bg-blue-600 text-white border-blue-600 shadow-xs"
-                        : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
-                    }`}
-                  >
-                    <GraduationCap className="w-4 h-4 shrink-0" />
-                    <span className="text-[11px] leading-tight">📚 Tutor Service</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setHubType("online_sale")}
-                    className={`p-2.5 rounded-2xl border text-xs font-bold flex items-center space-x-2 transition-all cursor-pointer ${
-                      hubType === "online_sale"
-                        ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
-                        : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
-                    }`}
-                  >
-                    <ShoppingBag className="w-4 h-4 shrink-0" />
-                    <span className="text-[11px] leading-tight">🛍️ Sale Online</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setHubType("organization")}
-                    className={`p-2.5 rounded-2xl border text-xs font-bold flex items-center space-x-2 transition-all cursor-pointer ${
-                      hubType === "organization"
-                        ? "bg-purple-600 text-white border-purple-600 shadow-xs"
-                        : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
-                    }`}
-                  >
-                    <Building2 className="w-4 h-4 shrink-0" />
-                    <span className="text-[11px] leading-tight">🏛️ Organization</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Title */}
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                  Title *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder={
-                    hubType === "showcase_business"
-                      ? "e.g. Grandma's Pure Veg Home Catering"
-                      : hubType === "tutor_service"
-                      ? "e.g. High School Physics & Math Tuitions"
-                      : hubType === "online_sale"
-                      ? "e.g. iPhone 13 Pro 128GB (Like New)"
-                      : "e.g. Jambu Community Youth Welfare Club"
-                  }
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 outline-hidden focus:border-amber-500"
-                />
-              </div>
-
-              {/* Sub-category & Price */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                    Tag / Category
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Home Cook, Maths, Electronics"
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 outline-hidden focus:border-amber-500"
-                  />
-                </div>
-
-                {hubType !== "organization" && (
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                      Price / Fee (Optional)
-                    </label>
-                    <div className="relative">
-                      <IndianRupee className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-                      <input
-                        type="number"
-                        placeholder="e.g. 250"
-                        value={price}
-                        onChange={(e) => setPrice(e.target.value)}
-                        className="w-full pl-7 pr-2 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 outline-hidden focus:border-amber-500"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {hubType !== "organization" && (
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                    Price Unit (e.g. per dish, per month, per item)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. per dish / per month / fixed"
-                    value={priceUnit}
-                    onChange={(e) => setPriceUnit(e.target.value)}
-                    className="w-full px-3.5 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 outline-hidden focus:border-amber-500"
-                  />
-                </div>
-              )}
-
-              {/* Location & Contact Info */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                    City / Area Location
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Indore, Vijay Nagar"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 outline-hidden focus:border-amber-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                    WhatsApp Mobile Number
-                  </label>
-                  <input
-                    type="tel"
-                    placeholder="e.g. 9826017177"
-                    value={whatsappNumber}
-                    onChange={(e) => setWhatsappNumber(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 outline-hidden focus:border-amber-500"
-                  />
-                </div>
-              </div>
-
-              {/* Photos Upload */}
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                  Upload Product / Showcase Photos
-                </label>
-                <div className="flex items-center space-x-2 overflow-x-auto py-1">
-                  <button
-                    type="button"
-                    onClick={() => imageInputRef.current?.click()}
-                    disabled={uploadingImage}
-                    className="w-16 h-16 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 hover:border-amber-500 flex flex-col items-center justify-center cursor-pointer shrink-0"
-                  >
-                    <ImagePlus className="w-5 h-5 text-slate-400" />
-                    <span className="text-[8px] font-bold text-slate-400 mt-1">
-                      {uploadingImage ? "Uploading..." : "+ Add"}
-                    </span>
-                  </button>
-
-                  {uploadedImages.map((imgUrl, idx) => (
-                    <div key={idx} className="relative w-16 h-16 rounded-2xl overflow-hidden border border-slate-200 shrink-0">
-                      <img src={imgUrl} className="w-full h-full object-cover" alt="" />
-                      <button
-                        type="button"
-                        onClick={() => setUploadedImages((prev) => prev.filter((_, i) => i !== idx))}
-                        className="absolute top-0.5 right-0.5 p-0.5 bg-black/60 text-white rounded-full cursor-pointer border-0"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                <input
-                  ref={imageInputRef}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  onChange={handleImageUpload}
-                />
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                  Description & Details *
-                </label>
-                <textarea
-                  required
-                  rows={3}
-                  placeholder="Describe your service, food menu, tutoring subjects, organization goals, or item condition..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 outline-hidden focus:border-amber-500 resize-none"
-                />
-              </div>
-
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full py-3 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 disabled:opacity-50 text-white font-extrabold text-xs rounded-2xl shadow-md transition-all flex items-center justify-center space-x-2 border-0 cursor-pointer"
-                >
-                  <Send className="w-4 h-4" />
-                  <span>{submitting ? "Publishing..." : "Publish Hub Listing"}</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
+      )}    </div>
   );
 }

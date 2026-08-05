@@ -2,7 +2,17 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface IHub extends Document {
   owner: mongoose.Types.ObjectId;
-  hubType: "organization" | "showcase_business" | "tutor_service" | "online_sale";
+  hubType:
+    | "mahurth_panchang"
+    | "bookings"
+    | "organization"
+    | "shopping"
+    | "training"
+    | "banking"
+    | "classified"
+    | "showcase_business"
+    | "tutor_service"
+    | "online_sale";
   title: string;
   category?: string;
   description: string;
@@ -26,7 +36,18 @@ const HubSchema: Schema<IHub> = new Schema(
     },
     hubType: {
       type: String,
-      enum: ["organization", "showcase_business", "tutor_service", "online_sale"],
+      enum: [
+        "mahurth_panchang",
+        "bookings",
+        "organization",
+        "shopping",
+        "training",
+        "banking",
+        "classified",
+        "showcase_business",
+        "tutor_service",
+        "online_sale",
+      ],
       required: [true, "Hub type is required"],
     },
     title: {
