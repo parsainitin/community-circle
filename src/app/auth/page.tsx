@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { MessageSquare, Phone, Lock, User, Home, Shield, Award, Heart, Camera, GraduationCap, Briefcase, MapPin } from "lucide-react";
+import { MessageSquare, Phone, Lock, Key, User, Home, Shield, Award, Heart, Camera, GraduationCap, Briefcase, MapPin } from "lucide-react";
 import { compressImage, checkFileSize } from "@/lib/imageCompression";
 import CommunityBrand from "@/components/CommunityBrand";
 
@@ -37,6 +37,7 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [resetKey, setResetKey] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [gotra, setGotra] = useState("");
@@ -246,12 +247,16 @@ export default function AuthPage() {
     e.preventDefault();
     setError(null);
     setSuccess(null);
+    if (!resetKey.trim()) {
+      setError("Please enter the Admin Reset Key provided by your Community Admin.");
+      return;
+    }
     if (newPassword !== confirmPassword) {
       setError("Passwords do not match");
       return;
     }
     setLoading(true);
-    const res = await forgotPassword(mobileNumber, newPassword);
+    const res = await forgotPassword(mobileNumber, newPassword, resetKey);
     setLoading(false);
     if (res.success) {
       setSuccess("Password reset successfully! You can now sign in.");
@@ -259,6 +264,7 @@ export default function AuthPage() {
       setPassword("");
       setNewPassword("");
       setConfirmPassword("");
+      setResetKey("");
     } else {
       setError(res.error || "Failed to reset password");
     }
@@ -950,6 +956,24 @@ export default function AuthPage() {
                     value={mobileNumber}
                     onChange={(e) => setMobileNumber(e.target.value)}
                     className="w-full pl-11 pr-4 py-3 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green focus:ring-1 focus:ring-whatsapp-green text-sm outline-hidden transition-all text-slate-800"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                  <span>Admin Reset Key *</span>
+                  <span className="text-[10px] text-amber-700 font-bold normal-case">Provided by Community Admin</span>
+                </label>
+                <div className="relative">
+                  <Key className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-600" />
+                  <input
+                    type="text"
+                    required
+                    placeholder="Enter Reset Key (e.g. RESET123)"
+                    value={resetKey}
+                    onChange={(e) => setResetKey(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 bg-amber-50/60 hover:bg-amber-50 focus:bg-white rounded-xl border border-amber-200/80 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-sm outline-hidden transition-all text-slate-800 font-mono font-bold"
                   />
                 </div>
               </div>

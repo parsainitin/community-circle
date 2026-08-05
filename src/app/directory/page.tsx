@@ -26,6 +26,9 @@ interface UserType {
   occupationType?: string;
   profession?: string;
   company?: string;
+  latitude?: number;
+  longitude?: number;
+  googleMapsUrl?: string;
 }
 
 function getWhatsAppUrl(mobileNumber?: string) {
@@ -264,6 +267,21 @@ export default function DirectoryPage() {
                 </div>
               </div>
               <div className="flex items-center space-x-2 shrink-0 select-none">
+                {(contact.googleMapsUrl || (contact.latitude && contact.longitude)) && (
+                  <a
+                    href={
+                      contact.googleMapsUrl ||
+                      `https://www.google.com/maps?q=${contact.latitude},${contact.longitude}`
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-8 h-8 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center shadow-xs active:scale-90 transition-transform cursor-pointer"
+                    title={`Open ${contact.name}'s location on Google Maps`}
+                  >
+                    <MapPin className="w-4 h-4 text-white" />
+                  </a>
+                )}
                 {contact.mobileNumber && (
                   <a
                     href={getWhatsAppUrl(contact.mobileNumber)}

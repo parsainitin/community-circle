@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { ChevronLeft, Camera, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, Camera, CheckCircle2, MapPin, Navigation } from "lucide-react";
 import { compressImage, checkFileSize } from "@/lib/imageCompression";
 
 // Per-step display metadata
@@ -119,6 +119,62 @@ export default function SignupPage() {
   const [communityCities, setCommunityCities] = useState<string[]>([]);
   const [communityGotras, setCommunityGotras] = useState<string[]>([]);
   const [communityKulDevis, setCommunityKulDevis] = useState<string[]>([]);
+  const [existingVillages, setExistingVillages] = useState<string[]>([]);
+
+  // Custom write-in states when selecting "➕ Other / Add New"
+  const [customCity, setCustomCity] = useState("");
+  const [customVillage, setCustomVillage] = useState("");
+  const [customGotra, setCustomGotra] = useState("");
+  const [customKulDevi, setCustomKulDevi] = useState("");
+
+  // Geo Location states
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
+  const [googleMapsUrl, setGoogleMapsUrl] = useState("");
+  const [locating, setLocating] = useState(false);
+  const [locationSuccessMessage, setLocationSuccessMessage] = useState<string | null>(null);
+
+  const handleGetGeoLocation = () => {
+    if (typeof window === "undefined" || !navigator.geolocation) {
+      alert("Geolocation is not supported by your browser.");
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setLatitude(lat);
+        setLongitude(lng);
+        const mapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
+        setGoogleMapsUrl(mapsUrl);
+        setLocationSuccessMessage(`GPS Pin Captured! (${lat.toFixed(4)}, ${lng.toFixed(4)})`);
+        setLocating(false);
+
+        // Attempt reverse geocoding to auto-fill address/city if empty
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+          if (res.ok) {
+            const data = await res.json();
+            const addr = data.address || {};
+            const foundCity = addr.city || addr.town || addr.village || addr.suburb || addr.county;
+            if (foundCity && !city) {
+              setCustomCity(foundCity);
+              setCity("__custom__");
+            }
+            if (data.display_name && !address) {
+              setAddress(data.display_name);
+            }
+          }
+        } catch {}
+      },
+      (err) => {
+        setLocating(false);
+        alert(`Location permission denied or unavailable: ${err.message}`);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
 
   useEffect(() => {
     fetch("/api/community/current")
@@ -139,6 +195,23 @@ export default function SignupPage() {
       .then((d) => {
         const filtered = (d || []).filter((u: { role?: string }) => u.role !== "super-admin");
         setUsersList(filtered);
+
+        const vSet = new Set<string>();
+        const gSet = new Set<string>();
+        const kSet = new Set<string>();
+        const cSet = new Set<string>();
+
+        (d || []).forEach((u: { village?: string; gotra?: string; kulDevi?: string; city?: string }) => {
+          if (u.village && u.village.trim()) vSet.add(u.village.trim());
+          if (u.gotra && u.gotra.trim()) gSet.add(u.gotra.trim());
+          if (u.kulDevi && u.kulDevi.trim()) kSet.add(u.kulDevi.trim());
+          if (u.city && u.city.trim()) cSet.add(u.city.trim());
+        });
+
+        setExistingVillages(Array.from(vSet));
+        setCommunityGotras((prev) => Array.from(new Set([...prev, ...Array.from(gSet)])));
+        setCommunityKulDevis((prev) => Array.from(new Set([...prev, ...Array.from(kSet)])));
+        setCommunityCities((prev) => Array.from(new Set([...prev, ...Array.from(cSet)])));
       })
       .catch(() => {});
   }, []);
@@ -245,16 +318,25 @@ export default function SignupPage() {
         if (r.ok) finalAvatarUrl = d.url;
       } catch {}
     }
+
+    const finalCity = city === "__custom__" ? customCity.trim() : city.trim();
+    const finalVillage = village === "__custom__" ? customVillage.trim() : village.trim();
+    const finalGotra = gotra === "__custom__" ? customGotra.trim() : gotra.trim();
+    const finalKulDevi = kulDevi === "__custom__" ? customKulDevi.trim() : kulDevi.trim();
+
     const res = await signup({
       name,
       phone: phone || mobileNumber,
       mobileNumber,
       password,
-      gotra,
-      kulDevi,
+      gotra: finalGotra,
+      kulDevi: finalKulDevi,
       address,
-      city,
-      village,
+      city: finalCity,
+      village: finalVillage,
+      latitude: latitude ?? undefined,
+      longitude: longitude ?? undefined,
+      googleMapsUrl: googleMapsUrl || undefined,
       age: age ? Number(age) : undefined,
       sex,
       maritalStatus,
@@ -521,23 +603,31 @@ export default function SignupPage() {
               <div>
                 <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">City *</label>
                 {communityCities.length > 0 ? (
-                  <select
-                    required
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    className={`${inputBase} cursor-pointer`}
-                    style={{ borderColor: city ? meta.accent : undefined }}
-                  >
-                    <option value="">— Select City —</option>
-                    {communityCities.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                    {city && !communityCities.includes(city) && (
-                      <option value={city}>{city}</option>
+                  <div className="space-y-2">
+                    <select
+                      required
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      className={`${inputBase} cursor-pointer`}
+                      style={{ borderColor: city ? meta.accent : undefined }}
+                    >
+                      <option value="">— Select City —</option>
+                      {communityCities.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                      <option value="__custom__">➕ Other / Add New City...</option>
+                    </select>
+                    {city === "__custom__" && (
+                      <input
+                        type="text" autoFocus required placeholder="Type your City Name"
+                        value={customCity} onChange={(e) => setCustomCity(e.target.value)}
+                        className={inputBase}
+                        style={{ borderColor: customCity ? meta.accent : undefined }}
+                      />
                     )}
-                  </select>
+                  </div>
                 ) : (
                   <input
                     type="text" autoFocus required placeholder="e.g. Indore, Bhopal, Mumbai"
@@ -548,12 +638,37 @@ export default function SignupPage() {
                 )}
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Village / Town</label>
-                <input
-                  type="text" placeholder="e.g. Ashta (optional)"
-                  value={village} onChange={(e) => setVillage(e.target.value)}
-                  className={inputBase}
-                />
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Village / Native Town</label>
+                {existingVillages.length > 0 ? (
+                  <div className="space-y-2">
+                    <select
+                      value={village}
+                      onChange={(e) => setVillage(e.target.value)}
+                      className={`${inputBase} cursor-pointer`}
+                    >
+                      <option value="">— Select Village (Optional) —</option>
+                      {existingVillages.map((v) => (
+                        <option key={v} value={v}>
+                          {v}
+                        </option>
+                      ))}
+                      <option value="__custom__">➕ Other / Add New Village...</option>
+                    </select>
+                    {village === "__custom__" && (
+                      <input
+                        type="text" autoFocus placeholder="Type your Village / Native Town Name"
+                        value={customVillage} onChange={(e) => setCustomVillage(e.target.value)}
+                        className={inputBase}
+                      />
+                    )}
+                  </div>
+                ) : (
+                  <input
+                    type="text" placeholder="e.g. Ashta (optional)"
+                    value={village} onChange={(e) => setVillage(e.target.value)}
+                    className={inputBase}
+                  />
+                )}
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Full Address</label>
@@ -562,6 +677,55 @@ export default function SignupPage() {
                   value={address} onChange={(e) => setAddress(e.target.value)}
                   className={`${inputBase} resize-none`}
                 />
+              </div>
+
+              {/* Geo Location Pin capture */}
+              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider flex items-center space-x-1">
+                    <MapPin className="w-3.5 h-3.5 text-red-500" />
+                    <span>Geo Location Pin</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleGetGeoLocation}
+                    disabled={locating}
+                    className="py-1.5 px-3 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-extrabold text-[11px] rounded-xl shadow-xs transition-all flex items-center space-x-1.5 border-0 cursor-pointer disabled:opacity-50"
+                  >
+                    {locating ? (
+                      <>
+                        <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>Detecting...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Navigation className="w-3.5 h-3.5" />
+                        <span>📍 Use GPS Location</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {locationSuccessMessage ? (
+                  <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-700 font-bold flex items-center justify-between">
+                    <span className="flex items-center space-x-1.5 truncate">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span className="truncate">{locationSuccessMessage}</span>
+                    </span>
+                    <a
+                      href={googleMapsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] underline font-extrabold text-emerald-800 hover:text-emerald-950 shrink-0 ml-2"
+                    >
+                      Preview Map 🗺️
+                    </a>
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-slate-400 font-medium leading-relaxed">
+                    Click above to capture your GPS location so members can navigate to your address on Google Maps.
+                  </p>
+                )}
               </div>
             </>
           )}
@@ -671,22 +835,30 @@ export default function SignupPage() {
               <div>
                 <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Gotra</label>
                 {communityGotras.length > 0 ? (
-                  <select
-                    value={gotra}
-                    onChange={(e) => setGotra(e.target.value)}
-                    className={`${inputBase} cursor-pointer`}
-                    style={{ borderColor: gotra ? meta.accent : undefined }}
-                  >
-                    <option value="">— Select Gotra —</option>
-                    {communityGotras.map((g) => (
-                      <option key={g} value={g}>
-                        {g}
-                      </option>
-                    ))}
-                    {gotra && !communityGotras.includes(gotra) && (
-                      <option value={gotra}>{gotra}</option>
+                  <div className="space-y-2">
+                    <select
+                      value={gotra}
+                      onChange={(e) => setGotra(e.target.value)}
+                      className={`${inputBase} cursor-pointer`}
+                      style={{ borderColor: gotra ? meta.accent : undefined }}
+                    >
+                      <option value="">— Select Gotra —</option>
+                      {communityGotras.map((g) => (
+                        <option key={g} value={g}>
+                          {g}
+                        </option>
+                      ))}
+                      <option value="__custom__">➕ Other / Add New Gotra...</option>
+                    </select>
+                    {gotra === "__custom__" && (
+                      <input
+                        type="text" autoFocus placeholder="Type your Gotra Name"
+                        value={customGotra} onChange={(e) => setCustomGotra(e.target.value)}
+                        className={inputBase}
+                        style={{ borderColor: customGotra ? meta.accent : undefined }}
+                      />
                     )}
-                  </select>
+                  </div>
                 ) : (
                   <input
                     type="text" placeholder="Enter Gotra (optional)"
@@ -699,22 +871,30 @@ export default function SignupPage() {
               <div>
                 <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">KulDevi</label>
                 {communityKulDevis.length > 0 ? (
-                  <select
-                    value={kulDevi}
-                    onChange={(e) => setKulDevi(e.target.value)}
-                    className={`${inputBase} cursor-pointer`}
-                    style={{ borderColor: kulDevi ? meta.accent : undefined }}
-                  >
-                    <option value="">— Select KulDevi —</option>
-                    {communityKulDevis.map((k) => (
-                      <option key={k} value={k}>
-                        {k}
-                      </option>
-                    ))}
-                    {kulDevi && !communityKulDevis.includes(kulDevi) && (
-                      <option value={kulDevi}>{kulDevi}</option>
+                  <div className="space-y-2">
+                    <select
+                      value={kulDevi}
+                      onChange={(e) => setKulDevi(e.target.value)}
+                      className={`${inputBase} cursor-pointer`}
+                      style={{ borderColor: kulDevi ? meta.accent : undefined }}
+                    >
+                      <option value="">— Select KulDevi —</option>
+                      {communityKulDevis.map((k) => (
+                        <option key={k} value={k}>
+                          {k}
+                        </option>
+                      ))}
+                      <option value="__custom__">➕ Other / Add New KulDevi...</option>
+                    </select>
+                    {kulDevi === "__custom__" && (
+                      <input
+                        type="text" autoFocus placeholder="Type your KulDevi Name"
+                        value={customKulDevi} onChange={(e) => setCustomKulDevi(e.target.value)}
+                        className={inputBase}
+                        style={{ borderColor: customKulDevi ? meta.accent : undefined }}
+                      />
                     )}
-                  </select>
+                  </div>
                 ) : (
                   <input
                     type="text" placeholder="Enter KulDevi (optional)"

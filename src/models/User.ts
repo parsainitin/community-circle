@@ -19,6 +19,9 @@ export interface IUser extends Document {
   familyMembers: mongoose.Types.ObjectId[] | IUser[];
   avatar?: string;
   email?: string;
+  latitude?: number;
+  longitude?: number;
+  googleMapsUrl?: string;
   education?: string;
   institution?: string;
   occupationType?: string;
@@ -147,6 +150,16 @@ const UserSchema: Schema<IUser> = new Schema(
       sparse: true,
       unique: true,
     },
+    latitude: {
+      type: Number,
+    },
+    longitude: {
+      type: Number,
+    },
+    googleMapsUrl: {
+      type: String,
+      trim: true,
+    },
     role: {
       type: String,
       enum: ["super-admin", "admin", "member"],
@@ -167,7 +180,7 @@ const UserSchema: Schema<IUser> = new Schema(
   }
 );
 
-if (mongoose.models.User && !mongoose.models.User.schema.path("status")) {
+if (mongoose.models.User && (!mongoose.models.User.schema.path("status") || !mongoose.models.User.schema.path("latitude"))) {
   delete (mongoose.models as any).User;
 }
 

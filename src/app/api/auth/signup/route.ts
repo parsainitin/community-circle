@@ -36,6 +36,9 @@ export async function POST(request: NextRequest) {
       profession,
       company,
       email,
+      latitude,
+      longitude,
+      googleMapsUrl,
     } = body;
 
     const isChild = parentRelationship === "Son" || parentRelationship === "Daughter";
@@ -122,6 +125,9 @@ export async function POST(request: NextRequest) {
       profession,
       company,
       email: email ? email.toLowerCase() : undefined,
+      latitude: latitude ? Number(latitude) : undefined,
+      longitude: longitude ? Number(longitude) : undefined,
+      googleMapsUrl: googleMapsUrl || undefined,
       status: "pending",
       communityId: communityId ?? undefined,
     });

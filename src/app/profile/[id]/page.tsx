@@ -45,6 +45,9 @@ interface UserType {
   occupationType?: string;
   profession?: string;
   company?: string;
+  latitude?: number;
+  longitude?: number;
+  googleMapsUrl?: string;
 }
 
 interface FamilyTreeNode {
@@ -257,6 +260,52 @@ export default function UserProfilePage() {
   const [editOccupationType, setEditOccupationType] = useState("");
   const [editProfession, setEditProfession] = useState("");
   const [editCompany, setEditCompany] = useState("");
+  const [editLatitude, setEditLatitude] = useState<number | undefined>(undefined);
+  const [editLongitude, setEditLongitude] = useState<number | undefined>(undefined);
+  const [editGoogleMapsUrl, setEditGoogleMapsUrl] = useState<string>("");
+  const [locatingGps, setLocatingGps] = useState(false);
+  const [gpsSuccessMsg, setGpsSuccessMsg] = useState("");
+
+  const handleGetGeoLocation = () => {
+    if (typeof window === "undefined" || !navigator.geolocation) {
+      alert("Geolocation is not supported by your browser.");
+      return;
+    }
+    setLocatingGps(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setEditLatitude(lat);
+        setEditLongitude(lng);
+        const mapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
+        setEditGoogleMapsUrl(mapsUrl);
+        setGpsSuccessMsg(`GPS Location updated! (${lat.toFixed(4)}, ${lng.toFixed(4)})`);
+        setLocatingGps(false);
+
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+          if (res.ok) {
+            const data = await res.json();
+            const addr = data.address || {};
+            const foundCity = addr.city || addr.town || addr.village || addr.suburb || addr.county;
+            if (foundCity && !editCity) {
+              setEditCity(foundCity);
+            }
+            if (data.display_name && !editAddress) {
+              setEditAddress(data.display_name);
+            }
+          }
+        } catch {}
+      },
+      (err) => {
+        setLocatingGps(false);
+        alert("Failed to retrieve GPS location. Please check browser permissions.");
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
 
@@ -382,6 +431,14 @@ export default function UserProfilePage() {
     setEditOccupationType(profileUser.occupationType || "");
     setEditProfession(profileUser.profession || "");
     setEditCompany(profileUser.company || "");
+    setEditLatitude(profileUser.latitude);
+    setEditLongitude(profileUser.longitude);
+    setEditGoogleMapsUrl(profileUser.googleMapsUrl || "");
+    setGpsSuccessMsg(
+      profileUser.latitude && profileUser.longitude
+        ? `📍 Current GPS Pin (${profileUser.latitude.toFixed(4)}, ${profileUser.longitude.toFixed(4)})`
+        : ""
+    );
     setEditError(null);
     setEditModalOpen(true);
   };
@@ -427,6 +484,9 @@ export default function UserProfilePage() {
           occupationType: editOccupationType || undefined,
           profession: editProfession.trim() || undefined,
           company: editCompany.trim() || undefined,
+          latitude: editLatitude,
+          longitude: editLongitude,
+          googleMapsUrl: editGoogleMapsUrl || (editLatitude && editLongitude ? `https://www.google.com/maps?q=${editLatitude},${editLongitude}` : undefined),
         }),
       });
 
@@ -971,16 +1031,30 @@ export default function UserProfilePage() {
             </div>
           </div>
           {(profileUser.address || profileUser.city || profileUser.village) && (
-            <div className="flex items-start space-x-2 pt-1 border-t border-slate-100">
-              <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-              <span>
-                <strong>Address:</strong> {profileUser.address || "N/A"}
-                {(profileUser.city || profileUser.village) && (
-                  <span className="text-slate-500 font-semibold ml-1">
-                    ({[profileUser.city, profileUser.village].filter(Boolean).join(", ")})
-                  </span>
-                )}
-              </span>
+            <div className="flex items-start justify-between space-x-2 pt-1 border-t border-slate-100">
+              <div className="flex items-start space-x-2 min-w-0">
+                <MapPin className="w-3.5 h-3.5 text-indigo-600 shrink-0 mt-0.5" />
+                <span className="min-w-0">
+                  <strong>Address:</strong> {profileUser.address || "N/A"}
+                  {(profileUser.city || profileUser.village) && (
+                    <span className="text-slate-500 font-semibold ml-1">
+                      ({[profileUser.city, profileUser.village].filter(Boolean).join(", ")})
+                    </span>
+                  )}
+                </span>
+              </div>
+              {(profileUser.googleMapsUrl || (profileUser.latitude && profileUser.longitude)) && (
+                <a
+                  href={profileUser.googleMapsUrl || `https://www.google.com/maps?q=${profileUser.latitude},${profileUser.longitude}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-[10px] font-black border border-indigo-200/80 transition-all flex items-center space-x-1 shrink-0 cursor-pointer text-decoration-none"
+                  title="Open in Google Maps"
+                >
+                  <MapPin className="w-3 h-3 text-indigo-600" />
+                  <span>Map Pin</span>
+                </a>
+              )}
             </div>
           )}
           {(profileUser.education || profileUser.profession || profileUser.occupationType) && (
@@ -1613,6 +1687,54 @@ export default function UserProfilePage() {
                     className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800"
                   />
                 </div>
+              </div>
+
+              {/* GPS Geo Location Capture */}
+              <div className="p-3 bg-indigo-50/70 border border-indigo-100 rounded-2xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-1.5 text-indigo-900 font-bold text-[11px]">
+                    <MapPin className="w-4 h-4 text-indigo-600 shrink-0" />
+                    <span>GPS Map Pin Location</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleGetGeoLocation}
+                    disabled={locatingGps}
+                    className="py-1 px-3 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-extrabold text-[10px] rounded-xl shadow-xs transition-all flex items-center space-x-1 cursor-pointer border-0 disabled:opacity-50"
+                  >
+                    {locatingGps ? (
+                      <>
+                        <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>Locating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <MapPin className="w-3 h-3" />
+                        <span>{editLatitude ? "📍 Re-pin GPS Location" : "📍 Pin My GPS Location"}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {gpsSuccessMsg ? (
+                  <div className="flex items-center justify-between bg-emerald-50 text-emerald-800 p-2 rounded-xl border border-emerald-200 text-[10px] font-bold">
+                    <span>{gpsSuccessMsg}</span>
+                    {editGoogleMapsUrl && (
+                      <a
+                        href={editGoogleMapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-indigo-600 underline hover:text-indigo-800 ml-2"
+                      >
+                        Preview Map
+                      </a>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-slate-500 font-semibold leading-relaxed">
+                    Pin your exact GPS location so community members can locate your address on Google Maps via Directory.
+                  </p>
+                )}
               </div>
 
               {/* Personal Details */}

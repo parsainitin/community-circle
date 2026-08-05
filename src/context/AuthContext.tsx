@@ -33,7 +33,7 @@ interface AuthContextProps {
   loading: boolean;
   login: (mobileNumber: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signup: (userData: any) => Promise<{ success: boolean; pendingApproval?: boolean; error?: string }>;
-  forgotPassword: (mobileNumber: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
+  forgotPassword: (mobileNumber: string, newPassword: string, resetKey: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   updateUser: (userData: Partial<UserType>) => void;
 }
@@ -129,12 +129,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const forgotPassword = async (mobileNumber: string, newPassword: string) => {
+  const forgotPassword = async (mobileNumber: string, newPassword: string, resetKey: string) => {
     try {
       const res = await fetch("/api/auth/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mobileNumber, newPassword }),
+        body: JSON.stringify({ mobileNumber, newPassword, resetKey }),
       });
       const data = await res.json();
 
