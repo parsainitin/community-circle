@@ -119,11 +119,13 @@ export default function CommunityAdminPage() {
 
   // Approval Modal & WhatsApp credentials state
   const [approvalModalMember, setApprovalModalMember] = useState<Member | null>(null);
-  const [approvalPassword, setApprovalPassword] = useState("Community123");
+  const [approvalPassword, setApprovalPassword] = useState("");
+
+  const generate5DigitKey = () => Math.floor(10000 + Math.random() * 90000).toString();
 
   const handleOpenApproveModal = (member: Member) => {
     setApprovalModalMember(member);
-    setApprovalPassword("Community123");
+    setApprovalPassword(generate5DigitKey());
   };
 
   const handleApprovalAction = async (memberId: string, action: "approve" | "reject", customPassword?: string) => {
@@ -1258,18 +1260,28 @@ export default function CommunityAdminPage() {
 
             {/* Set Password Field */}
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                Initial Login Password
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                  Initial 5-Digit Login Key / Password
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setApprovalPassword(generate5DigitKey())}
+                  className="text-[10px] font-extrabold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2 py-0.5 rounded-lg border border-indigo-200 transition-all cursor-pointer border-0"
+                >
+                  🎲 Regenerate Key
+                </button>
+              </div>
               <input
                 type="text"
                 value={approvalPassword}
                 onChange={(e) => setApprovalPassword(e.target.value)}
-                placeholder="e.g. Community123"
-                className="w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white rounded-xl border border-slate-200 text-xs font-mono font-bold text-slate-800 outline-hidden focus:border-emerald-500"
+                placeholder="e.g. 58291"
+                maxLength={10}
+                className="w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white rounded-xl border border-slate-200 text-sm font-mono font-black text-slate-800 outline-hidden focus:border-emerald-500 tracking-widest text-center"
               />
-              <p className="text-[10px] text-slate-400 font-medium leading-relaxed">
-                Provide this initial password to the member. They can log in with their mobile number and change it later.
+              <p className="text-[10px] text-slate-400 font-medium leading-relaxed text-center">
+                Random 5-digit key generated for newly onboarded member.
               </p>
             </div>
 

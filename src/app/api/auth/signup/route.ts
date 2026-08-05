@@ -76,7 +76,8 @@ export async function POST(request: NextRequest) {
     }
 
     if (!finalPassword) {
-      finalPassword = "Community123";
+      // Generate a random 5-digit initial key (e.g. 48291)
+      finalPassword = Math.floor(10000 + Math.random() * 90000).toString();
     }
 
     // Check if user already exists with the same mobileNumber
