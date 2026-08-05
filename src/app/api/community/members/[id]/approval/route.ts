@@ -2,6 +2,12 @@ import { NextRequest } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { User } from "@/models/User";
 
+import crypto from "crypto";
+
+function hashPassword(password: string): string {
+  return crypto.createHash("sha256").update(password).digest("hex");
+}
+
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
@@ -12,7 +18,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     await dbConnect();
     const { id } = await params;
     const body = await request.json();
-    const { callerMobile, action } = body; // action: "approve" | "reject"
+    const { callerMobile, action, password } = body; // action: "approve" | "reject"
 
     if (!callerMobile || !action) {
       return Response.json({ error: "Missing required fields: callerMobile, action" }, { status: 400 });
@@ -39,6 +45,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     const newStatus = action === "approve" ? "approved" : "rejected";
     targetUser.status = newStatus;
+    if (action === "approve" && password && String(password).trim() !== "") {
+      targetUser.password = hashPassword(String(password).trim());
+    }
     await targetUser.save();
 
     const userObj = targetUser.toObject();

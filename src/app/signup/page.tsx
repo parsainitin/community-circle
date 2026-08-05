@@ -64,13 +64,6 @@ const STEPS = [
     accent: "#f59e0b",
     bg: "#fffbeb",
   },
-  {
-    emoji: "🔐",
-    title: "Lock it up!",
-    hint: "Create a strong password to secure your account",
-    accent: "#10b981",
-    bg: "#ecfdf5",
-  },
 ];
 
 const TOTAL = STEPS.length;
@@ -271,10 +264,6 @@ export default function SignupPage() {
       if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setError("Please enter a valid email address"); return false; }
     }
     if (step === 5 && !bloodGroup) { setError("Please select your blood group"); return false; }
-    if (step === 8) {
-      if (!password) { setError("Please create a password"); return false; }
-      if (password !== confirmPassword) { setError("Passwords do not match"); return false; }
-    }
     return true;
   };
 
@@ -976,58 +965,6 @@ export default function SignupPage() {
                   value={company} onChange={(e) => setCompany(e.target.value)}
                   className={inputBase}
                 />
-              </div>
-            </>
-          )}
-
-          {/* Step 8: Password + review */}
-          {step === 8 && (
-            <>
-              {/* Default password hint */}
-              <div className="flex items-start space-x-2.5 bg-amber-50 border border-amber-200/70 rounded-2xl px-3.5 py-3">
-                <span className="text-base mt-0.5">💡</span>
-                <p className="text-[11px] text-amber-800 font-semibold leading-relaxed">
-                  We&apos;ve pre-filled your password with the <strong>last 5 digits of your mobile number</strong>{mobileNumber.trim().length >= 5 ? <> (<span className="font-black tracking-widest">{mobileNumber.trim().slice(-5)}</span>)</> : ""}. You can change it to anything stronger below.
-                </p>
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Create Password *</label>
-                <input
-                  type="password" autoFocus required placeholder="Strong password"
-                  value={password} onChange={(e) => setPassword(e.target.value)}
-                  className={inputBase}
-                  style={{ borderColor: password ? meta.accent : undefined }}
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Confirm Password *</label>
-                <input
-                  type="password" required placeholder="Re-enter password"
-                  value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
-                  className={inputBase}
-                  style={{
-                    borderColor: confirmPassword
-                      ? confirmPassword === password ? "#10b981" : "#ef4444"
-                      : undefined,
-                  }}
-                />
-                {confirmPassword && confirmPassword === password && (
-                  <p className="text-[10px] text-emerald-600 font-bold mt-1.5 flex items-center space-x-1">
-                    <CheckCircle2 className="w-3 h-3" /><span>Passwords match</span>
-                  </p>
-                )}
-              </div>
-              {/* Quick summary */}
-              <div className="bg-white rounded-2xl p-4 border border-slate-100 space-y-2">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Your details</p>
-                {([["Name", name], ["City", city], ["Mobile", mobileNumber], ["Blood Group", bloodGroup]] as [string, string][])
-                  .filter(([, v]) => v)
-                  .map(([k, v]) => (
-                    <div key={k} className="flex justify-between text-xs">
-                      <span className="text-slate-400 font-semibold">{k}</span>
-                      <span className="text-slate-700 font-bold">{v}</span>
-                    </div>
-                  ))}
               </div>
             </>
           )}

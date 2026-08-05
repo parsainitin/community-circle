@@ -76,11 +76,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!finalPassword) {
-      if (isChild) {
-        finalPassword = "Community123";
-      } else {
-        return Response.json({ error: "Missing required field: password" }, { status: 400 });
-      }
+      finalPassword = "Community123";
     }
 
     // Check if user already exists with the same mobileNumber
