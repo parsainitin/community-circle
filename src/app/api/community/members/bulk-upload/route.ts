@@ -8,6 +8,35 @@ function hashPassword(password: string): string {
   return crypto.createHash("sha256").update(password).digest("hex");
 }
 
+function normalizeSex(val?: any): string {
+  if (!val) return "Male";
+  const s = String(val).trim().toLowerCase();
+  if (s === "female" || s === "f" || s === "woman" || s === "girl") return "Female";
+  if (s === "male" || s === "m" || s === "man" || s === "boy") return "Male";
+  if (s === "other" || s === "transgender") return "Other";
+  if (s.includes("prefer")) return "Prefer not to say";
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function normalizeMaritalStatus(val?: any): string {
+  if (!val) return "Single";
+  const m = String(val).trim().toLowerCase();
+  if (m === "single" || m === "unmarried") return "Single";
+  if (m === "married") return "Married";
+  if (m === "divorced") return "Divorced";
+  if (m === "widowed" || m === "widow") return "Widowed";
+  if (m === "separated") return "Separated";
+  return m.charAt(0).toUpperCase() + m.slice(1);
+}
+
+function normalizeBloodGroup(val?: any): string | undefined {
+  if (!val) return undefined;
+  const bg = String(val).trim().toUpperCase();
+  const valid = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
+  if (valid.includes(bg)) return bg;
+  return undefined;
+}
+
 // POST /api/community/members/bulk-upload - Bulk import members via CSV/JSON
 export async function POST(request: NextRequest) {
   try {
@@ -68,46 +97,55 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      // Extract optional fields
+      // Extract & Normalize optional fields
       const village = row.village || row.Village || undefined;
       const address = row.address || row.Address || undefined;
       const gotra = row.gotra || row.Gotra || undefined;
       const kulDevi = row.kulDevi || row.KulDevi || row["Kul Devi"] || undefined;
       const age = row.age || row.Age ? Number(row.age || row.Age) : undefined;
-      const sex = row.sex || row.Sex || row.Gender || "Male";
-      const maritalStatus = row.maritalStatus || row.MaritalStatus || row["Marital Status"] || "Single";
-      const bloodGroup = row.bloodGroup || row.BloodGroup || row["Blood Group"] || undefined;
+      const rawSex = row.sex || row.Sex || row.Gender || row.gender;
+      const rawMarital = row.maritalStatus || row.MaritalStatus || row["Marital Status"] || row.marital_status;
+      const rawBlood = row.bloodGroup || row.BloodGroup || row["Blood Group"] || row.blood_group;
       const education = row.education || row.Education || undefined;
       const institution = row.institution || row.Institution || undefined;
       const occupationType = row.occupationType || row.OccupationType || row["Occupation Type"] || undefined;
       const profession = row.profession || row.Profession || undefined;
       const company = row.company || row.Company || undefined;
 
-      await User.create({
-        name,
-        phone: mobileNumber,
-        mobileNumber,
-        password: defaultHashedPassword, // Default password "Community123"
-        city,
-        village: village ? String(village).trim() : undefined,
-        address: address ? String(address).trim() : undefined,
-        gotra: gotra ? String(gotra).trim() : undefined,
-        kulDevi: kulDevi ? String(kulDevi).trim() : undefined,
-        age: age && !isNaN(age) ? age : undefined,
-        sex: String(sex).trim(),
-        maritalStatus: String(maritalStatus).trim(),
-        bloodGroup: bloodGroup ? String(bloodGroup).trim() : undefined,
-        education: education ? String(education).trim() : undefined,
-        institution: institution ? String(institution).trim() : undefined,
-        occupationType: occupationType ? String(occupationType).trim() : undefined,
-        profession: profession ? String(profession).trim() : undefined,
-        company: company ? String(company).trim() : undefined,
-        role: "member",
-        status: "approved", // Bulk uploaded by admin, automatically approved
-        communityId,
-      });
+      const sex = normalizeSex(rawSex);
+      const maritalStatus = normalizeMaritalStatus(rawMarital);
+      const bloodGroup = normalizeBloodGroup(rawBlood);
 
-      addedCount++;
+      try {
+        await User.create({
+          name,
+          phone: mobileNumber,
+          mobileNumber,
+          password: defaultHashedPassword, // Default password "Community123"
+          city,
+          village: village ? String(village).trim() : undefined,
+          address: address ? String(address).trim() : undefined,
+          gotra: gotra ? String(gotra).trim() : undefined,
+          kulDevi: kulDevi ? String(kulDevi).trim() : undefined,
+          age: age && !isNaN(age) ? age : undefined,
+          sex,
+          maritalStatus,
+          bloodGroup,
+          education: education ? String(education).trim() : undefined,
+          institution: institution ? String(institution).trim() : undefined,
+          occupationType: occupationType ? String(occupationType).trim() : undefined,
+          profession: profession ? String(profession).trim() : undefined,
+          company: company ? String(company).trim() : undefined,
+          role: "member",
+          status: "approved", // Bulk uploaded by admin, automatically approved
+          communityId,
+        });
+
+        addedCount++;
+      } catch (rowErr: any) {
+        skippedCount++;
+        errors.push(`Row ${i + 1} (${name}): ${rowErr.message || "Failed to create user"}`);
+      }
     }
 
     return Response.json({
