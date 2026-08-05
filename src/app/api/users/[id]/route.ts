@@ -28,6 +28,22 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     await dbConnect();
     const { id } = await params;
     const body = await request.json();
+
+    if (body.latitude !== undefined && body.latitude !== null && body.latitude !== "") {
+      body.latitude = Number(body.latitude);
+    }
+    if (body.longitude !== undefined && body.longitude !== null && body.longitude !== "") {
+      body.longitude = Number(body.longitude);
+    }
+    if (
+      (!body.googleMapsUrl || String(body.googleMapsUrl).trim() === "") &&
+      body.latitude !== undefined &&
+      body.longitude !== undefined &&
+      !isNaN(body.latitude) &&
+      !isNaN(body.longitude)
+    ) {
+      body.googleMapsUrl = `https://www.google.com/maps?q=${body.latitude},${body.longitude}`;
+    }
     
     const updatedUser = await User.findByIdAndUpdate(id, body, {
       new: true,

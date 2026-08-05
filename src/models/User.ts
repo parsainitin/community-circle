@@ -180,7 +180,12 @@ const UserSchema: Schema<IUser> = new Schema(
   }
 );
 
-if (mongoose.models.User && (!mongoose.models.User.schema.path("status") || !mongoose.models.User.schema.path("latitude"))) {
+if (
+  mongoose.models.User &&
+  (!mongoose.models.User.schema.path("status") ||
+   !mongoose.models.User.schema.path("latitude") ||
+   !mongoose.models.User.schema.path("googleMapsUrl"))
+) {
   delete (mongoose.models as any).User;
 }
 

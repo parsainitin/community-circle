@@ -267,11 +267,15 @@ export default function DirectoryPage() {
                 </div>
               </div>
               <div className="flex items-center space-x-2 shrink-0 select-none">
-                {(contact.googleMapsUrl || (contact.latitude && contact.longitude)) && (
+                {Boolean(
+                  (contact.googleMapsUrl && String(contact.googleMapsUrl).trim() !== "") ||
+                  (contact.latitude !== undefined && contact.latitude !== null && contact.longitude !== undefined && contact.longitude !== null && !isNaN(Number(contact.latitude)) && !isNaN(Number(contact.longitude)))
+                ) && (
                   <a
                     href={
-                      contact.googleMapsUrl ||
-                      `https://www.google.com/maps?q=${contact.latitude},${contact.longitude}`
+                      contact.googleMapsUrl && String(contact.googleMapsUrl).trim() !== ""
+                        ? contact.googleMapsUrl
+                        : `https://www.google.com/maps?q=${contact.latitude},${contact.longitude}`
                     }
                     target="_blank"
                     rel="noopener noreferrer"
