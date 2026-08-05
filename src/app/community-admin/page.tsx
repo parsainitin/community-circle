@@ -557,15 +557,6 @@ export default function CommunityAdminPage() {
             >
               <Upload className="w-4.5 h-4.5" />
             </button>
-
-            <button
-              onClick={exportToCSV}
-              disabled={filteredMembers.length === 0}
-              title="Export Member List as CSV"
-              className="w-10 h-10 rounded-2xl bg-emerald-50 hover:bg-emerald-100/80 text-emerald-700 border border-emerald-200/60 flex items-center justify-center shadow-2xs active:scale-90 transition-all cursor-pointer disabled:opacity-40"
-            >
-              <Download className="w-4.5 h-4.5" />
-            </button>
           </div>
         </div>
 
