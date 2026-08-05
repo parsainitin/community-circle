@@ -98,6 +98,21 @@ export async function POST(request: NextRequest) {
       }
 
       // Extract & Normalize optional fields
+      const rawEmail = row.email || row.Email || row["Email"] || row["email_address"];
+      let email: string | undefined = undefined;
+      if (rawEmail && String(rawEmail).trim() !== "") {
+        const parsedEmail = String(rawEmail).trim().toLowerCase();
+        if (parsedEmail.includes("@")) {
+          const existingEmail = await User.findOne({ email: parsedEmail });
+          if (existingEmail) {
+            skippedCount++;
+            errors.push(`Row ${i + 1} (${name}): Email ${parsedEmail} is already registered`);
+            continue;
+          }
+          email = parsedEmail;
+        }
+      }
+
       const village = row.village || row.Village || undefined;
       const address = row.address || row.Address || undefined;
       const gotra = row.gotra || row.Gotra || undefined;
@@ -121,6 +136,7 @@ export async function POST(request: NextRequest) {
           name,
           phone: mobileNumber,
           mobileNumber,
+          email,
           password: defaultHashedPassword, // Default password "Community123"
           city,
           village: village ? String(village).trim() : undefined,

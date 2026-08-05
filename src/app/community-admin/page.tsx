@@ -245,6 +245,7 @@ export default function CommunityAdminPage() {
     const headers = [
       "Name",
       "Mobile Number",
+      "Email",
       "City",
       "Village",
       "Address",
@@ -264,6 +265,7 @@ export default function CommunityAdminPage() {
     const sampleRow1 = [
       '"Rajesh Sharma"',
       '"9876543210"',
+      '"rajesh.sharma@example.com"',
       '"Indore"',
       '"Ashta"',
       '"123 M.G. Road"',
@@ -283,6 +285,7 @@ export default function CommunityAdminPage() {
     const sampleRow2 = [
       '"Priya Verma"',
       '"9876543211"',
+      '"priya.verma@example.com"',
       '"Bhopal"',
       '"Sehore"',
       '"45 Park Street"',
