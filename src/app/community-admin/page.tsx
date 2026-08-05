@@ -33,6 +33,7 @@ import {
   Sparkles,
   Plus,
   Trash2,
+  Building2,
 } from "lucide-react";
 
 interface Member {
@@ -57,6 +58,7 @@ interface Member {
   profession?: string;
   company?: string;
   role?: string;
+  isPropertyManager?: boolean;
   parent?: { _id: string; name: string; mobileNumber: string } | string;
   parentRelationship?: string;
   status: "pending" | "approved" | "rejected";
@@ -121,15 +123,22 @@ export default function CommunityAdminPage() {
   // Approval Modal & WhatsApp credentials state
   const [approvalModalMember, setApprovalModalMember] = useState<Member | null>(null);
   const [approvalPassword, setApprovalPassword] = useState("");
+  const [makePropertyManager, setMakePropertyManager] = useState(false);
 
   const generate5DigitKey = () => Math.floor(10000 + Math.random() * 90000).toString();
 
   const handleOpenApproveModal = (member: Member) => {
     setApprovalModalMember(member);
     setApprovalPassword(generate5DigitKey());
+    setMakePropertyManager(!!member.isPropertyManager);
   };
 
-  const handleApprovalAction = async (memberId: string, action: "approve" | "reject", customPassword?: string) => {
+  const handleApprovalAction = async (
+    memberId: string,
+    action: "approve" | "reject",
+    customPassword?: string,
+    isPropMgr?: boolean
+  ) => {
     if (!user) return;
     setProcessingId(memberId);
     try {
@@ -140,6 +149,7 @@ export default function CommunityAdminPage() {
           callerMobile: user.mobileNumber,
           action,
           password: customPassword || "Community123",
+          isPropertyManager: isPropMgr,
         }),
       });
       const data = await res.json();
@@ -152,7 +162,11 @@ export default function CommunityAdminPage() {
 
         // Update inspecting member if currently open
         if (inspectMember && inspectMember._id === memberId) {
-          setInspectMember({ ...inspectMember, status: action === "approve" ? "approved" : "rejected" });
+          setInspectMember({
+            ...inspectMember,
+            status: action === "approve" ? "approved" : "rejected",
+            isPropertyManager: data.user?.isPropertyManager,
+          });
         }
 
         fetchMembers();
@@ -161,6 +175,40 @@ export default function CommunityAdminPage() {
       }
     } catch {
       alert(`Network error trying to ${action} member`);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleTogglePropertyManager = async (memberId: string, currentVal?: boolean) => {
+    if (!user) return;
+    setProcessingId(memberId);
+    try {
+      const res = await fetch(`/api/community/members/${memberId}/approval`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          callerMobile: user.mobileNumber,
+          action: "toggle_property_manager",
+          isPropertyManager: !currentVal,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(
+          !currentVal
+            ? `🏢 ${data.user.name} designated as Property Manager!`
+            : `ℹ️ Property Manager role removed for ${data.user.name}`
+        );
+        if (inspectMember && inspectMember._id === memberId) {
+          setInspectMember({ ...inspectMember, isPropertyManager: !currentVal });
+        }
+        fetchMembers();
+      } else {
+        alert(data.error || "Failed to update property manager status");
+      }
+    } catch {
+      alert("Network error updating property manager status");
     } finally {
       setProcessingId(null);
     }
@@ -207,12 +255,12 @@ export default function CommunityAdminPage() {
     const member = approvalModalMember;
     const passToSet = approvalPassword.trim() || "Community123";
 
-    await handleApprovalAction(member._id, "approve", passToSet);
+    await handleApprovalAction(member._id, "approve", passToSet, makePropertyManager);
     setApprovalModalMember(null);
 
     const cleanMobile = member.mobileNumber.replace(/\D/g, "");
     const formattedMobile = cleanMobile.length === 10 ? `91${cleanMobile}` : cleanMobile;
-    const message = `Namaste ${member.name}! 🙏\n\nYour registration on Community Circle has been APPROVED! 🎉\n\n🔑 Your login credentials:\n• Mobile Number: ${cleanMobile}\n• Initial Password: ${passToSet}\n\nPlease sign in at ${window.location.origin}/auth to access your community directory, hubs, and family tree.`;
+    const message = `Namaste ${member.name}! 🙏\n\nYour registration on Community Circle has been APPROVED! 🎉${makePropertyManager ? "\n🏢 You have been designated as a Property Manager." : ""}\n\n🔑 Your login credentials:\n• Mobile Number: ${cleanMobile}\n• Initial Password: ${passToSet}\n\nPlease sign in at ${window.location.origin}/auth to access your community directory, hubs, and family tree.`;
     const waUrl = `https://wa.me/${formattedMobile}?text=${encodeURIComponent(message)}`;
     window.open(waUrl, "_blank");
   };
@@ -220,7 +268,7 @@ export default function CommunityAdminPage() {
   const handleApproveOnly = async () => {
     if (!approvalModalMember || !user) return;
     const passToSet = approvalPassword.trim() || "Community123";
-    await handleApprovalAction(approvalModalMember._id, "approve", passToSet);
+    await handleApprovalAction(approvalModalMember._id, "approve", passToSet, makePropertyManager);
     setApprovalModalMember(null);
   };
 
@@ -694,6 +742,11 @@ export default function CommunityAdminPage() {
                             Admin
                           </span>
                         )}
+                        {member.isPropertyManager && (
+                          <span className="bg-indigo-100 text-indigo-800 text-[9px] font-extrabold px-1.5 py-0.2 rounded-md border border-indigo-200 shrink-0">
+                            🏢 Property Manager
+                          </span>
+                        )}
                       </h3>
                       <div className="flex items-center space-x-2 mt-0.5">
                         <span className="text-xs text-slate-500 font-semibold flex items-center space-x-1">
@@ -843,6 +896,20 @@ export default function CommunityAdminPage() {
                         <Check className="w-4.5 h-4.5 stroke-[2.5]" />
                       </button>
                     )}
+
+                    {/* Toggle Property Manager Role */}
+                    <button
+                      onClick={() => handleTogglePropertyManager(member._id, member.isPropertyManager)}
+                      disabled={processingId === member._id}
+                      className={`w-8.5 h-8.5 rounded-xl border active:scale-90 flex items-center justify-center transition-all cursor-pointer border-0 disabled:opacity-40 ${
+                        member.isPropertyManager
+                          ? "bg-indigo-600 text-white border-indigo-600 shadow-xs"
+                          : "bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200"
+                      }`}
+                      title={member.isPropertyManager ? "Remove Property Manager Permission" : "Make Property Manager"}
+                    >
+                      <Building2 className="w-4.5 h-4.5" />
+                    </button>
 
                     {/* Delete Member Button */}
                     <button
@@ -1341,6 +1408,28 @@ export default function CommunityAdminPage() {
               <p className="text-[10px] text-slate-400 font-medium leading-relaxed text-center">
                 Random 5-digit key generated for newly onboarded member.
               </p>
+            </div>
+
+            {/* Property Manager Option Toggle */}
+            <div className="bg-indigo-50/70 p-3.5 rounded-2xl border border-indigo-100 flex items-center justify-between">
+              <div className="flex items-center space-x-2.5">
+                <Building2 className="w-4.5 h-4.5 text-indigo-600 shrink-0" />
+                <div>
+                  <label htmlFor="makePropMgr" className="text-xs font-black text-indigo-950 cursor-pointer block leading-tight">
+                    Assign Property Manager Role
+                  </label>
+                  <p className="text-[10px] text-indigo-700/80 font-medium mt-0.5">
+                    Allows member to manage property bookings
+                  </p>
+                </div>
+              </div>
+              <input
+                type="checkbox"
+                id="makePropMgr"
+                checked={makePropertyManager}
+                onChange={(e) => setMakePropertyManager(e.target.checked)}
+                className="w-4.5 h-4.5 accent-indigo-600 cursor-pointer rounded-md shrink-0"
+              />
             </div>
 
             {/* Action Buttons */}

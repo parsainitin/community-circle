@@ -13,12 +13,12 @@ import {
   Users,
   IndianRupee,
   Phone,
-  UserCheck,
   X,
   ChevronLeft,
   ChevronRight,
-  ShieldAlert,
-  Info,
+  ChevronDown,
+  ChevronUp,
+  ShieldCheck,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
@@ -41,12 +41,27 @@ interface Property {
   bookedDates: BookedSlot[];
 }
 
+function getWhatsAppUrl(mobileNumber?: string, message?: string) {
+  if (!mobileNumber) return "";
+  const digits = mobileNumber.replace(/\D/g, "");
+  if (!digits) return "";
+  const formatted = digits.length === 10 ? `91${digits}` : digits;
+  const encodedMsg = message ? encodeURIComponent(message) : "";
+  return `https://wa.me/${formatted}${encodedMsg ? `?text=${encodedMsg}` : ""}`;
+}
+
 export default function BookingsPage() {
   const { user } = useAuth();
   const [properties, setProperties] = useState<Property[]>([]);
-  const [selectedPropertyId, setSelectedPropertyId] = useState<string>("");
+  const [expandedPropIds, setExpandedPropIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Check if current user is admin or property manager
+  const isManagerOrAdmin =
+    user?.role === "admin" ||
+    user?.role === "super-admin" ||
+    user?.isPropertyManager === true;
 
   // Calendar Month & Year State
   const now = new Date();
@@ -65,6 +80,7 @@ export default function BookingsPage() {
   const [submittingProperty, setSubmittingProperty] = useState(false);
 
   // Manage Booking Date Modal State
+  const [targetPropertyId, setTargetPropertyId] = useState<string>("");
   const [manageBookingModalOpen, setManageBookingModalOpen] = useState(false);
   const [bookingDate, setBookingDate] = useState("");
   const [bookingAction, setBookingAction] = useState<"book" | "free">("book");
@@ -86,15 +102,9 @@ export default function BookingsPage() {
         const data = await res.json();
         const propList = data.properties || [];
         setProperties(propList);
-        if (propList.length > 0) {
-          if (
-            !selectedPropertyId ||
-            !propList.some((p: Property) => p._id === selectedPropertyId)
-          ) {
-            setSelectedPropertyId(propList[0]._id);
-          }
-        } else {
-          setSelectedPropertyId("");
+        // Expand first property by default if none expanded yet
+        if (propList.length > 0 && expandedPropIds.length === 0) {
+          setExpandedPropIds([propList[0]._id]);
         }
       }
     } catch (e) {
@@ -108,18 +118,21 @@ export default function BookingsPage() {
     fetchProperties();
   }, []);
 
-  const selectedProperty =
-    properties.find((p) => p._id === selectedPropertyId) ||
-    properties[0] ||
-    null;
+  const toggleExpand = (propId: string) => {
+    setExpandedPropIds((prev) =>
+      prev.includes(propId)
+        ? prev.filter((id) => id !== propId)
+        : [...prev, propId]
+    );
+  };
 
-  // Helper for generating calendar grid for current year & month
+  // Helper for generating calendar grid
   const getDaysInMonth = (year: number, month: number) => {
     return new Date(year, month + 1, 0).getDate();
   };
 
   const getFirstDayOfMonth = (year: number, month: number) => {
-    return new Date(year, month, 1).getDay(); // 0 = Sunday
+    return new Date(year, month, 1).getDay();
   };
 
   const daysInMonth = getDaysInMonth(currentYear, currentMonth);
@@ -164,28 +177,44 @@ export default function BookingsPage() {
     return `${currentYear}-${m}-${d}`;
   };
 
-  const isDateBooked = (dateStr: string) => {
-    if (!selectedProperty || !selectedProperty.bookedDates) return null;
-    return selectedProperty.bookedDates.find((b) => b.date === dateStr) || null;
+  const isDateBooked = (prop: Property, dateStr: string) => {
+    if (!prop || !prop.bookedDates) return null;
+    return prop.bookedDates.find((b) => b.date === dateStr) || null;
   };
 
-  // Open Manage Booking modal pre-selected for date
-  const handleDayClick = (dateStr: string) => {
-    if (!selectedProperty) return;
-    const booking = isDateBooked(dateStr);
-    setBookingDate(dateStr);
-    if (booking) {
-      setBookingAction("free");
-      setBookedByName(booking.bookedBy);
-      setBookedByPhone(booking.contactPhone || "");
-      setBookingNotes(booking.notes || "");
+  // Handle Day Click
+  const handleDayClick = (prop: Property, dateStr: string) => {
+    const booking = isDateBooked(prop, dateStr);
+    if (isManagerOrAdmin) {
+      setTargetPropertyId(prop._id);
+      setBookingDate(dateStr);
+      if (booking) {
+        setBookingAction("free");
+        setBookedByName(booking.bookedBy);
+        setBookedByPhone(booking.contactPhone || "");
+        setBookingNotes(booking.notes || "");
+      } else {
+        setBookingAction("book");
+        setBookedByName(user?.name || "");
+        setBookedByPhone(user?.mobileNumber || user?.phone || "");
+        setBookingNotes("");
+      }
+      setManageBookingModalOpen(true);
     } else {
-      setBookingAction("book");
-      setBookedByName(user?.name || "");
-      setBookedByPhone(user?.mobileNumber || user?.phone || "");
-      setBookingNotes("");
+      if (booking) {
+        alert(
+          `🔴 Date ${dateStr} is Booked for "${booking.notes || "Event"}" by ${booking.bookedBy}.`
+        );
+      } else {
+        const phone = prop.contactPhone;
+        if (phone) {
+          const msg = `Namaste! I would like to inquire about booking "${prop.propertyName}" for date ${dateStr}. Please share availability and details.`;
+          window.open(getWhatsAppUrl(phone, msg), "_blank");
+        } else {
+          alert(`🟢 Date ${dateStr} is Available! Please connect with the manager to request booking.`);
+        }
+      }
     }
-    setManageBookingModalOpen(true);
   };
 
   // Create New Property
@@ -221,7 +250,7 @@ export default function BookingsPage() {
         setNewPropPhone("");
         setNewPropDesc("");
         if (data.property) {
-          setSelectedPropertyId(data.property._id);
+          setExpandedPropIds((prev) => [...prev, data.property._id]);
         }
         fetchProperties();
       } else {
@@ -239,7 +268,7 @@ export default function BookingsPage() {
   // Submit Manage Booking (Book or Free date)
   const handleSaveBookingDate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!bookingDate || !selectedPropertyId) return;
+    if (!bookingDate || !targetPropertyId) return;
 
     setSubmittingBooking(true);
     try {
@@ -247,7 +276,7 @@ export default function BookingsPage() {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          propertyId: selectedPropertyId,
+          propertyId: targetPropertyId,
           action: bookingAction,
           date: bookingDate,
           bookedBy: bookedByName.trim() || "Community Member",
@@ -276,6 +305,8 @@ export default function BookingsPage() {
     }
   };
 
+  const getTargetProperty = () => properties.find((p) => p._id === targetPropertyId);
+
   return (
     <div className="min-h-screen bg-slate-50 pb-24 text-slate-800 select-none">
       {/* Toast Alert */}
@@ -300,19 +331,26 @@ export default function BookingsPage() {
                 <Building2 className="w-4.5 h-4.5 text-indigo-200" />
                 <span>Property Bookings & Calendar</span>
               </h1>
-              <p className="text-[10px] text-indigo-100 font-medium">
-                Check Booked & Free Days or Add New Property
+              <p className="text-[10px] text-indigo-100 font-medium flex items-center space-x-1">
+                <span>Expand any property to view booking status & connect</span>
+                {isManagerOrAdmin && (
+                  <span className="bg-emerald-500/30 text-white px-1.5 py-0.2 rounded-md font-bold text-[9px] border border-white/20">
+                    Manager Access
+                  </span>
+                )}
               </p>
             </div>
           </div>
 
-          <button
-            onClick={() => setAddPropertyModalOpen(true)}
-            className="px-3 py-2 bg-white/20 hover:bg-white/30 text-white text-xs font-extrabold rounded-xl border border-white/30 backdrop-blur-xs flex items-center space-x-1.5 cursor-pointer active:scale-95 transition-all shadow-xs"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Property</span>
-          </button>
+          {isManagerOrAdmin && (
+            <button
+              onClick={() => setAddPropertyModalOpen(true)}
+              className="px-3 py-2 bg-white/20 hover:bg-white/30 text-white text-xs font-extrabold rounded-xl border border-white/30 backdrop-blur-xs flex items-center space-x-1.5 cursor-pointer active:scale-95 transition-all shadow-xs"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Property</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -330,304 +368,355 @@ export default function BookingsPage() {
               <Building2 className="w-6 h-6" />
             </div>
             <h3 className="text-sm font-black text-slate-800">
-              No Properties Added Yet
+              No Properties Listed Yet
             </h3>
             <p className="text-xs text-slate-500 font-medium max-w-sm mx-auto">
-              There are currently no properties listed. Click the button below to add your community property (Community Hall, Marriage Garden, Guest House) and manage its booking days!
+              {isManagerOrAdmin
+                ? "Click below to add a property (Community Hall, Lawn, Guest House) and manage its bookings!"
+                : "There are currently no community properties listed for booking."}
             </p>
-            <button
-              onClick={() => setAddPropertyModalOpen(true)}
-              className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-xs border-0 cursor-pointer active:scale-95 transition-all inline-flex items-center space-x-1.5"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add New Property</span>
-            </button>
+            {isManagerOrAdmin && (
+              <button
+                onClick={() => setAddPropertyModalOpen(true)}
+                className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-xs border-0 cursor-pointer active:scale-95 transition-all inline-flex items-center space-x-1.5"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add New Property</span>
+              </button>
+            )}
           </div>
         ) : (
-          <>
-            {/* PROPERTY SELECTOR CARDS */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xs font-black uppercase text-slate-500 tracking-wider">
-                  Select Property (संपत्ति चुनें)
-                </h2>
-                <span className="text-[10px] text-indigo-600 font-extrabold">
-                  {properties.length} Registered Properties
-                </span>
-              </div>
+          <div className="space-y-3.5">
+            <div className="flex items-center justify-between px-1">
+              <h2 className="text-xs font-black uppercase text-slate-500 tracking-wider">
+                Community Properties ({properties.length})
+              </h2>
+              <span className="text-[10px] text-slate-400 font-bold">
+                Tap header to Expand / Collapse
+              </span>
+            </div>
 
-              <div className="flex space-x-3 overflow-x-auto no-scrollbar py-1">
-                {properties.map((prop) => {
-                  const isSelected = prop._id === selectedPropertyId;
-                  const bookedCount = prop.bookedDates?.length || 0;
+            {/* COLLAPSIBLE ACCORDION LIST */}
+            {properties.map((prop) => {
+              const isExpanded = expandedPropIds.includes(prop._id);
+              const bookedCount = prop.bookedDates?.length || 0;
 
-                  return (
-                    <div
-                      key={prop._id}
-                      onClick={() => setSelectedPropertyId(prop._id)}
-                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer shrink-0 w-64 flex flex-col justify-between select-none ${
-                        isSelected
-                          ? "bg-indigo-600 text-white border-indigo-600 shadow-md ring-2 ring-indigo-400"
-                          : "bg-white text-slate-800 border-slate-200 hover:border-indigo-300 shadow-xs"
-                      }`}
-                    >
-                      <div>
-                        <span
-                          className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider ${
-                            isSelected
-                              ? "bg-white/20 text-white"
-                              : "bg-indigo-50 text-indigo-700"
-                          }`}
-                        >
-                          {prop.propertyType}
-                        </span>
-                        <h3 className="text-xs font-black mt-1.5 leading-snug line-clamp-1">
+              return (
+                <div
+                  key={prop._id}
+                  className="bg-white rounded-3xl border border-slate-200/90 shadow-xs overflow-hidden transition-all"
+                >
+                  {/* COLLAPSED HEADER BAR */}
+                  <div
+                    onClick={() => toggleExpand(prop._id)}
+                    className={`p-4 cursor-pointer flex items-center justify-between transition-colors select-none ${
+                      isExpanded
+                        ? "bg-gradient-to-r from-indigo-50/80 to-blue-50/50 border-b border-slate-200"
+                        : "hover:bg-slate-50"
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3.5 min-w-0">
+                      <div
+                        className={`p-3 rounded-2xl shrink-0 transition-transform ${
+                          isExpanded
+                            ? "bg-indigo-600 text-white shadow-xs"
+                            : "bg-indigo-50 text-indigo-700"
+                        }`}
+                      >
+                        <Building2 className="w-5 h-5" />
+                      </div>
+
+                      <div className="min-w-0">
+                        <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+                          <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider bg-indigo-100 text-indigo-800">
+                            {prop.propertyType}
+                          </span>
+                          {prop.location && (
+                            <span className="text-[10px] font-medium text-slate-500 flex items-center space-x-1">
+                              <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                              <span className="truncate max-w-[130px]">{prop.location}</span>
+                            </span>
+                          )}
+                        </div>
+
+                        <h3 className="text-sm font-black text-slate-900 mt-1 truncate">
                           {prop.propertyName}
                         </h3>
                       </div>
+                    </div>
 
-                      <div className="mt-3 pt-2 border-t border-current/10 flex items-center justify-between text-[10px]">
-                        <div className="flex items-center space-x-1">
-                          <MapPin className="w-3 h-3 opacity-70" />
-                          <span className="truncate max-w-[110px] font-medium">
-                            {prop.location || "Location"}
-                          </span>
-                        </div>
-
-                        <span className="font-extrabold">
-                          {bookedCount} Booked Days
+                    <div className="flex items-center space-x-3 shrink-0 ml-2">
+                      <div className="text-right hidden sm:block">
+                        <span className="text-xs font-black text-rose-600 block">
+                          🔴 {bookedCount} Booked
                         </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* SELECTED PROPERTY HEADER & DETAILS CARD */}
-            {selectedProperty && (
-              <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs space-y-3">
-                <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 pb-3 gap-2">
-                  <div>
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md">
-                      {selectedProperty.propertyType}
-                    </span>
-                    <h2 className="text-base font-black text-slate-900 mt-1">
-                      {selectedProperty.propertyName}
-                    </h2>
-                    {selectedProperty.location && (
-                      <p className="text-xs text-slate-500 font-medium flex items-center space-x-1 mt-0.5">
-                        <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span>{selectedProperty.location}</span>
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="flex items-center space-x-3 text-xs font-bold text-slate-700 shrink-0">
-                    {selectedProperty.pricePerDay && (
-                      <div className="bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-xl border border-emerald-200 flex items-center space-x-1">
-                        <IndianRupee className="w-3.5 h-3.5" />
-                        <span>{selectedProperty.pricePerDay} / day</span>
-                      </div>
-                    )}
-
-                    {selectedProperty.capacity && (
-                      <div className="bg-slate-100 px-3 py-1.5 rounded-xl flex items-center space-x-1">
-                        <Users className="w-3.5 h-3.5 text-slate-500" />
-                        <span>Cap: {selectedProperty.capacity}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {selectedProperty.description && (
-                  <p className="text-xs text-slate-600 font-medium leading-relaxed bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                    {selectedProperty.description}
-                  </p>
-                )}
-
-                {/* MANAGER CONTACT & ACTION BAR */}
-                <div className="flex justify-between items-center pt-1">
-                  {selectedProperty.contactPhone && (
-                    <a
-                      href={`tel:${selectedProperty.contactPhone}`}
-                      className="text-xs font-extrabold text-indigo-600 hover:text-indigo-700 flex items-center space-x-1 cursor-pointer no-underline"
-                    >
-                      <Phone className="w-3.5 h-3.5" />
-                      <span>Call Manager: {selectedProperty.contactPhone}</span>
-                    </a>
-                  )}
-
-                  <button
-                    onClick={() => {
-                      setBookingDate(new Date().toISOString().split("T")[0]);
-                      setBookingAction("book");
-                      setBookedByName(user?.name || "");
-                      setBookedByPhone(user?.mobileNumber || user?.phone || "");
-                      setBookingNotes("");
-                      setManageBookingModalOpen(true);
-                    }}
-                    className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition-transform active:scale-95 flex items-center space-x-1.5 border-0 cursor-pointer ml-auto"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Manage Booking Date</span>
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* ── CALENDAR VIEW: BOOKED vs FREE DAYS ────────────────────────── */}
-            {selectedProperty && (
-              <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs space-y-4">
-                {/* Calendar Month Navigation Header */}
-                <div className="flex justify-between items-center pb-3 border-b border-slate-100">
-                  <div>
-                    <h3 className="text-sm font-black text-slate-900 flex items-center space-x-2">
-                      <CalendarIcon className="w-4 h-4 text-indigo-600" />
-                      <span>
-                        Booking Status: {monthNames[currentMonth]} {currentYear}
-                      </span>
-                    </h3>
-                    <p className="text-[10px] text-slate-400 font-semibold mt-0.5">
-                      Tap any date to mark as Booked (🔴) or Free (🟢)
-                    </p>
-                  </div>
-
-                  <div className="flex items-center space-x-1">
-                    <button
-                      onClick={handlePrevMonth}
-                      className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all border-0 cursor-pointer"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
-                    <span className="text-xs font-black px-2 min-w-[110px] text-center">
-                      {monthNames[currentMonth]} {currentYear}
-                    </span>
-                    <button
-                      onClick={handleNextMonth}
-                      className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all border-0 cursor-pointer"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Color Legend Bar */}
-                <div className="flex items-center justify-around bg-slate-50 p-2.5 rounded-2xl border border-slate-100 text-xs font-extrabold">
-                  <div className="flex items-center space-x-1.5">
-                    <div className="w-3.5 h-3.5 rounded-full bg-rose-600 shadow-xs" />
-                    <span className="text-rose-700">🔴 Booked Day (बुक है)</span>
-                  </div>
-                  <div className="flex items-center space-x-1.5">
-                    <div className="w-3.5 h-3.5 rounded-full bg-emerald-500 shadow-xs" />
-                    <span className="text-emerald-700">🟢 Free Day (उपलब्ध है)</span>
-                  </div>
-                </div>
-
-                {/* Calendar Grid (Weekdays + Days) */}
-                <div>
-                  <div className="grid grid-cols-7 text-center text-[11px] font-black text-slate-400 uppercase tracking-wider mb-2">
-                    <span>Sun</span>
-                    <span>Mon</span>
-                    <span>Tue</span>
-                    <span>Wed</span>
-                    <span>Thu</span>
-                    <span>Fri</span>
-                    <span>Sat</span>
-                  </div>
-
-                  <div className="grid grid-cols-7 gap-1.5 text-center">
-                    {/* Empty leading slots */}
-                    {Array.from({ length: firstDayOfWeek }).map((_, idx) => (
-                      <div key={`empty-${idx}`} className="h-14 rounded-2xl bg-slate-50/50" />
-                    ))}
-
-                    {/* Month Days */}
-                    {Array.from({ length: daysInMonth }).map((_, idx) => {
-                      const dayNum = idx + 1;
-                      const dateStr = formatDateStr(dayNum);
-                      const booking = isDateBooked(dateStr);
-
-                      return (
-                        <div
-                          key={dateStr}
-                          onClick={() => handleDayClick(dateStr)}
-                          className={`h-14 rounded-2xl p-1.5 flex flex-col justify-between items-center transition-all cursor-pointer select-none border ${
-                            booking
-                              ? "bg-rose-50 border-rose-300 hover:bg-rose-100 text-rose-950"
-                              : "bg-emerald-50/70 border-emerald-200 hover:bg-emerald-100 text-emerald-950"
-                          }`}
-                        >
-                          <div className="w-full flex justify-between items-center">
-                            <span className="text-xs font-black leading-none">{dayNum}</span>
-                            <div
-                              className={`w-2.5 h-2.5 rounded-full ${
-                                booking ? "bg-rose-600" : "bg-emerald-500"
-                              }`}
-                            />
-                          </div>
-
-                          <span className="text-[9px] font-extrabold leading-tight truncate w-full px-0.5">
-                            {booking ? booking.bookedBy : "Free Day"}
+                        {prop.pricePerDay && (
+                          <span className="text-[10px] text-slate-500 font-semibold block">
+                            ₹{prop.pricePerDay}/day
                           </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+                        )}
+                      </div>
 
-                {/* LIST OF BOOKED DATES FOR SELECTED PROPERTY */}
-                <div className="pt-3 border-t border-slate-100 space-y-2">
-                  <h4 className="text-xs font-black uppercase text-slate-500 tracking-wider">
-                    Booked Dates List for {selectedProperty?.propertyName}
-                  </h4>
-
-                  {!selectedProperty?.bookedDates || selectedProperty.bookedDates.length === 0 ? (
-                    <div className="p-4 bg-slate-50 rounded-2xl text-center text-xs font-bold text-slate-400">
-                      🟢 All dates are currently free and available for booking!
+                      <div className="p-2 rounded-xl bg-slate-100 text-slate-600">
+                        {isExpanded ? (
+                          <ChevronUp className="w-4 h-4" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4" />
+                        )}
+                      </div>
                     </div>
-                  ) : (
-                    <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                      {selectedProperty.bookedDates.map((item, idx) => (
-                        <div
-                          key={idx}
-                          className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex justify-between items-center text-xs"
-                        >
-                          <div className="space-y-0.5">
-                            <div className="flex items-center space-x-2">
-                              <span className="font-black text-rose-700 bg-rose-100 px-2 py-0.5 rounded-md">
-                                {item.date}
-                              </span>
-                              <span className="font-bold text-slate-800">
-                                Booked by: {item.bookedBy}
-                              </span>
+                  </div>
+
+                  {/* EXPANDED CONTENT BODY */}
+                  {isExpanded && (
+                    <div className="p-5 space-y-4 animate-in fade-in duration-200">
+                      {/* PROPERTY DETAILS & WHATSAPP ACTION BAR */}
+                      <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs font-bold text-slate-700">
+                          {prop.pricePerDay && (
+                            <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex items-center space-x-2">
+                              <IndianRupee className="w-4 h-4 text-emerald-600 shrink-0" />
+                              <div>
+                                <span className="text-[9px] text-slate-400 block uppercase font-bold">Price</span>
+                                <span>₹{prop.pricePerDay} / day</span>
+                              </div>
                             </div>
-                            {item.notes && (
-                              <p className="text-[10px] text-slate-500 font-medium">
-                                Note: {item.notes}
-                              </p>
+                          )}
+
+                          {prop.capacity && (
+                            <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex items-center space-x-2">
+                              <Users className="w-4 h-4 text-indigo-600 shrink-0" />
+                              <div>
+                                <span className="text-[9px] text-slate-400 block uppercase font-bold">Capacity</span>
+                                <span>{prop.capacity} Guests</span>
+                              </div>
+                            </div>
+                          )}
+
+                          {prop.location && (
+                            <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex items-center space-x-2 col-span-2 sm:col-span-1">
+                              <MapPin className="w-4 h-4 text-rose-500 shrink-0" />
+                              <div className="truncate">
+                                <span className="text-[9px] text-slate-400 block uppercase font-bold">Location</span>
+                                <span className="truncate block">{prop.location}</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {prop.description && (
+                          <p className="text-xs text-slate-600 font-medium leading-relaxed bg-white p-3 rounded-xl border border-slate-200/70">
+                            {prop.description}
+                          </p>
+                        )}
+
+                        {/* WHATSAPP & MANAGER CALL ACTION BUTTONS */}
+                        <div className="pt-1 flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center space-x-2 flex-wrap gap-y-2">
+                            {prop.contactPhone && (
+                              <>
+                                {/* WhatsApp Connect Icon Button */}
+                                <a
+                                  href={getWhatsAppUrl(
+                                    prop.contactPhone,
+                                    `Namaste! I am interested in booking "${prop.propertyName}" for an event. Please share availability and booking details.`
+                                  )}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition-transform active:scale-95 flex items-center space-x-1.5 no-underline border-0 cursor-pointer"
+                                  title="Chat with Property Manager on WhatsApp"
+                                >
+                                  <svg className="w-4 h-4 fill-current text-white shrink-0" viewBox="0 0 24 24">
+                                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+                                  </svg>
+                                  <span>WhatsApp Manager</span>
+                                </a>
+
+                                {/* Call Manager Link */}
+                                <a
+                                  href={`tel:${prop.contactPhone}`}
+                                  className="px-3.5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-extrabold text-xs rounded-xl transition-all flex items-center space-x-1.5 no-underline border-0 cursor-pointer"
+                                >
+                                  <Phone className="w-3.5 h-3.5" />
+                                  <span>Call: {prop.contactPhone}</span>
+                                </a>
+                              </>
                             )}
                           </div>
 
-                          <button
-                            onClick={() => handleDayClick(item.date)}
-                            className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-[10px] rounded-lg transition-all cursor-pointer border-0"
-                          >
-                            Manage
-                          </button>
+                          {/* Manage Date Action Button for Property Managers & Admins */}
+                          {isManagerOrAdmin && (
+                            <button
+                              onClick={() => {
+                                setTargetPropertyId(prop._id);
+                                setBookingDate(new Date().toISOString().split("T")[0]);
+                                setBookingAction("book");
+                                setBookedByName(user?.name || "");
+                                setBookedByPhone(user?.mobileNumber || user?.phone || "");
+                                setBookingNotes("");
+                                setManageBookingModalOpen(true);
+                              }}
+                              className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition-transform active:scale-95 flex items-center space-x-1.5 border-0 cursor-pointer ml-auto"
+                            >
+                              <Plus className="w-4 h-4" />
+                              <span>Manage Booking Date</span>
+                            </button>
+                          )}
                         </div>
-                      ))}
+                      </div>
+
+                      {/* ── CALENDAR VIEW: BOOKED vs FREE DAYS ────────────────── */}
+                      <div className="bg-white rounded-2xl p-4 border border-slate-200 space-y-3">
+                        {/* Calendar Month Navigation Header */}
+                        <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                          <div>
+                            <h4 className="text-xs font-black text-slate-900 flex items-center space-x-1.5">
+                              <CalendarIcon className="w-4 h-4 text-indigo-600" />
+                              <span>
+                                {monthNames[currentMonth]} {currentYear} Booking Calendar
+                              </span>
+                            </h4>
+                          </div>
+
+                          <div className="flex items-center space-x-1">
+                            <button
+                              onClick={handlePrevMonth}
+                              className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all border-0 cursor-pointer"
+                            >
+                              <ChevronLeft className="w-3.5 h-3.5" />
+                            </button>
+                            <span className="text-xs font-black px-1.5 min-w-[90px] text-center">
+                              {monthNames[currentMonth]} {currentYear}
+                            </span>
+                            <button
+                              onClick={handleNextMonth}
+                              className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all border-0 cursor-pointer"
+                            >
+                              <ChevronRight className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Color Legend Bar */}
+                        <div className="flex items-center justify-around bg-slate-50 p-2 rounded-xl border border-slate-100 text-[11px] font-extrabold">
+                          <div className="flex items-center space-x-1.5">
+                            <div className="w-3 h-3 rounded-full bg-rose-600 shadow-xs" />
+                            <span className="text-rose-700">🔴 Booked Day (बुक है)</span>
+                          </div>
+                          <div className="flex items-center space-x-1.5">
+                            <div className="w-3 h-3 rounded-full bg-emerald-500 shadow-xs" />
+                            <span className="text-emerald-700">🟢 Free Day (उपलब्ध है)</span>
+                          </div>
+                        </div>
+
+                        {/* Calendar Grid */}
+                        <div>
+                          <div className="grid grid-cols-7 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">
+                            <span>Sun</span>
+                            <span>Mon</span>
+                            <span>Tue</span>
+                            <span>Wed</span>
+                            <span>Thu</span>
+                            <span>Fri</span>
+                            <span>Sat</span>
+                          </div>
+
+                          <div className="grid grid-cols-7 gap-1 text-center">
+                            {Array.from({ length: firstDayOfWeek }).map((_, idx) => (
+                              <div key={`empty-${idx}`} className="h-12 rounded-xl bg-slate-50/50" />
+                            ))}
+
+                            {Array.from({ length: daysInMonth }).map((_, idx) => {
+                              const dayNum = idx + 1;
+                              const dateStr = formatDateStr(dayNum);
+                              const booking = isDateBooked(prop, dateStr);
+
+                              return (
+                                <div
+                                  key={dateStr}
+                                  onClick={() => handleDayClick(prop, dateStr)}
+                                  className={`h-12 rounded-xl p-1 flex flex-col justify-between items-center transition-all cursor-pointer select-none border ${
+                                    booking
+                                      ? "bg-rose-50 border-rose-300 hover:bg-rose-100 text-rose-950"
+                                      : "bg-emerald-50/70 border-emerald-200 hover:bg-emerald-100 text-emerald-950"
+                                  }`}
+                                >
+                                  <div className="w-full flex justify-between items-center px-0.5">
+                                    <span className="text-xs font-black leading-none">{dayNum}</span>
+                                    <div
+                                      className={`w-2 h-2 rounded-full ${
+                                        booking ? "bg-rose-600" : "bg-emerald-500"
+                                      }`}
+                                    />
+                                  </div>
+
+                                  <span className="text-[8.5px] font-extrabold leading-tight truncate w-full px-0.5">
+                                    {booking ? booking.bookedBy : "Free"}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* LIST OF BOOKED DATES */}
+                        <div className="pt-2 border-t border-slate-100 space-y-1.5">
+                          <h5 className="text-[11px] font-black uppercase text-slate-500 tracking-wider">
+                            Booked Dates List for {prop.propertyName}
+                          </h5>
+
+                          {!prop.bookedDates || prop.bookedDates.length === 0 ? (
+                            <div className="p-3 bg-slate-50 rounded-xl text-center text-xs font-bold text-slate-400">
+                              🟢 All dates are currently free and available for booking!
+                            </div>
+                          ) : (
+                            <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                              {prop.bookedDates.map((item, idx) => (
+                                <div
+                                  key={idx}
+                                  className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-center text-xs"
+                                >
+                                  <div className="space-y-0.5">
+                                    <div className="flex items-center space-x-2">
+                                      <span className="font-black text-rose-700 bg-rose-100 px-2 py-0.5 rounded-md text-[11px]">
+                                        {item.date}
+                                      </span>
+                                      <span className="font-bold text-slate-800">
+                                        Booked by: {item.bookedBy}
+                                      </span>
+                                    </div>
+                                    {item.notes && (
+                                      <p className="text-[10px] text-slate-500 font-medium">
+                                        Note: {item.notes}
+                                      </p>
+                                    )}
+                                  </div>
+
+                                  {isManagerOrAdmin && (
+                                    <button
+                                      onClick={() => handleDayClick(prop, item.date)}
+                                      className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-[10px] rounded-lg transition-all cursor-pointer border-0"
+                                    >
+                                      Manage
+                                    </button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
-              </div>
-            )}
-          </>
+              );
+            })}
+          </div>
         )}
       </div>
 
-      {/* ── MODAL 1: ADD NEW PROPERTY ─────────────────────────────────── */}
-      {addPropertyModalOpen && (
+      {/* ── MODAL 1: ADD NEW PROPERTY (For Managers & Admins) ─────────────────────────────── */}
+      {addPropertyModalOpen && isManagerOrAdmin && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
           <div className="bg-white w-full max-w-md rounded-3xl p-5 shadow-2xl border border-slate-100 flex flex-col space-y-4 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-150">
             <div className="flex justify-between items-center pb-3 border-b border-slate-100">
@@ -758,8 +847,8 @@ export default function BookingsPage() {
         </div>
       )}
 
-      {/* ── MODAL 2: MANAGE BOOKING DATE FOR PROPERTY ─────────────────── */}
-      {manageBookingModalOpen && (
+      {/* ── MODAL 2: MANAGE BOOKING DATE (For Managers & Admins) ─────────────────── */}
+      {manageBookingModalOpen && isManagerOrAdmin && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
           <div className="bg-white w-full max-w-md rounded-3xl p-5 shadow-2xl border border-slate-100 flex flex-col space-y-4 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-150">
             <div className="flex justify-between items-center pb-3 border-b border-slate-100">
@@ -768,7 +857,7 @@ export default function BookingsPage() {
                   Manage Booking Status
                 </h3>
                 <p className="text-[10px] text-slate-400 font-bold">
-                  Property: {selectedProperty?.propertyName}
+                  Property: {getTargetProperty()?.propertyName}
                 </p>
               </div>
               <button

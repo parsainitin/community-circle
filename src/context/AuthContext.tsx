@@ -26,6 +26,7 @@ interface UserType {
   occupationType?: string;
   profession?: string;
   company?: string;
+  isPropertyManager?: boolean;
 }
 
 interface AuthContextProps {

@@ -18,19 +18,19 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     await dbConnect();
     const { id } = await params;
     const body = await request.json();
-    const { callerMobile, action, password } = body; // action: "approve" | "reject"
+    const { callerMobile, action, password, isPropertyManager } = body; // action: "approve" | "reject" | "toggle_property_manager"
 
     if (!callerMobile || !action) {
       return Response.json({ error: "Missing required fields: callerMobile, action" }, { status: 400 });
     }
 
-    if (action !== "approve" && action !== "reject") {
-      return Response.json({ error: "Action must be 'approve' or 'reject'" }, { status: 400 });
+    if (action !== "approve" && action !== "reject" && action !== "toggle_property_manager") {
+      return Response.json({ error: "Action must be 'approve', 'reject', or 'toggle_property_manager'" }, { status: 400 });
     }
 
     const caller = await User.findOne({ mobileNumber: callerMobile }).lean();
     if (!caller || (caller.role !== "admin" && caller.role !== "super-admin")) {
-      return Response.json({ error: "Forbidden: Only community admins can approve or reject members" }, { status: 403 });
+      return Response.json({ error: "Forbidden: Only community admins can manage member roles" }, { status: 403 });
     }
 
     const targetUser = await User.findById(id);
@@ -43,18 +43,28 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return Response.json({ error: "Forbidden: Cannot manage members outside your community" }, { status: 403 });
     }
 
-    const newStatus = action === "approve" ? "approved" : "rejected";
-    targetUser.status = newStatus;
-    if (action === "approve" && password && String(password).trim() !== "") {
-      targetUser.password = hashPassword(String(password).trim());
+    if (action === "toggle_property_manager") {
+      targetUser.isPropertyManager = typeof isPropertyManager === "boolean" ? isPropertyManager : !targetUser.isPropertyManager;
+    } else {
+      const newStatus = action === "approve" ? "approved" : "rejected";
+      targetUser.status = newStatus;
+      if (action === "approve") {
+        if (password && String(password).trim() !== "") {
+          targetUser.password = hashPassword(String(password).trim());
+        }
+        if (typeof isPropertyManager === "boolean") {
+          targetUser.isPropertyManager = isPropertyManager;
+        }
+      }
     }
+
     await targetUser.save();
 
     const userObj = targetUser.toObject();
     delete (userObj as any).password;
 
     return Response.json({
-      message: `Member ${action === "approve" ? "approved" : "rejected"} successfully`,
+      message: `Member ${action} updated successfully`,
       user: userObj,
     });
   } catch (error: any) {

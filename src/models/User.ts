@@ -30,6 +30,7 @@ export interface IUser extends Document {
   role?: "super-admin" | "admin" | "member";
   status?: "pending" | "approved" | "rejected";
   communityId?: mongoose.Types.ObjectId;
+  isPropertyManager?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -174,6 +175,10 @@ const UserSchema: Schema<IUser> = new Schema(
       type: Schema.Types.ObjectId,
       ref: "Community",
     },
+    isPropertyManager: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
@@ -184,7 +189,8 @@ if (
   mongoose.models.User &&
   (!mongoose.models.User.schema.path("status") ||
    !mongoose.models.User.schema.path("latitude") ||
-   !mongoose.models.User.schema.path("googleMapsUrl"))
+   !mongoose.models.User.schema.path("googleMapsUrl") ||
+   !mongoose.models.User.schema.path("isPropertyManager"))
 ) {
   delete (mongoose.models as any).User;
 }
