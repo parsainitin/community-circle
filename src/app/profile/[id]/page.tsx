@@ -1689,12 +1689,12 @@ export default function UserProfilePage() {
                 </div>
               </div>
 
-              {/* GPS Geo Location Capture & Maps Link */}
-              <div className="p-3 bg-indigo-50/70 border border-indigo-100 rounded-2xl space-y-2.5">
+              {/* GPS Geo Location Capture */}
+              <div className="p-3 bg-indigo-50/70 border border-indigo-100 rounded-2xl space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-1.5 text-indigo-900 font-bold text-[11px]">
                     <MapPin className="w-4 h-4 text-indigo-600 shrink-0" />
-                    <span>GPS & Google Maps Location</span>
+                    <span>GPS Map Pin Location</span>
                   </div>
                   <button
                     type="button"
@@ -1710,31 +1710,13 @@ export default function UserProfilePage() {
                     ) : (
                       <>
                         <MapPin className="w-3 h-3" />
-                        <span>{editLatitude || editGoogleMapsUrl ? "📍 Re-pin GPS Location" : "📍 Pin My GPS Location"}</span>
+                        <span>{editLatitude ? "📍 Re-pin GPS Location" : "📍 Pin My GPS Location"}</span>
                       </>
                     )}
                   </button>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="block text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">
-                    Google Maps Link / URL
-                  </label>
-                  <input
-                    type="url"
-                    placeholder="https://maps.google.com/?q=22.7196,75.8577 or paste Maps share link"
-                    value={editGoogleMapsUrl}
-                    onChange={(e) => {
-                      setEditGoogleMapsUrl(e.target.value);
-                      if (e.target.value.trim()) {
-                        setGpsSuccessMsg("Custom Google Maps link added");
-                      }
-                    }}
-                    className="w-full px-3 py-1.5 bg-white rounded-xl border border-indigo-200 text-xs font-mono font-medium outline-hidden focus:border-indigo-500 text-slate-800"
-                  />
-                </div>
-
-                {gpsSuccessMsg && (
+                {gpsSuccessMsg ? (
                   <div className="flex items-center justify-between bg-emerald-50 text-emerald-800 p-2 rounded-xl border border-emerald-200 text-[10px] font-bold">
                     <span>{gpsSuccessMsg}</span>
                     {editGoogleMapsUrl && (
@@ -1748,6 +1730,10 @@ export default function UserProfilePage() {
                       </a>
                     )}
                   </div>
+                ) : (
+                  <p className="text-[10px] text-slate-500 font-semibold leading-relaxed">
+                    Pin your exact GPS location so community members can locate your address on Google Maps via Directory.
+                  </p>
                 )}
               </div>
 
