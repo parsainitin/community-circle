@@ -3,11 +3,7 @@ import { dbConnect } from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { Post } from "@/models/Post";
 import { getTenantId } from "@/lib/tenant";
-import crypto from "crypto";
-
-function hashPassword(password: string): string {
-  return crypto.createHash("sha256").update(password).digest("hex");
-}
+import { hashPassword } from "@/lib/auth-crypto";
 
 export async function POST(request: NextRequest) {
   try {
@@ -69,7 +65,21 @@ export async function POST(request: NextRequest) {
 
     if (!finalMobileNumber) {
       if (isChild) {
-        finalMobileNumber = `Child_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+        // Generate a 10-character alphanumeric ID for child/dependent without mobile number
+        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        let uniqueId = "";
+        let isTaken = true;
+        let attempts = 0;
+        while (isTaken && attempts < 10) {
+          uniqueId = "";
+          for (let i = 0; i < 10; i++) {
+            uniqueId += chars.charAt(Math.floor(Math.random() * chars.length));
+          }
+          const checkUser = await User.findOne({ mobileNumber: uniqueId }).lean();
+          isTaken = !!checkUser;
+          attempts++;
+        }
+        finalMobileNumber = uniqueId;
       } else {
         return Response.json({ error: "Missing required field: mobileNumber" }, { status: 400 });
       }

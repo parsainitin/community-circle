@@ -2,26 +2,25 @@ import { NextRequest } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { Community } from "@/models/Community";
-import crypto from "crypto";
-
-function hashPassword(password: string): string {
-  return crypto.createHash("sha256").update(password).digest("hex");
-}
+import { hashPassword } from "@/lib/auth-crypto";
 
 export async function POST(request: NextRequest) {
   try {
     await dbConnect();
     const body = await request.json();
-    const { mobileNumber, newPassword, resetKey } = body;
+    const { mobileNumber, newPassword, resetKey } = body || {};
+    const cleanMobile = typeof mobileNumber === "string" ? mobileNumber.trim() : String(mobileNumber || "").trim();
+    const cleanNewPassword = typeof newPassword === "string" ? newPassword : String(newPassword || "");
+    const cleanResetKey = typeof resetKey === "string" ? resetKey.trim() : String(resetKey || "").trim();
 
-    if (!mobileNumber || !newPassword || !resetKey) {
+    if (!cleanMobile || !cleanNewPassword || !cleanResetKey) {
       return Response.json(
         { error: "Mobile number, new password, and Admin Reset Key are required." },
         { status: 400 }
       );
     }
 
-    const user = await User.findOne({ mobileNumber });
+    const user = await User.findOne({ mobileNumber: cleanMobile });
     if (!user) {
       return Response.json({ error: "No user found with this mobile number" }, { status: 404 });
     }
@@ -51,7 +50,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Update password
-    user.password = hashPassword(newPassword);
+    user.password = hashPassword(cleanNewPassword);
     await user.save();
 
     return Response.json({ message: "Password reset successfully! You can now log in with your new password." });

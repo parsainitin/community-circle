@@ -2,11 +2,7 @@ import { NextRequest } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { getTenantId } from "@/lib/tenant";
-import crypto from "crypto";
-
-function hashPassword(password: string): string {
-  return crypto.createHash("sha256").update(password).digest("hex");
-}
+import { hashPassword } from "@/lib/auth-crypto";
 
 function normalizeSex(val?: any): string {
   if (!val) return "Male";

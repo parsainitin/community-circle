@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import mongoose from "mongoose";
 import { dbConnect } from "@/lib/mongodb";
 import { PropertyBooking } from "@/models/PropertyBooking";
 
@@ -30,7 +31,10 @@ export async function POST(request: NextRequest) {
       owner,
     } = body;
 
-    if (!propertyName || !propertyType) {
+    const cleanName = String(propertyName || "").trim();
+    const cleanType = String(propertyType || "").trim();
+
+    if (!cleanName || !cleanType) {
       return Response.json(
         { error: "Property name and type are required" },
         { status: 400 }
@@ -38,14 +42,14 @@ export async function POST(request: NextRequest) {
     }
 
     const newProperty = await PropertyBooking.create({
-      propertyName,
-      propertyType,
-      location: location || undefined,
+      propertyName: cleanName,
+      propertyType: cleanType,
+      location: location ? String(location).trim() : undefined,
       capacity: capacity ? Number(capacity) : undefined,
       pricePerDay: pricePerDay ? Number(pricePerDay) : undefined,
-      contactPhone: contactPhone || undefined,
-      description: description || undefined,
-      owner: owner || undefined,
+      contactPhone: contactPhone ? String(contactPhone).trim() : undefined,
+      description: description ? String(description).trim() : undefined,
+      owner: owner && mongoose.Types.ObjectId.isValid(owner) ? owner : undefined,
       bookedDates: [],
     });
 
@@ -64,26 +68,28 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { propertyId, action, date, bookedBy, contactPhone, notes } = body;
 
-    if (!propertyId || !date) {
+    const cleanPropId = String(propertyId || "").trim();
+    const cleanDate = String(date || "").trim();
+
+    if (!cleanPropId || !mongoose.Types.ObjectId.isValid(cleanPropId) || !cleanDate) {
       return Response.json(
-        { error: "Property ID and date are required" },
+        { error: "Valid Property ID and date are required" },
         { status: 400 }
       );
     }
 
-    const property = await PropertyBooking.findById(propertyId);
+    const property = await PropertyBooking.findById(cleanPropId);
     if (!property) {
       return Response.json({ error: "Property not found" }, { status: 404 });
     }
 
     if (action === "book") {
-      // Add or update booking for date
-      const existingIndex = property.bookedDates.findIndex((b) => b.date === date);
+      const existingIndex = property.bookedDates.findIndex((b) => b.date === cleanDate);
       const newSlot = {
-        date,
-        bookedBy: bookedBy || "Booked Member",
-        contactPhone: contactPhone || "",
-        notes: notes || "",
+        date: cleanDate,
+        bookedBy: String(bookedBy || "Booked Member").trim(),
+        contactPhone: String(contactPhone || "").trim(),
+        notes: String(notes || "").trim(),
       };
       if (existingIndex >= 0) {
         property.bookedDates[existingIndex] = newSlot;
@@ -91,8 +97,7 @@ export async function PUT(request: NextRequest) {
         property.bookedDates.push(newSlot);
       }
     } else if (action === "free") {
-      // Remove booking for date (mark as free)
-      property.bookedDates = property.bookedDates.filter((b) => b.date !== date);
+      property.bookedDates = property.bookedDates.filter((b) => b.date !== cleanDate);
     }
 
     await property.save();

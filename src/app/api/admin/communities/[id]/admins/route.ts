@@ -2,14 +2,10 @@ import { NextRequest } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { Community } from "@/models/Community";
-import crypto from "crypto";
+import { hashPassword } from "@/lib/auth-crypto";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
-}
-
-function hashPassword(p: string) {
-  return crypto.createHash("sha256").update(p).digest("hex");
 }
 
 // POST /api/admin/communities/[id]/admins — create or promote a user as admin for this community

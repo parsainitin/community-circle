@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import mongoose from "mongoose";
 import { dbConnect } from "@/lib/mongodb";
 import { User } from "@/models/User";
 
@@ -12,6 +13,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     await dbConnect();
     const { id } = await params;
     
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return Response.json({ error: "Invalid user ID format" }, { status: 400 });
+    }
+
     const user = await User.findById(id).populate("familyMembers", "name phone gotra");
     if (!user) {
       return Response.json({ error: "User not found" }, { status: 404 });
@@ -27,6 +32,11 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     await dbConnect();
     const { id } = await params;
+
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return Response.json({ error: "Invalid user ID format" }, { status: 400 });
+    }
+
     const body = await request.json();
 
     if (body.latitude !== undefined && body.latitude !== null && body.latitude !== "") {
@@ -65,6 +75,10 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     await dbConnect();
     const { id } = await params;
     
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return Response.json({ error: "Invalid user ID format" }, { status: 400 });
+    }
+
     const deletedUser = await User.findByIdAndDelete(id);
     if (!deletedUser) {
       return Response.json({ error: "User not found" }, { status: 404 });

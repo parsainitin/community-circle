@@ -1,25 +1,22 @@
 import { NextRequest } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { User } from "@/models/User";
-import crypto from "crypto";
-
-function hashPassword(password: string): string {
-  return crypto.createHash("sha256").update(password).digest("hex");
-}
+import { verifyPassword } from "@/lib/auth-crypto";
 
 export async function POST(request: NextRequest) {
   try {
     await dbConnect();
     const body = await request.json();
-    const { mobileNumber, password } = body;
+    const { mobileNumber, password } = body || {};
+    const cleanMobile = typeof mobileNumber === "string" ? mobileNumber.trim() : String(mobileNumber || "").trim();
+    const cleanPassword = typeof password === "string" ? password : String(password || "");
 
-    if (!mobileNumber || !password) {
+    if (!cleanMobile || !cleanPassword) {
       return Response.json({ error: "Missing mobileNumber or password" }, { status: 400 });
     }
 
-    const hashedPassword = hashPassword(password);
-    const candidates = await User.find({ mobileNumber });
-    const user = candidates.find((u) => u.password === hashedPassword);
+    const candidates = await User.find({ mobileNumber: cleanMobile });
+    const user = candidates.find((u) => verifyPassword(cleanPassword, u.password || ""));
     if (!user) {
       return Response.json({ error: "Invalid mobile number or password" }, { status: 401 });
     }

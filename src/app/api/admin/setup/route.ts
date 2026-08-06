@@ -1,11 +1,7 @@
 import { NextRequest } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { User } from "@/models/User";
-import crypto from "crypto";
-
-function hashPassword(p: string) {
-  return crypto.createHash("sha256").update(p).digest("hex");
-}
+import { hashPassword } from "@/lib/auth-crypto";
 
 // POST /api/admin/setup — one-time bootstrap to create the platform super-admin.
 // Succeeds only if no super-admin exists yet.
