@@ -26,7 +26,7 @@ export default function CommunityBrand({ variant = "topbar", className, imageCla
   }, []);
 
   const logoSrc = community?.logo || "/logo.png";
-  const altText = community?.name ? `${community.name} logo` : "Jambu Community Circle logo";
+  const altText = community?.name ? `${community.name} logo` : "MySocialClan logo";
 
   if (variant === "auth") {
     return (
@@ -34,11 +34,11 @@ export default function CommunityBrand({ variant = "topbar", className, imageCla
         <img
           src={logoSrc}
           alt={altText}
-          className={imageClassName || "h-16 w-auto object-contain max-w-[240px] mb-3"}
+          className={imageClassName || "h-20 w-auto object-contain max-w-[280px] mb-3"}
         />
         {community && <h1 className="text-lg font-black text-slate-800">{community.name}</h1>}
         <p className="text-xs text-slate-500 mt-1 max-w-xs font-semibold">
-          {community?.description || "Connect, collaborate, and share with your local circle"}
+          {community?.description || "Connect · Engage · Belong"}
         </p>
       </div>
     );
@@ -48,7 +48,7 @@ export default function CommunityBrand({ variant = "topbar", className, imageCla
     <img
       src={logoSrc}
       alt={altText}
-      className={imageClassName || "h-10 w-auto object-contain max-w-[180px]"}
+      className={imageClassName || "h-11 w-auto object-contain max-w-[200px]"}
     />
   );
 }
