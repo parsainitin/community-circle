@@ -35,6 +35,7 @@ interface UserType {
   city?: string;
   village?: string;
   age?: number;
+  dob?: string;
   sex?: string;
   maritalStatus?: string;
   bloodGroup?: string;
@@ -240,6 +241,7 @@ export default function UserProfilePage() {
 
   // Edit Profile States
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editWizardStep, setEditWizardStep] = useState(0);
 
   // Edit Avatar States
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -252,6 +254,7 @@ export default function UserProfilePage() {
   const [editCity, setEditCity] = useState("");
   const [editVillage, setEditVillage] = useState("");
   const [editAge, setEditAge] = useState("");
+  const [editDob, setEditDob] = useState("");
   const [editSex, setEditSex] = useState("Male");
   const [editMarital, setEditMarital] = useState("Single");
   const [editBloodGroup, setEditBloodGroup] = useState("");
@@ -423,6 +426,7 @@ export default function UserProfilePage() {
     setEditCity(profileUser.city || "");
     setEditVillage(profileUser.village || "");
     setEditAge(profileUser.age ? String(profileUser.age) : "");
+    setEditDob(profileUser.dob || "");
     setEditSex(profileUser.sex || "Male");
     setEditMarital(profileUser.maritalStatus || "Single");
     setEditBloodGroup(profileUser.bloodGroup || "");
@@ -440,6 +444,7 @@ export default function UserProfilePage() {
         : ""
     );
     setEditError(null);
+    setEditWizardStep(0);
     setEditModalOpen(true);
   };
 
@@ -462,6 +467,20 @@ export default function UserProfilePage() {
     setEditLoading(true);
     setEditError(null);
 
+    let calculatedAge = editAge ? Number(editAge) : undefined;
+    if (editDob) {
+      const birthDate = new Date(editDob);
+      if (!isNaN(birthDate.getTime())) {
+        const today = new Date();
+        let calcAge = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+          calcAge--;
+        }
+        if (calcAge >= 0) calculatedAge = calcAge;
+      }
+    }
+
     try {
       const res = await fetch(`/api/users/${profileUser._id}`, {
         method: "PUT",
@@ -475,7 +494,8 @@ export default function UserProfilePage() {
           address: editAddress.trim(),
           city: editCity.trim(),
           village: editVillage.trim(),
-          age: editAge ? Number(editAge) : undefined,
+          dob: editDob || undefined,
+          age: calculatedAge,
           sex: editSex,
           maritalStatus: editMarital,
           bloodGroup: editBloodGroup || undefined,
@@ -1508,388 +1528,500 @@ export default function UserProfilePage() {
         </div>
       )}
 
-      {/* EDIT PROFILE DIALOG MODAL */}
+      {/* EDIT PROFILE WIZARD DIALOG MODAL */}
       {editModalOpen && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-[60] p-4">
-          <div className="bg-white w-full max-w-md rounded-3xl p-5 shadow-2xl border border-slate-100 flex flex-col space-y-4 animate-fade-in select-none max-h-[85vh] overflow-y-auto">
-            <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-[60] p-4">
+          <div className="bg-white w-full max-w-xl rounded-3xl p-5 shadow-2xl border border-slate-100 flex flex-col space-y-4 animate-fade-in select-none max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex justify-between items-center pb-3 border-b border-slate-100">
               <div className="flex items-center space-x-2 text-whatsapp-green font-bold">
-                <Edit className="w-4 h-4 shrink-0" />
-                <h3 className="text-slate-800 text-sm">Edit Profile: {profileUser?.name}</h3>
+                <Edit className="w-5 h-5 shrink-0" />
+                <div>
+                  <h3 className="text-slate-800 text-sm font-extrabold">Edit Profile Wizard (प्रोफ़ाइल संपादित करें)</h3>
+                  <p className="text-[11px] text-slate-400 font-medium">Step {editWizardStep + 1} of 5: {["Personal & Photo (व्यक्तिगत एवं फ़ोटो)", "Family & Lineage (परिवार एवं वंश)", "Personal Details (व्यक्तिगत विवरण)", "Location & GPS Pin (पता एवं लोकेशन)", "Education & Career (शिक्षा एवं कार्य)"][editWizardStep]}</p>
+                </div>
               </div>
               <button
                 onClick={() => setEditModalOpen(false)}
-                className="p-1 hover:bg-slate-100 rounded-full cursor-pointer bg-transparent border-0"
+                className="p-1.5 hover:bg-slate-100 rounded-full cursor-pointer bg-transparent border-0 text-slate-400"
               >
-                <X className="w-4.5 h-4.5 text-slate-500" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
+            {/* Wizard Step Tabs Navigation */}
+            <div className="flex items-center justify-between gap-1 p-1 bg-slate-100 rounded-2xl overflow-x-auto text-[10px] font-bold">
+              {[
+                { s: 0, label: "1. Basic (मूल)", emoji: "👤" },
+                { s: 1, label: "2. Lineage (वंश)", emoji: "🧬" },
+                { s: 2, label: "3. Personal (व्यक्तिगत)", emoji: "🙋" },
+                { s: 3, label: "4. Location (पता)", emoji: "📍" },
+                { s: 4, label: "5. Career (कार्य)", emoji: "💼" },
+              ].map((tab) => (
+                <button
+                  key={tab.s}
+                  type="button"
+                  onClick={() => setEditWizardStep(tab.s)}
+                  className={`flex-1 py-1.5 px-2 rounded-xl transition-all cursor-pointer border-0 whitespace-nowrap text-center ${
+                    editWizardStep === tab.s
+                      ? "bg-white text-slate-900 shadow-xs font-black"
+                      : "text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  <span className="mr-1">{tab.emoji}</span>
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
             {editError && (
-              <div className="p-2.5 bg-red-50 text-red-600 rounded-xl text-[10px] font-bold border border-red-100">
+              <div className="p-2.5 bg-red-50 text-red-600 rounded-xl text-[11px] font-bold border border-red-100">
                 {editError}
               </div>
             )}
 
             <form onSubmit={handleUpdateProfile} className="space-y-4">
-              {/* Basic Fields */}
-              <div className="grid grid-cols-2 gap-3.5">
-                <div className="space-y-1">
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                    Full Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Enter name"
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                    Mobile Number *
-                  </label>
-                  <input
-                    type="tel"
-                    required
-                    placeholder="Enter mobile"
-                    value={editMobile}
-                    onChange={(e) => setEditMobile(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3.5">
-                <div className="space-y-1">
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                    Gotra
-                  </label>
-                  {communityGotras.length > 0 ? (
-                    <select
-                      value={editGotra}
-                      onChange={(e) => setEditGotra(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800 cursor-pointer"
-                    >
-                      <option value="">— Select Gotra —</option>
-                      {communityGotras.map((g) => (
-                        <option key={g} value={g}>
-                          {g}
-                        </option>
-                      ))}
-                      {editGotra && !communityGotras.includes(editGotra) && (
-                        <option value={editGotra}>{editGotra}</option>
+              {/* STEP 0: Personal Identity & Photo */}
+              {editWizardStep === 0 && (
+                <div className="space-y-4 animate-fade-in">
+                  {/* Photo Avatar */}
+                  <div className="flex items-center space-x-4 bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
+                    <div className="relative w-16 h-16 shrink-0">
+                      {profileUser?.avatar ? (
+                        <img
+                          src={profileUser.avatar}
+                          alt="Avatar"
+                          className="w-full h-full rounded-full object-cover border-2 border-whatsapp-green"
+                        />
+                      ) : (
+                        <div className="w-full h-full rounded-full bg-slate-200 flex items-center justify-center text-slate-500 font-bold text-xl">
+                          {editName.charAt(0) || "U"}
+                        </div>
                       )}
-                    </select>
-                  ) : (
-                    <input
-                      type="text"
-                      placeholder="e.g. Kashyap"
-                      value={editGotra}
-                      onChange={(e) => setEditGotra(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800"
-                    />
-                  )}
-                </div>
-
-                <div className="space-y-1">
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                    KulDevi
-                  </label>
-                  {communityKulDevis.length > 0 ? (
-                    <select
-                      value={editKulDevi}
-                      onChange={(e) => setEditKulDevi(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800 cursor-pointer"
-                    >
-                      <option value="">— Select KulDevi —</option>
-                      {communityKulDevis.map((k) => (
-                        <option key={k} value={k}>
-                          {k}
-                        </option>
-                      ))}
-                      {editKulDevi && !communityKulDevis.includes(editKulDevi) && (
-                        <option value={editKulDevi}>{editKulDevi}</option>
-                      )}
-                    </select>
-                  ) : (
-                    <input
-                      type="text"
-                      placeholder="e.g. Bijasan"
-                      value={editKulDevi}
-                      onChange={(e) => setEditKulDevi(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800"
-                    />
-                  )}
-                </div>
-              </div>
-
-              {/* Location Fields */}
-              <div className="space-y-1">
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                  Residential Address
-                </label>
-                <textarea
-                  placeholder="Enter address"
-                  value={editAddress}
-                  onChange={(e) => setEditAddress(e.target.value)}
-                  rows={2}
-                  className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800 resize-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3.5">
-                <div className="space-y-1">
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                    City *
-                  </label>
-                  {communityCities.length > 0 ? (
-                    <select
-                      required
-                      value={editCity}
-                      onChange={(e) => setEditCity(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800 cursor-pointer"
-                    >
-                      <option value="">— Select City —</option>
-                      {communityCities.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                      {editCity && !communityCities.includes(editCity) && (
-                        <option value={editCity}>{editCity}</option>
-                      )}
-                    </select>
-                  ) : (
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Indore"
-                      value={editCity}
-                      onChange={(e) => setEditCity(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800"
-                    />
-                  )}
-                </div>
-
-                <div className="space-y-1">
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                    Village
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Ashta"
-                    value={editVillage}
-                    onChange={(e) => setEditVillage(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800"
-                  />
-                </div>
-              </div>
-
-              {/* GPS Geo Location Capture */}
-              <div className="p-3 bg-indigo-50/70 border border-indigo-100 rounded-2xl space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-1.5 text-indigo-900 font-bold text-[11px]">
-                    <MapPin className="w-4 h-4 text-indigo-600 shrink-0" />
-                    <span>GPS Map Pin Location</span>
+                      <button
+                        type="button"
+                        onClick={() => avatarInputRef.current?.click()}
+                        className="absolute bottom-0 right-0 w-6 h-6 bg-whatsapp-green text-white rounded-full flex items-center justify-center shadow-md hover:bg-whatsapp-teal transition-transform hover:scale-105 border-0 cursor-pointer"
+                        title="Upload photo"
+                      >
+                        <Camera className="w-3.5 h-3.5" />
+                      </button>
+                      <input
+                        ref={avatarInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleAvatarChange}
+                        className="hidden"
+                      />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-extrabold text-slate-800">Profile Photo (फ़ोटो)</h4>
+                      <p className="text-[10px] text-slate-500 mt-0.5">
+                        {avatarUpdating ? "Uploading photo..." : "Tap camera icon to update photo (फ़ोटो बदलने के लिए कैमरा आइकॉन पर टैप करें)."}
+                      </p>
+                    </div>
                   </div>
+
+                  <div className="grid grid-cols-2 gap-3.5">
+                    <div className="space-y-1">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                        Full Name (पूरा नाम) *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Enter full name"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                        Mobile No. (मोबाइल नं.) *
+                      </label>
+                      <input
+                        type="tel"
+                        required
+                        placeholder="Enter mobile number"
+                        value={editMobile}
+                        onChange={(e) => setEditMobile(e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 1: Lineage & Family */}
+              {editWizardStep === 1 && (
+                <div className="space-y-4 animate-fade-in">
+                  <div className="grid grid-cols-2 gap-3.5">
+                    <div className="space-y-1">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                        Gotra (गोत्र)
+                      </label>
+                      {communityGotras.length > 0 ? (
+                        <select
+                          value={editGotra}
+                          onChange={(e) => setEditGotra(e.target.value)}
+                          className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800 cursor-pointer"
+                        >
+                          <option value="">— Select Gotra (गोत्र चुनें) —</option>
+                          {communityGotras.map((g) => (
+                            <option key={g} value={g}>
+                              {g}
+                            </option>
+                          ))}
+                          {editGotra && !communityGotras.includes(editGotra) && (
+                            <option value={editGotra}>{editGotra}</option>
+                          )}
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          placeholder="e.g. Kashyap"
+                          value={editGotra}
+                          onChange={(e) => setEditGotra(e.target.value)}
+                          className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800"
+                        />
+                      )}
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                        KulDevi (कुलदेवी)
+                      </label>
+                      {communityKulDevis.length > 0 ? (
+                        <select
+                          value={editKulDevi}
+                          onChange={(e) => setEditKulDevi(e.target.value)}
+                          className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800 cursor-pointer"
+                        >
+                          <option value="">— Select KulDevi (कुलदेवी चुनें) —</option>
+                          {communityKulDevis.map((k) => (
+                            <option key={k} value={k}>
+                              {k}
+                            </option>
+                          ))}
+                          {editKulDevi && !communityKulDevis.includes(editKulDevi) && (
+                            <option value={editKulDevi}>{editKulDevi}</option>
+                          )}
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          placeholder="e.g. Bijasan"
+                          value={editKulDevi}
+                          onChange={(e) => setEditKulDevi(e.target.value)}
+                          className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800"
+                        />
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 2: Personal Details */}
+              {editWizardStep === 2 && (
+                <div className="space-y-4 animate-fade-in">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                        Date of Birth (जन्म तिथि)
+                      </label>
+                      <input
+                        type="date"
+                        value={editDob}
+                        onChange={(e) => setEditDob(e.target.value)}
+                        className="w-full px-2.5 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                        Sex (लिंग)
+                      </label>
+                      <select
+                        value={editSex}
+                        onChange={(e) => setEditSex(e.target.value)}
+                        className="w-full px-2.5 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs text-slate-800 focus:border-whatsapp-green outline-hidden font-semibold"
+                      >
+                        <option value="Male">Male (पुरुष)</option>
+                        <option value="Female">Female (महिला)</option>
+                        <option value="Other">Other (अन्य)</option>
+                        <option value="Prefer not to say">Prefer not to say (बताना नहीं चाहते)</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                        Blood Group (रक्त समूह)
+                      </label>
+                      <select
+                        value={editBloodGroup}
+                        onChange={(e) => setEditBloodGroup(e.target.value)}
+                        className="w-full px-2.5 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs text-slate-800 focus:border-whatsapp-green outline-hidden font-semibold"
+                      >
+                        <option value="">N/A</option>
+                        <option>A+</option>
+                        <option>A-</option>
+                        <option>B+</option>
+                        <option>B-</option>
+                        <option>AB+</option>
+                        <option>AB-</option>
+                        <option>O+</option>
+                        <option>O-</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      Marital Status (वैवाहिक स्थिति)
+                    </label>
+                    <select
+                      value={editMarital}
+                      onChange={(e) => setEditMarital(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs text-slate-800 focus:border-whatsapp-green outline-hidden font-semibold"
+                    >
+                      <option value="Single">Single (अविवाहित)</option>
+                      <option value="Married">Married (विवाहित)</option>
+                      <option value="Divorced">Divorced (तलाकशुदा)</option>
+                      <option value="Widowed">Widowed (विधवा/विधुर)</option>
+                      <option value="Separated">Separated (अलग)</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 3: Location & GPS Pin */}
+              {editWizardStep === 3 && (
+                <div className="space-y-4 animate-fade-in">
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      Address (आवासीय पता)
+                    </label>
+                    <textarea
+                      placeholder="Enter address"
+                      value={editAddress}
+                      onChange={(e) => setEditAddress(e.target.value)}
+                      rows={2}
+                      className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800 resize-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3.5">
+                    <div className="space-y-1">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                        City (शहर)
+                      </label>
+                      {communityCities.length > 0 ? (
+                        <select
+                          value={editCity}
+                          onChange={(e) => setEditCity(e.target.value)}
+                          className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800 cursor-pointer"
+                        >
+                          <option value="">— Select City (शहर चुनें) —</option>
+                          {communityCities.map((c) => (
+                            <option key={c} value={c}>
+                              {c}
+                            </option>
+                          ))}
+                          {editCity && !communityCities.includes(editCity) && (
+                            <option value={editCity}>{editCity}</option>
+                          )}
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          placeholder="e.g. Indore"
+                          value={editCity}
+                          onChange={(e) => setEditCity(e.target.value)}
+                          className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800"
+                        />
+                      )}
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                        Village (गांव)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Ashta"
+                        value={editVillage}
+                        onChange={(e) => setEditVillage(e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800"
+                      />
+                    </div>
+                  </div>
+
+                  {/* GPS Geo Location Capture */}
+                  <div className="p-3 bg-indigo-50/70 border border-indigo-100 rounded-2xl space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-1.5 text-indigo-900 font-bold text-[11px]">
+                        <MapPin className="w-4 h-4 text-indigo-600 shrink-0" />
+                        <span>GPS Pin (जीपीएस लोकेशन)</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleGetGeoLocation}
+                        disabled={locatingGps}
+                        className="py-1 px-3 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-extrabold text-[10px] rounded-xl shadow-xs transition-all flex items-center space-x-1 cursor-pointer border-0 disabled:opacity-50"
+                      >
+                        {locatingGps ? (
+                          <>
+                            <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            <span>Locating...</span>
+                          </>
+                        ) : (
+                          <>
+                            <MapPin className="w-3 h-3" />
+                            <span>{editLatitude ? "📍 Re-pin GPS" : "📍 Pin My GPS"}</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    {gpsSuccessMsg ? (
+                      <div className="flex items-center justify-between bg-emerald-50 text-emerald-800 p-2 rounded-xl border border-emerald-200 text-[10px] font-bold">
+                        <span>{gpsSuccessMsg}</span>
+                        {editGoogleMapsUrl && (
+                          <a
+                            href={editGoogleMapsUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-indigo-600 underline hover:text-indigo-800 ml-2 shrink-0"
+                          >
+                            Preview Map
+                          </a>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-[10px] text-slate-500 font-semibold leading-relaxed">
+                        Pin your exact GPS location so community members can locate your address on Google Maps via Directory.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 4: Education & Career */}
+              {editWizardStep === 4 && (
+                <div className="space-y-4 animate-fade-in">
+                  <div className="grid grid-cols-2 gap-3.5">
+                    <div className="space-y-1">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                        Education (शिक्षा)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Degree/Qualification"
+                        value={editEducation}
+                        onChange={(e) => setEditEducation(e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                        Institution (संस्थान)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="College/University"
+                        value={editInstitution}
+                        onChange={(e) => setEditInstitution(e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="col-span-1 space-y-1">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                        Occupation (व्यवसाय)
+                      </label>
+                      <select
+                        value={editOccupationType}
+                        onChange={(e) => setEditOccupationType(e.target.value)}
+                        className="w-full px-2 py-2 bg-slate-50 border border-slate-100 rounded-xl text-[10px] text-slate-800 focus:border-whatsapp-green outline-hidden font-semibold"
+                      >
+                        <option value="">Select Occupation</option>
+                        <option value="Salaried">Salaried (नौकरीपेशा)</option>
+                        <option value="Self-Employed">Business / Self-Employed (स्वरोजगार)</option>
+                        <option value="Student">Student (छात्र)</option>
+                        <option value="Retired">Retired (सेवानिवृत्त)</option>
+                        <option value="Homemaker">Homemaker (गृहणी)</option>
+                        <option value="Unemployed">Unemployed (बेरोजगार)</option>
+                      </select>
+                    </div>
+
+                    <div className="col-span-1 space-y-1">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                        Designation (पद)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Job Title"
+                        value={editProfession}
+                        onChange={(e) => setEditProfession(e.target.value)}
+                        className="w-full px-2.5 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800"
+                      />
+                    </div>
+
+                    <div className="col-span-1 space-y-1">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                        Company (कंपनी)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Company/Business"
+                        value={editCompany}
+                        onChange={(e) => setEditCompany(e.target.value)}
+                        className="w-full px-2.5 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Wizard Navigation Footer Buttons */}
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
+                {editWizardStep > 0 ? (
                   <button
                     type="button"
-                    onClick={handleGetGeoLocation}
-                    disabled={locatingGps}
-                    className="py-1 px-3 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-extrabold text-[10px] rounded-xl shadow-xs transition-all flex items-center space-x-1 cursor-pointer border-0 disabled:opacity-50"
+                    onClick={() => setEditWizardStep((s) => s - 1)}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all border-0 cursor-pointer"
                   >
-                    {locatingGps ? (
-                      <>
-                        <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        <span>Locating...</span>
-                      </>
-                    ) : (
-                      <>
-                        <MapPin className="w-3 h-3" />
-                        <span>{editLatitude ? "📍 Re-pin GPS Location" : "📍 Pin My GPS Location"}</span>
-                      </>
-                    )}
+                    &larr; Previous (पीछे)
+                  </button>
+                ) : (
+                  <div />
+                )}
+
+                <div className="flex items-center space-x-2">
+                  {editWizardStep < 4 && (
+                    <button
+                      type="button"
+                      onClick={() => setEditWizardStep((s) => s + 1)}
+                      className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl transition-all border-0 cursor-pointer"
+                    >
+                      Next Step (आगे) &rarr;
+                    </button>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={editLoading}
+                    className="px-4 py-2 bg-whatsapp-green hover:bg-whatsapp-teal text-white font-extrabold text-xs rounded-xl shadow-md transition-all border-0 cursor-pointer disabled:opacity-50 active:scale-95"
+                  >
+                    {editLoading ? "Saving..." : "Save Changes (बदलाव सहेजें)"}
                   </button>
                 </div>
-
-                {gpsSuccessMsg ? (
-                  <div className="flex items-center justify-between bg-emerald-50 text-emerald-800 p-2 rounded-xl border border-emerald-200 text-[10px] font-bold">
-                    <span>{gpsSuccessMsg}</span>
-                    {editGoogleMapsUrl && (
-                      <a
-                        href={editGoogleMapsUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-indigo-600 underline hover:text-indigo-800 ml-2 shrink-0"
-                      >
-                        Preview Map
-                      </a>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-[10px] text-slate-500 font-semibold leading-relaxed">
-                    Pin your exact GPS location so community members can locate your address on Google Maps via Directory.
-                  </p>
-                )}
               </div>
-
-              {/* Personal Details */}
-              <div className="grid grid-cols-3 gap-3">
-                <div className="space-y-1">
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                    Age
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="Age"
-                    value={editAge}
-                    onChange={(e) => setEditAge(e.target.value)}
-                    className="w-full px-2.5 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                    Sex
-                  </label>
-                  <select
-                    value={editSex}
-                    onChange={(e) => setEditSex(e.target.value)}
-                    className="w-full px-2.5 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs text-slate-800 focus:border-whatsapp-green outline-hidden font-semibold"
-                  >
-                    <option>Male</option>
-                    <option>Female</option>
-                    <option>Other</option>
-                    <option>Prefer not to say</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                    Blood Group
-                  </label>
-                  <select
-                    value={editBloodGroup}
-                    onChange={(e) => setEditBloodGroup(e.target.value)}
-                    className="w-full px-2.5 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs text-slate-800 focus:border-whatsapp-green outline-hidden font-semibold"
-                  >
-                    <option value="">N/A</option>
-                    <option>A+</option>
-                    <option>A-</option>
-                    <option>B+</option>
-                    <option>B-</option>
-                    <option>AB+</option>
-                    <option>AB-</option>
-                    <option>O+</option>
-                    <option>O-</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                  Marital Status
-                </label>
-                <select
-                  value={editMarital}
-                  onChange={(e) => setEditMarital(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs text-slate-800 focus:border-whatsapp-green outline-hidden font-semibold"
-                >
-                  <option>Single</option>
-                  <option>Married</option>
-                  <option>Divorced</option>
-                  <option>Widowed</option>
-                  <option>Separated</option>
-                </select>
-              </div>
-
-              {/* Education & Profession */}
-              <div className="grid grid-cols-2 gap-3.5">
-                <div className="space-y-1">
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                    Highest Education
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Degree/Qualification"
-                    value={editEducation}
-                    onChange={(e) => setEditEducation(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                    Institution
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="College/University"
-                    value={editInstitution}
-                    onChange={(e) => setEditInstitution(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div className="col-span-1 space-y-1">
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                    Occupation
-                  </label>
-                  <select
-                    value={editOccupationType}
-                    onChange={(e) => setEditOccupationType(e.target.value)}
-                    className="w-full px-2 py-2 bg-slate-50 border border-slate-100 rounded-xl text-[10px] text-slate-800 focus:border-whatsapp-green outline-hidden font-semibold"
-                  >
-                    <option value="">Select Occupation</option>
-                    <option value="Salaried">Salaried</option>
-                    <option value="Self-Employed">Business / Self-Employed</option>
-                    <option value="Student">Student</option>
-                    <option value="Retired">Retired</option>
-                    <option value="Homemaker">Homemaker</option>
-                    <option value="Unemployed">Unemployed</option>
-                  </select>
-                </div>
-
-                <div className="col-span-1 space-y-1">
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                    Designation
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Job Title"
-                    value={editProfession}
-                    onChange={(e) => setEditProfession(e.target.value)}
-                    className="w-full px-2.5 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800"
-                  />
-                </div>
-
-                <div className="col-span-1 space-y-1">
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                    Company Name
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Company/Business"
-                    value={editCompany}
-                    onChange={(e) => setEditCompany(e.target.value)}
-                    className="w-full px-2.5 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800"
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={editLoading}
-                className="w-full py-2.5 bg-whatsapp-green text-white font-bold rounded-xl text-xs shadow-md hover:bg-whatsapp-teal disabled:opacity-50 mt-2 active:scale-[0.98] cursor-pointer border-0"
-              >
-                {editLoading ? "Saving Changes..." : "Save Changes"}
-              </button>
             </form>
           </div>
         </div>

@@ -21,6 +21,7 @@ import {
   BookOpen,
   Info,
   Phone,
+  Globe,
 } from "lucide-react";
 
 interface DonationType {
@@ -39,122 +40,216 @@ interface DonationType {
 interface FAQItem {
   id: string;
   category: "password" | "approval" | "location" | "whatsapp" | "hubs" | "tree";
-  categoryLabel: string;
+  categoryLabel: { en: string; hi: string };
   icon: any;
-  question: string;
-  steps: string[];
-  tip?: string;
+  question: { en: string; hi: string };
+  steps: { en: string[]; hi: string[] };
+  tip?: { en: string; hi: string };
 }
 
 const FAQ_LIST: FAQItem[] = [
   {
     id: "faq-reset-password",
     category: "password",
-    categoryLabel: "🔐 Password & Login",
+    categoryLabel: { en: "🔐 Password & Login", hi: "🔐 पासवर्ड और लॉगिन" },
     icon: Key,
-    question: "How do I reset my password if I forget it?",
-    steps: [
-      "Navigate to the Login / Auth page (/auth).",
-      "Click or tap on the 'Forgot Password?' tab located next to Sign In.",
-      "Enter your registered Mobile Number and your new desired Password.",
-      "Enter the Admin Password Reset Key provided by your Community Admin (e.g. RESET123 or obtain key from your admin).",
-      "Tap 'Reset' to save your new password and sign in immediately.",
-    ],
-    tip: "If you don't have the Admin Reset Key, contact any member tagged with the green Admin badge in the Directory.",
+    question: {
+      en: "How do I reset my password if I forget it?",
+      hi: "यदि मैं अपना पासवर्ड भूल जाऊं तो रीसेट कैसे करूं?",
+    },
+    steps: {
+      en: [
+        "Navigate to the Login / Auth page (/auth).",
+        "Click or tap on the 'Forgot Password?' tab located next to Sign In.",
+        "Enter your registered Mobile Number and your new desired Password.",
+        "Enter the Admin Password Reset Key provided by your Community Admin.",
+        "Tap 'Reset' to save your new password and sign in immediately.",
+      ],
+      hi: [
+        "लॉगिन पेज (/auth) पर जाएं।",
+        "साइन इन के पास दिए गए 'Forgot Password?' (पासवर्ड भूल गए?) पर टैप करें।",
+        "अपना पंजीकृत मोबाइल नंबर और नया पासवर्ड दर्ज करें।",
+        "अपने कम्युनिटी एडमिन द्वारा दिया गया एडमिन रीसेट की (Admin Reset Key) दर्ज करें।",
+        "नया पासवर्ड सहेजने और तुरंत लॉगिन करने के लिए 'Reset' पर क्लिक करें।",
+      ],
+    },
+    tip: {
+      en: "If you don't have the Admin Reset Key, contact any member tagged with the green Admin badge in the Directory.",
+      hi: "यदि आपके पास एडमिन रीसेट की नहीं है, तो डायरेक्टरी में हरे Admin बैज वाले सदस्य से संपर्क करें।",
+    },
   },
   {
     id: "faq-pending-approval",
     category: "approval",
-    categoryLabel: "⏳ Account Approval",
+    categoryLabel: { en: "⏳ Account Approval", hi: "⏳ खाता स्वीकृति (Approval)" },
     icon: ShieldAlert,
-    question: "Why does my account show 'Pending Approval' after sign up?",
-    steps: [
-      "To ensure community privacy and prevent unauthorized access, all new registrations undergo verification.",
-      "Your signup request is automatically sent to your Community Admin's approval queue.",
-      "Once your admin reviews and approves your details, your account status turns to 'Approved'.",
-      "You will then be able to log in using your registered mobile number and password.",
-    ],
-    tip: "Approvals usually take a few hours. You can message your Community Admin on WhatsApp via the Directory if urgent.",
+    question: {
+      en: "Why does my account show 'Pending Approval' after sign up?",
+      hi: "साइन अप के बाद मेरा खाता 'Pending Approval' क्यों दिखाता है?",
+    },
+    steps: {
+      en: [
+        "To ensure community privacy and prevent unauthorized access, all new registrations undergo verification.",
+        "Your signup request is automatically sent to your Community Admin's approval queue.",
+        "Once your admin reviews and approves your details, your account status turns to 'Approved'.",
+        "You will then be able to log in using your registered mobile number and password.",
+      ],
+      hi: [
+        "कम्युनिटी की गोपनीयता और सुरक्षा के लिए सभी नए पंजीकरणों की जांच की जाती है।",
+        "आपका साइनअप अनुरोध अपने आप कम्युनिटी एडमिन के पास स्वीकृति के लिए चला जाता है।",
+        "एडमिन द्वारा विवरण स्वीकृत करते ही आपका खाता 'Approved' हो जाता है।",
+        "इसके बाद आप अपने पंजीकृत मोबाइल नंबर और पासवर्ड से लॉगिन कर सकते हैं।",
+      ],
+    },
+    tip: {
+      en: "Approvals usually take a few hours. You can message your Community Admin on WhatsApp via the Directory if urgent.",
+      hi: "स्वीकृति में कुछ घंटे लगते हैं। अत्यावश्यक होने पर डायरेक्टरी से एडमिन को व्हाट्सएप संदेश भेजें।",
+    },
   },
   {
     id: "faq-gps-location",
     category: "location",
-    categoryLabel: "📍 GPS Location Pin",
+    categoryLabel: { en: "📍 GPS Location Pin", hi: "📍 जीपीएस लोकेशन पिन (GPS Pin)" },
     icon: MapPin,
-    question: "How to pin my exact GPS location on Google Maps?",
-    steps: [
-      "During signup (or when editing your profile), go to Step 2: 'Where do you live?'.",
-      "Tap the '📍 Use GPS Location' button and allow location permission on your browser or mobile phone.",
-      "Your exact GPS latitude and longitude coordinates will be captured automatically.",
-      "A Map Pin icon 📍 will appear next to your contact in the Directory so community members can navigate to your address on Google Maps.",
-    ],
-    tip: "Make sure location services/GPS are enabled on your device for accurate coordinates.",
+    question: {
+      en: "How to pin my exact GPS location on Google Maps?",
+      hi: "गूगल मैप्स पर अपनी सटीक जीपीएस लोकेशन कैसे पिन करें?",
+    },
+    steps: {
+      en: [
+        "During signup (or when editing your profile), go to Step 4: 'Location & GPS Pin'.",
+        "Tap the '📍 Pin My GPS Location' button and allow location permission on your browser or mobile phone.",
+        "Your exact GPS latitude and longitude coordinates will be captured automatically.",
+        "A Map Pin icon 📍 will appear next to your contact in the Directory so community members can navigate to your address on Google Maps.",
+      ],
+      hi: [
+        "प्रोफ़ाइल विजार्ड में चरण 4: 'Location & GPS Pin' (पता एवं लोकेशन) पर जाएं।",
+        "'📍 Pin My GPS' बटन पर टैप करें और फ़ोन में लोकेशन की अनुमति दें।",
+        "आपकी जीपीएस लोकेशन स्वचालित रूप से दर्ज हो जाएगी।",
+        "डायरेक्टरी में आपके संपर्क के पास 📍 मैप पिन दिखाई देगा जिससे सदस्य गूगल मैप्स द्वारा आपके पते तक पहुंच सकेंगे।",
+      ],
+    },
+    tip: {
+      en: "Make sure location services/GPS are enabled on your device for accurate coordinates.",
+      hi: "सटीक लोकेशन पिन करने के लिए अपने डिवाइस का जीपीएस ऑन (GPS ON) रखें।",
+    },
   },
   {
     id: "faq-whatsapp-chat",
     category: "whatsapp",
-    categoryLabel: "💬 WhatsApp & Contacts",
+    categoryLabel: { en: "💬 WhatsApp & Contacts", hi: "💬 व्हाट्सएप एवं संपर्क" },
     icon: MessageSquare,
-    question: "How do I chat directly with a community member on WhatsApp?",
-    steps: [
-      "Open the Directory tab from the bottom navigation bar.",
-      "Search for the member by name, city, gotra, or blood group.",
-      "On the right side of their contact card, tap the green circular WhatsApp icon.",
-      "WhatsApp will automatically launch with a prefilled message addressed to that member.",
-    ],
+    question: {
+      en: "How do I chat directly with a community member on WhatsApp?",
+      hi: "कम्युनिटी सदस्य के साथ व्हाट्सएप पर सीधे चैट कैसे करें?",
+    },
+    steps: {
+      en: [
+        "Open the Directory tab from the bottom navigation bar.",
+        "Search for the member by name, city, gotra, or blood group.",
+        "On the right side of their contact card, tap the green circular WhatsApp icon.",
+        "WhatsApp will automatically launch with a prefilled message addressed to that member.",
+      ],
+      hi: [
+        "नीचे दिए गए नेविगेशन बार से डायरेक्टरी (Directory) टैब खोलें।",
+        "नाम, शहर, गोत्र या रक्त समूह से सदस्य को खोजें।",
+        "संपर्क कार्ड पर दाएं तरफ दिए हरे व्हाट्सएप आइकॉन पर टैप करें।",
+        "उस सदस्य से चैट करने के लिए व्हाट्सएप तुरंत खुल जाएगा।",
+      ],
+    },
+    tip: {
+      en: "Direct WhatsApp buttons connect you instantly without manually saving phone numbers first!",
+      hi: "बिना नंबर सेव किए सीधे व्हाट्सएप बटन से तुरंत संपर्क करें!",
+    },
   },
   {
     id: "faq-hubs-listing",
     category: "hubs",
-    categoryLabel: "🏢 Community Hubs",
+    categoryLabel: { en: "🏢 Community Hubs", hi: "🏢 कम्युनिटी हब्स (व्यापार/सेवाएं)" },
     icon: Building2,
-    question: "How to showcase my home business, tutor service, or sale items on Hubs?",
-    steps: [
-      "Tap the 'Hubs' tab in the bottom navigation bar.",
-      "Select a Hub category: 🏛️ Organizations, 🍳 Food & Showcase, 📚 Tutor Services, or 🛍️ Sale Online Stuffs.",
-      "Tap the '+ Create' button on the category card or floating action button.",
-      "Fill in your listing title, description, pricing/unit, upload photos, and tap Publish!",
-    ],
-    tip: "Listing your items on Hubs allows members to place direct WhatsApp orders with you!",
+    question: {
+      en: "How to showcase my home business, tutor service, or sale items on Hubs?",
+      hi: "हब्स (Hubs) पर अपना व्यापार, ट्यूशन या बिक्री का सामान कैसे दिखाएं?",
+    },
+    steps: {
+      en: [
+        "Tap the 'Hubs' tab in the bottom navigation bar.",
+        "Select a Hub category: 🏛️ Organizations, 🍳 Food & Showcase, 📚 Tutor Services, or 🛍️ Sale Online Stuffs.",
+        "Tap the '+ Create' button on the category card or floating action button.",
+        "Fill in your listing title, description, pricing/unit, upload photos, and tap Publish!",
+      ],
+      hi: [
+        "निचले नेविगेशन बार से 'Hubs' टैब पर जाएं।",
+        "श्रेणी चुनें: 🏛️ संस्थाएं, 🍳 फ़ूड व शोकेस, 📚 ट्यूटर सेवाएं, या 🛍️ बिक्री हेतु सामान।",
+        "श्रेणी कार्ड पर '+ Create' (नया बनाएं) बटन दबाएं।",
+        "शीर्षक, विवरण, मूल्य व फ़ोटो दर्ज करके Publish बटन दबाएं!",
+      ],
+    },
+    tip: {
+      en: "Listing your items on Hubs allows members to place direct WhatsApp orders with you!",
+      hi: "हब्स पर सामान पोस्ट करने से सदस्य आपको सीधे व्हाट्सएप पर ऑर्डर दे सकते हैं!",
+    },
   },
   {
     id: "faq-family-tree",
     category: "tree",
-    categoryLabel: "🌳 Family Lineage Tree",
+    categoryLabel: { en: "🌳 Family Lineage Tree", hi: "🌳 वंशावली वृक्ष (Family Tree)" },
     icon: Users,
-    question: "How to build and link my Family Tree?",
-    steps: [
-      "Tap your profile avatar in the top app bar to open your Profile page.",
-      "Switch to the 'Family Lineage' tab.",
-      "Tap 'Link Relative' or select your parent during signup to automatically connect your family tree nodes.",
-      "You can add parents, children, and spouses to visualize your generations.",
-    ],
+    question: {
+      en: "How to build and link my Family Tree?",
+      hi: "अपनी पारिवारिक वंशावली (Family Tree) कैसे बनाएं और जोड़ें?",
+    },
+    steps: {
+      en: [
+        "Tap your profile avatar in the top app bar to open your Profile page.",
+        "Switch to the 'Family Lineage' tab.",
+        "Tap 'Link Relative' or select your parent during signup to automatically connect your family tree nodes.",
+        "You can add parents, children, and spouses to visualize your generations.",
+      ],
+      hi: [
+        "अपनी प्रोफ़ाइल खोलने के लिए शीर्ष बार में अपने अवतार पर टैप करें।",
+        "'Family Lineage' (वंशावली) टैब पर जाएं।",
+        "पंजीकरण के समय अभिभावक चुनें या 'Link Relative' बटन दबाकर वंशावली से जुड़ें।",
+        "आप माता-पिता, संतान और जीवनसाथी को जोड़कर अपनी पीढ़ियों का वृक्ष देख सकते हैं।",
+      ],
+    },
   },
   {
     id: "faq-contact-admin",
     category: "approval",
-    categoryLabel: "📞 Contact Community Admin",
+    categoryLabel: { en: "📞 Contact Community Admin", hi: "📞 कम्युनिटी एडमिन से संपर्क" },
     icon: Phone,
-    question: "How to contact my Community Admin for support?",
-    steps: [
-      "Open the Directory page.",
-      "Look for contacts with a green 'Admin' badge next to their name.",
-      "Tap their WhatsApp button or Phone icon to message or call your Community Admin directly for password keys or account help.",
-    ],
+    question: {
+      en: "How to contact my Community Admin for support?",
+      hi: "सहायता के लिए अपने कम्युनिटी एडमिन से कैसे संपर्क करें?",
+    },
+    steps: {
+      en: [
+        "Open the Directory page.",
+        "Look for contacts with a green 'Admin' badge next to their name.",
+        "Tap their WhatsApp button or Phone icon to message or call your Community Admin directly for password keys or account help.",
+      ],
+      hi: [
+        "डायरेक्टरी (Directory) पेज खोलें।",
+        "हरे 'Admin' बैज वाले सदस्यों को देखें।",
+        "पासवर्ड की या सहायता के लिए एडमिन के व्हाट्सएप या फोन आइकॉन पर सीधे टैप करें।",
+      ],
+    },
   },
 ];
 
 export default function HelpSupportPage() {
   const { user } = useAuth();
-  const [activeMainTab, setActiveMainTab] = useState<"support" | "donate">("support");
+  const [activeMainTab, setActiveMainTab] = useState<"support" | "donate">("donate");
 
   // Support / FAQ States
+  const [faqLang, setFaqLang] = useState<"hi" | "en">("hi");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [expandedFaqId, setExpandedFaqId] = useState<string | null>("faq-reset-password");
 
   // Donation States
-  const [amount, setAmount] = useState("500");
+  const [amount, setAmount] = useState("50");
   const [customAmount, setCustomAmount] = useState("");
   const [donations, setDonations] = useState<DonationType[]>([]);
   const [loadingReport, setLoadingReport] = useState(true);
@@ -165,7 +260,7 @@ export default function HelpSupportPage() {
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [savedTxId, setSavedTxId] = useState("");
 
-  const presetAmounts = ["100", "500", "1000", "5000"];
+  const presetAmounts = ["20", "50", "100", "500"];
 
   const [community, setCommunity] = useState<{ name?: string; upiId?: string } | null>(null);
   const [copiedUpi, setCopiedUpi] = useState(false);
@@ -261,9 +356,9 @@ export default function HelpSupportPage() {
     const q = searchQuery.toLowerCase();
     const matchesQuery =
       !q ||
-      faq.question.toLowerCase().includes(q) ||
-      faq.categoryLabel.toLowerCase().includes(q) ||
-      faq.steps.some((step) => step.toLowerCase().includes(q));
+      faq.question[faqLang].toLowerCase().includes(q) ||
+      faq.categoryLabel[faqLang].toLowerCase().includes(q) ||
+      faq.steps[faqLang].some((step) => step.toLowerCase().includes(q));
     return matchesCategory && matchesQuery;
   });
 
@@ -316,36 +411,61 @@ export default function HelpSupportPage() {
       {/* ───────────────────────────────────────────────────────────── */}
       {activeMainTab === "support" && (
         <div className="space-y-4">
-          {/* Search Input Bar */}
-          <div className="bg-white rounded-2xl p-2 shadow-xs border border-slate-100 flex items-center space-x-2">
-            <Search className="w-4 h-4 text-slate-400 shrink-0 ml-2" />
-            <input
-              type="text"
-              placeholder="Search help topics (e.g. reset password, GPS pin, hubs...)"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1 bg-transparent border-0 outline-hidden text-xs placeholder-slate-400 text-slate-800 font-medium"
-            />
-            {searchQuery && (
+          {/* Search Input Bar & Language Switcher Pill */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <div className="flex-1 bg-white rounded-2xl p-2 shadow-xs border border-slate-100 flex items-center space-x-2">
+              <Search className="w-4 h-4 text-slate-400 shrink-0 ml-2" />
+              <input
+                type="text"
+                placeholder={faqLang === "hi" ? "प्रश्न खोजें (उदा. पासवर्ड, लोकेशन, हब्स...)" : "Search help topics (e.g. reset password, GPS pin, hubs...)"}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="flex-1 bg-transparent border-0 outline-hidden text-xs placeholder-slate-400 text-slate-800 font-medium"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="text-[10px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-600 px-2 py-1 rounded-lg border-0 cursor-pointer transition-all shrink-0"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
+            {/* 🌐 Language Switcher Pill */}
+            <div className="flex items-center bg-white p-1 rounded-2xl border border-slate-200 shadow-xs shrink-0 self-end sm:self-auto">
+              <Globe className="w-3.5 h-3.5 text-slate-500 ml-2 mr-1.5 shrink-0" />
               <button
-                onClick={() => setSearchQuery("")}
-                className="text-[10px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-600 px-2 py-1 rounded-lg border-0 cursor-pointer transition-all shrink-0"
+                type="button"
+                onClick={() => setFaqLang("hi")}
+                className={`px-2.5 py-1 rounded-xl text-[11px] font-extrabold transition-all border-0 cursor-pointer ${
+                  faqLang === "hi" ? "bg-rose-700 text-white shadow-xs" : "text-slate-600 hover:bg-slate-100"
+                }`}
               >
-                Clear
+                हिंदी
               </button>
-            )}
+              <button
+                type="button"
+                onClick={() => setFaqLang("en")}
+                className={`px-2.5 py-1 rounded-xl text-[11px] font-extrabold transition-all border-0 cursor-pointer ${
+                  faqLang === "en" ? "bg-rose-700 text-white shadow-xs" : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                English
+              </button>
+            </div>
           </div>
 
           {/* Filter Chips */}
           <div className="flex overflow-x-auto no-scrollbar space-x-1.5 pb-1">
             {[
-              { id: "all", label: "All Questions" },
-              { id: "password", label: "🔐 Password" },
-              { id: "approval", label: "⏳ Approval" },
-              { id: "location", label: "📍 GPS Pin" },
-              { id: "whatsapp", label: "💬 WhatsApp" },
-              { id: "hubs", label: "🏢 Hubs" },
-              { id: "tree", label: "🌳 Family Tree" },
+              { id: "all", label: faqLang === "hi" ? "सभी प्रश्न (All)" : "All Questions" },
+              { id: "password", label: faqLang === "hi" ? "🔐 पासवर्ड" : "🔐 Password" },
+              { id: "approval", label: faqLang === "hi" ? "⏳ स्वीकृति" : "⏳ Approval" },
+              { id: "location", label: faqLang === "hi" ? "📍 जीपीएस" : "📍 GPS Pin" },
+              { id: "whatsapp", label: faqLang === "hi" ? "💬 व्हाट्सएप" : "💬 WhatsApp" },
+              { id: "hubs", label: faqLang === "hi" ? "🏢 हब्स" : "🏢 Hubs" },
+              { id: "tree", label: faqLang === "hi" ? "🌳 वंशावली" : "🌳 Family Tree" },
             ].map((chip) => (
               <button
                 key={chip.id}
@@ -366,8 +486,12 @@ export default function HelpSupportPage() {
             {filteredFaqs.length === 0 ? (
               <div className="bg-white rounded-3xl p-8 text-center space-y-2 border border-slate-100">
                 <Info className="w-8 h-8 text-slate-300 mx-auto" />
-                <h4 className="text-xs font-bold text-slate-700">No matching help topics found</h4>
-                <p className="text-[11px] text-slate-400">Try searching for keywords like "password", "location", "tree", or "hubs".</p>
+                <h4 className="text-xs font-bold text-slate-700">
+                  {faqLang === "hi" ? "कोई संबंधित सहायता विषय नहीं मिला" : "No matching help topics found"}
+                </h4>
+                <p className="text-[11px] text-slate-400">
+                  {faqLang === "hi" ? "पासवर्ड, लोकेशन, हब्स या वंशावली जैसे शब्द खोजकर देखें।" : "Try searching for keywords like 'password', 'location', 'tree', or 'hubs'."}
+                </p>
               </div>
             ) : (
               filteredFaqs.map((faq) => {
@@ -399,10 +523,10 @@ export default function HelpSupportPage() {
                         </div>
                         <div className="min-w-0">
                           <span className="text-[10px] font-black uppercase tracking-wider text-rose-700 block mb-0.5">
-                            {faq.categoryLabel}
+                            {faq.categoryLabel[faqLang]}
                           </span>
                           <h3 className="text-xs font-black text-slate-900 leading-snug">
-                            {faq.question}
+                            {faq.question[faqLang]}
                           </h3>
                         </div>
                       </div>
@@ -416,9 +540,9 @@ export default function HelpSupportPage() {
                       <div className="px-4 pb-4 pt-1 border-t border-slate-100 bg-slate-50/50 space-y-3">
                         <div className="space-y-2.5">
                           <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block pt-1">
-                            📌 Step-by-Step Guidance:
+                            {faqLang === "hi" ? "📌 चरण-दर-चरण मार्गदर्शिका:" : "📌 Step-by-Step Guidance:"}
                           </span>
-                          {faq.steps.map((stepText, idx) => (
+                          {faq.steps[faqLang].map((stepText, idx) => (
                             <div key={idx} className="flex items-start space-x-2.5 bg-white p-2.5 rounded-2xl border border-slate-100 shadow-2xs">
                               <span className="w-5 h-5 rounded-full bg-rose-700 text-white font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5">
                                 {idx + 1}
@@ -433,7 +557,7 @@ export default function HelpSupportPage() {
                         {faq.tip && (
                           <div className="p-3 bg-amber-50/80 border border-amber-200/80 rounded-2xl text-[11px] text-amber-800 font-bold flex items-start space-x-2">
                             <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                            <span><strong>Pro Tip:</strong> {faq.tip}</span>
+                            <span><strong>{faqLang === "hi" ? "खास सुझाव:" : "Pro Tip:"}</strong> {faq.tip[faqLang]}</span>
                           </div>
                         )}
                       </div>

@@ -291,7 +291,7 @@ export default function AuthPage() {
                   : "text-slate-500 hover:text-slate-700 bg-slate-50/[0.3]"
               }`}
             >
-              Sign In
+              Sign In (लॉग इन)
             </button>
             <button
               onClick={() => router.push("/signup")}
@@ -301,7 +301,7 @@ export default function AuthPage() {
                   : "text-slate-500 hover:text-slate-700 bg-slate-50/[0.3]"
               }`}
             >
-              Sign Up
+              Sign Up (पंजीकरण)
             </button>
           </div>
         )}
@@ -325,7 +325,7 @@ export default function AuthPage() {
             <form onSubmit={handleSignIn} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
-                  Mobile Number (Username)
+                  Mobile No. (मोबाइल नं.)
                 </label>
                 <div className="relative">
                   <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -343,7 +343,7 @@ export default function AuthPage() {
               <div>
                 <div className="flex justify-between items-center mb-1.5">
                   <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                    Password
+                    Password (पासवर्ड)
                   </label>
                   <button
                     type="button"
@@ -353,7 +353,7 @@ export default function AuthPage() {
                     }}
                     className="text-xs font-semibold text-whatsapp-green hover:underline"
                   >
-                    Forgot?
+                    Forgot? (भूल गए?)
                   </button>
                 </div>
                 <div className="relative">
@@ -372,9 +372,9 @@ export default function AuthPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 bg-whatsapp-green hover:bg-whatsapp-teal text-white rounded-xl font-bold shadow-md transition-all active:scale-[0.98] disabled:opacity-50 text-sm mt-2"
+                className="w-full py-3 bg-whatsapp-green hover:bg-whatsapp-teal text-white rounded-xl font-bold shadow-md transition-all active:scale-[0.98] disabled:opacity-50 text-sm mt-2 cursor-pointer border-0"
               >
-                {loading ? "Signing In..." : "Sign In"}
+                {loading ? "Signing In..." : "Sign In (लॉग इन)"}
               </button>
             </form>
           )}

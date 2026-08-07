@@ -56,8 +56,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (!name || !finalCity) {
-      return Response.json({ error: "Missing required fields: name, city" }, { status: 400 });
+    if (!name) {
+      return Response.json({ error: "Missing required field: name" }, { status: 400 });
+    }
+
+    if (!finalCity) {
+      finalCity = "";
     }
 
     let finalMobileNumber = mobileNumber;
@@ -86,8 +90,8 @@ export async function POST(request: NextRequest) {
     }
 
     if (!finalPassword) {
-      // Generate a random 5-digit initial key (e.g. 48291)
-      finalPassword = Math.floor(10000 + Math.random() * 90000).toString();
+      // Generate a random 6-digit initial key (e.g. 482910)
+      finalPassword = Math.floor(100000 + Math.random() * 900000).toString();
     }
 
     // Check if user already exists with the same mobileNumber

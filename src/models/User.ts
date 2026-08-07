@@ -10,6 +10,7 @@ export interface IUser extends Document {
   village?: string;
   mobileNumber?: string;
   age?: number;
+  dob?: string;
   sex?: string;
   maritalStatus?: string;
   bloodGroup?: string;
@@ -61,8 +62,8 @@ const UserSchema: Schema<IUser> = new Schema(
     },
     city: {
       type: String,
-      required: [true, "City is required"],
       trim: true,
+      default: "",
     },
     village: {
       type: String,
@@ -77,6 +78,10 @@ const UserSchema: Schema<IUser> = new Schema(
     age: {
       type: Number,
       min: [0, "Age cannot be negative"],
+    },
+    dob: {
+      type: String,
+      trim: true,
     },
     sex: {
       type: String,

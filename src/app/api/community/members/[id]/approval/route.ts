@@ -38,15 +38,20 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return Response.json({ error: "Forbidden: Cannot manage members outside your community" }, { status: 403 });
     }
 
+    let generatedPassword = "";
     if (action === "toggle_property_manager") {
       targetUser.isPropertyManager = typeof isPropertyManager === "boolean" ? isPropertyManager : !targetUser.isPropertyManager;
     } else {
       const newStatus = action === "approve" ? "approved" : "rejected";
       targetUser.status = newStatus;
       if (action === "approve") {
-        if (password && String(password).trim() !== "") {
-          targetUser.password = hashPassword(String(password).trim());
-        }
+        const plainPassword = (password && String(password).trim() !== "")
+          ? String(password).trim()
+          : Math.floor(100000 + Math.random() * 900000).toString();
+        
+        generatedPassword = plainPassword;
+        targetUser.password = hashPassword(plainPassword);
+        
         if (typeof isPropertyManager === "boolean") {
           targetUser.isPropertyManager = isPropertyManager;
         }
@@ -61,6 +66,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     return Response.json({
       message: `Member ${action} updated successfully`,
       user: userObj,
+      generatedPassword: generatedPassword || undefined,
     });
   } catch (error: any) {
     return Response.json({ error: error.message || "Failed to update member approval status" }, { status: 500 });
