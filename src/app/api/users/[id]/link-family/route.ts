@@ -13,7 +13,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const { id } = await params;
     const { relativeId, relationshipType } = await request.json();
 
-    if (!relativeId || !relationshipType || !["parent", "child"].includes(relationshipType)) {
+    if (!relativeId || !relationshipType || !["parent", "child", "spouse"].includes(relationshipType)) {
       return Response.json({ error: "Invalid relativeId or relationshipType" }, { status: 400 });
     }
 
@@ -35,12 +35,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       // Set user's parent to relative
       user.parent = relativeId as any;
       user.parentRelationship = relative.sex === "Female" ? "Mother" : "Father";
-      
+
       // Update user's familyMembers
       if (!user.familyMembers.some((fid) => fid.toString() === relativeId)) {
         user.familyMembers.push(relativeId as any);
       }
-      
+
       // Update parent's familyMembers
       await UserModel.findByIdAndUpdate(relativeId, {
         $addToSet: { familyMembers: id },
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       await User.findByIdAndUpdate(relativeId, {
         $addToSet: { familyMembers: id },
       });
-      
+
       await user.save();
     } else if (relationshipType === "child") {
       // Set relative's parent to user
@@ -68,6 +68,41 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         $addToSet: { familyMembers: relativeId },
       });
 
+      await relative.save();
+    } else if (relationshipType === "spouse") {
+      // Link user and relative as spouses
+      const isRelativeFemale = relative.sex === "Female";
+      const isUserFemale = user.sex === "Female";
+
+      if (isRelativeFemale || (!isUserFemale && relative.sex !== "Male")) {
+        relative.parent = id as any;
+        relative.parentRelationship = "Wife";
+      } else {
+        user.parent = relativeId as any;
+        user.parentRelationship = "Wife";
+      }
+
+      if (!user.familyMembers.some((fid) => fid.toString() === relativeId)) {
+        user.familyMembers.push(relativeId as any);
+      }
+      if (!relative.familyMembers.some((fid) => fid.toString() === id)) {
+        relative.familyMembers.push(id as any);
+      }
+
+      await UserModel.findByIdAndUpdate(id, {
+        $addToSet: { familyMembers: relativeId },
+      });
+      await User.findByIdAndUpdate(id, {
+        $addToSet: { familyMembers: relativeId },
+      });
+      await UserModel.findByIdAndUpdate(relativeId, {
+        $addToSet: { familyMembers: id },
+      });
+      await User.findByIdAndUpdate(relativeId, {
+        $addToSet: { familyMembers: id },
+      });
+
+      await user.save();
       await relative.save();
     }
 

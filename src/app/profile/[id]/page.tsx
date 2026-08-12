@@ -89,7 +89,7 @@ interface TreeNodeComponentProps {
   isActive?: boolean;
   profileUserId: string;
   router: any;
-  setRelationshipType: (type: "parent" | "child" | "") => void;
+  setRelationshipType: (type: "parent" | "child" | "spouse" | "") => void;
   setLinkageTargetUser: (user: { _id: string; name: string; gotra?: string; kulDevi?: string; address?: string; city?: string; village?: string } | null) => void;
   setLinkageModalOpen: (open: boolean) => void;
   renderTreeNode: (node: any, isActive: boolean) => React.ReactNode;
@@ -237,7 +237,7 @@ export default function UserProfilePage() {
   // Relative linkage states
   const [linkageModalOpen, setLinkageModalOpen] = useState(false);
   const [linkageTab, setLinkageTab] = useState<"search" | "create">("search");
-  const [relationshipType, setRelationshipType] = useState<"parent" | "child" | "">("");
+  const [relationshipType, setRelationshipType] = useState<"parent" | "child" | "spouse" | "">("");
 
   // Edit Profile States
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -719,6 +719,10 @@ export default function UserProfilePage() {
       setLinkageError("Mobile Number is required");
       return;
     }
+    if (relationshipType === "spouse" && !newMemberMobile.trim()) {
+      setLinkageError("Mobile Number is required for Spouse");
+      return;
+    }
     if (!newMemberCity.trim()) {
       setLinkageError("City is required");
       return;
@@ -766,14 +770,14 @@ export default function UserProfilePage() {
 
       const newUserId = signupData._id;
 
-      if (relationshipType === "parent") {
+      if (relationshipType === "parent" || relationshipType === "spouse") {
         const targetId = linkageTargetUser?._id || profileUser._id;
         const linkRes = await fetch(`/api/users/${targetId}/link-family`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             relativeId: newUserId,
-            relationshipType: "parent",
+            relationshipType,
           }),
         });
 
@@ -784,14 +788,16 @@ export default function UserProfilePage() {
           return;
         }
 
-        const targetRel = newMemberSex === "Female" ? "Mother" : "Father";
-        await fetch(`/api/users/${targetId}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            parentRelationship: targetRel,
-          }),
-        });
+        if (relationshipType === "parent") {
+          const targetRel = newMemberSex === "Female" ? "Mother" : "Father";
+          await fetch(`/api/users/${targetId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              parentRelationship: targetRel,
+            }),
+          });
+        }
       }
 
       setLinkageSuccess("New profile registered and linked successfully!");
@@ -1336,28 +1342,39 @@ export default function UserProfilePage() {
                   <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                     2. Select Relationship Type
                   </label>
-                  <div className="flex space-x-3">
+                  <div className="grid grid-cols-3 gap-2">
                     <button
                       type="button"
                       onClick={() => setRelationshipType("parent")}
-                      className={`flex-1 py-2 border rounded-xl text-xs font-bold transition-all active:scale-[0.98] cursor-pointer ${
+                      className={`py-2 border rounded-xl text-xs font-bold transition-all active:scale-[0.98] cursor-pointer ${
                         relationshipType === "parent"
                           ? "border-whatsapp-green bg-whatsapp-light text-whatsapp-green"
                           : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
                       }`}
                     >
-                      Linked Person is Parent
+                      👴 Parent
                     </button>
                     <button
                       type="button"
                       onClick={() => setRelationshipType("child")}
-                      className={`flex-1 py-2 border rounded-xl text-xs font-bold transition-all active:scale-[0.98] cursor-pointer ${
+                      className={`py-2 border rounded-xl text-xs font-bold transition-all active:scale-[0.98] cursor-pointer ${
                         relationshipType === "child"
                           ? "border-whatsapp-green bg-whatsapp-light text-whatsapp-green"
                           : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
                       }`}
                     >
-                      Linked Person is Child
+                      👶 Child
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRelationshipType("spouse")}
+                      className={`py-2 border rounded-xl text-xs font-bold transition-all active:scale-[0.98] cursor-pointer ${
+                        relationshipType === "spouse"
+                          ? "border-rose-500 bg-rose-50 text-rose-600"
+                          : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
+                      }`}
+                    >
+                      💑 Spouse
                     </button>
                   </div>
                 </div>
@@ -1377,28 +1394,39 @@ export default function UserProfilePage() {
                   <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                     Relationship Role
                   </label>
-                  <div className="flex space-x-3">
+                  <div className="grid grid-cols-3 gap-2">
                     <button
                       type="button"
                       onClick={() => setRelationshipType("parent")}
-                      className={`flex-1 py-2 border rounded-xl text-xs font-bold transition-all active:scale-[0.98] cursor-pointer ${
+                      className={`py-2 border rounded-xl text-xs font-bold transition-all active:scale-[0.98] cursor-pointer ${
                         relationshipType === "parent"
                           ? "border-whatsapp-green bg-whatsapp-light text-whatsapp-green"
                           : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
                       }`}
                     >
-                      New Person is Parent
+                      👴 Parent
                     </button>
                     <button
                       type="button"
                       onClick={() => setRelationshipType("child")}
-                      className={`flex-1 py-2 border rounded-xl text-xs font-bold transition-all active:scale-[0.98] cursor-pointer ${
+                      className={`py-2 border rounded-xl text-xs font-bold transition-all active:scale-[0.98] cursor-pointer ${
                         relationshipType === "child"
                           ? "border-whatsapp-green bg-whatsapp-light text-whatsapp-green"
                           : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
                       }`}
                     >
-                      New Person is Child
+                      👶 Child
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRelationshipType("spouse")}
+                      className={`py-2 border rounded-xl text-xs font-bold transition-all active:scale-[0.98] cursor-pointer ${
+                        relationshipType === "spouse"
+                          ? "border-rose-500 bg-rose-50 text-rose-600"
+                          : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
+                      }`}
+                    >
+                      💑 Spouse
                     </button>
                   </div>
                 </div>
