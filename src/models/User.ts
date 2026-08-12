@@ -11,6 +11,8 @@ export interface IUser extends Document {
   city: string;
   village?: string;
   mobileNumber?: string;
+  mobile?: string;
+
   age?: number;
   dob?: string;
   sex?: string;

@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
-import { User } from "@/models/User";
+import { getTenantUserModel } from "@/models/User";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -12,15 +12,30 @@ export async function GET(request: NextRequest) {
   }
 
   await dbConnect();
+  const UserModel = await getTenantUserModel(request);
 
   const result: { mobileExists?: boolean; emailExists?: boolean } = {};
 
   if (mobileNumber) {
-    result.mobileExists = !!(await User.exists({ mobileNumber }));
+    const cleanMobile = mobileNumber.trim();
+    const digits = cleanMobile.replace(/\D/g, "");
+    const mobileQuery = {
+      $or: [
+        { mobileNumber: cleanMobile },
+        { mobile: cleanMobile },
+        { phone: cleanMobile },
+        ...(digits.length >= 10 ? [{ mobile: { $regex: digits.slice(-10) + "$" } }] : []),
+        ...(digits.length >= 10 ? [{ mobileNumber: { $regex: digits.slice(-10) + "$" } }] : []),
+        ...(digits.length >= 10 ? [{ phone: { $regex: digits.slice(-10) + "$" } }] : []),
+      ],
+    };
+    result.mobileExists = !!(await UserModel.exists(mobileQuery));
   }
+
   if (email) {
-    result.emailExists = !!(await User.exists({ email: email.toLowerCase() }));
+    result.emailExists = !!(await UserModel.exists({ email: email.toLowerCase() }));
   }
 
   return Response.json(result);
 }
+
