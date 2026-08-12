@@ -1,14 +1,17 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
+
+const VISITOR_SESSION_KEY = "cc_visitor_session";
+const VISITOR_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 
 interface UserType {
   _id: string;
   name: string;
   phone: string;
   mobileNumber: string;
-  role?: "super-admin" | "admin" | "member";
+  role?: "super-admin" | "admin" | "member" | "visitor";
   status?: "pending" | "approved" | "rejected";
   communityId?: string;
   gotra?: string;
@@ -27,12 +30,17 @@ interface UserType {
   profession?: string;
   company?: string;
   isPropertyManager?: boolean;
+  isVisitor?: boolean;
+  visitorExpiresAt?: number;
 }
 
 interface AuthContextProps {
   user: UserType | null;
   loading: boolean;
+  isVisitor: boolean;
+  visitorSecondsLeft: number;
   login: (mobileNumber: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  visitorLogin: (mobileNumber: string) => Promise<{ success: boolean; error?: string }>;
   signup: (userData: any) => Promise<{ success: boolean; pendingApproval?: boolean; error?: string }>;
   forgotPassword: (mobileNumber: string, newPassword: string, resetKey: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
@@ -44,20 +52,63 @@ const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserType | null>(null);
   const [loading, setLoading] = useState(true);
+  const [visitorSecondsLeft, setVisitorSecondsLeft] = useState(0);
+  const visitorTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const router = useRouter();
   const pathname = usePathname();
 
+  const isVisitor = !!(user?.isVisitor);
+
+  // Clear any running visitor countdown
+  const clearVisitorTimer = () => {
+    if (visitorTimerRef.current) {
+      clearInterval(visitorTimerRef.current);
+      visitorTimerRef.current = null;
+    }
+  };
+
+  // Start a countdown for the visitor session
+  const startVisitorCountdown = (expiresAt: number) => {
+    clearVisitorTimer();
+    const tick = () => {
+      const remaining = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
+      setVisitorSecondsLeft(remaining);
+      if (remaining <= 0) {
+        clearVisitorTimer();
+        // Auto-logout visitor
+        localStorage.removeItem(VISITOR_SESSION_KEY);
+        localStorage.removeItem("cc_user");
+        setUser(null);
+        router.replace("/auth");
+      }
+    };
+    tick();
+    visitorTimerRef.current = setInterval(tick, 1000);
+  };
+
   useEffect(() => {
-    // Check local storage for active session on load
+    // Check for regular user session
     const storedUser = localStorage.getItem("cc_user");
     if (storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
+        const parsed = JSON.parse(storedUser) as UserType;
+        setUser(parsed);
+        if (parsed.isVisitor && parsed.visitorExpiresAt) {
+          if (Date.now() < parsed.visitorExpiresAt) {
+            startVisitorCountdown(parsed.visitorExpiresAt);
+          } else {
+            // Session expired — clean up
+            localStorage.removeItem("cc_user");
+            localStorage.removeItem(VISITOR_SESSION_KEY);
+          }
+        }
       } catch (e) {
         localStorage.removeItem("cc_user");
       }
     }
     setLoading(false);
+
+    return () => clearVisitorTimer();
   }, []);
 
   useEffect(() => {
@@ -98,6 +149,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { success: true };
     } catch (e: any) {
       return { success: false, error: e.message || "An error occurred during sign in" };
+    }
+  };
+
+  const visitorLogin = async (mobileNumber: string) => {
+    try {
+      const res = await fetch("/api/auth/visitor-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mobileNumber }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        return { success: false, error: data.error || "Visitor login failed" };
+      }
+
+      localStorage.setItem("cc_user", JSON.stringify(data));
+      localStorage.setItem(VISITOR_SESSION_KEY, String(data.visitorExpiresAt));
+      setUser(data);
+      startVisitorCountdown(data.visitorExpiresAt);
+      router.replace("/");
+      return { success: true };
+    } catch (e: any) {
+      return { success: false, error: e.message || "An error occurred during visitor access" };
     }
   };
 
@@ -151,13 +226,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => {
+    clearVisitorTimer();
     localStorage.removeItem("cc_user");
+    localStorage.removeItem(VISITOR_SESSION_KEY);
     setUser(null);
     router.replace("/auth");
   };
 
   const updateUser = (userData: Partial<UserType>) => {
-    if (user) {
+    if (user && !user.isVisitor) {
       const updated = { ...user, ...userData };
       localStorage.setItem("cc_user", JSON.stringify(updated));
       setUser(updated);
@@ -165,7 +242,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, forgotPassword, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, loading, isVisitor, visitorSecondsLeft, login, visitorLogin, signup, forgotPassword, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

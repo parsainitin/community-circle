@@ -17,13 +17,16 @@ interface CurrentCommunity {
 }
 
 export default function AuthPage() {
-  const { login, signup, forgotPassword } = useAuth();
+  const { login, signup, forgotPassword, visitorLogin } = useAuth();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<AuthTab>("signin");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [community, setCommunity] = useState<CurrentCommunity | null>(null);
+  const [visitorMobile, setVisitorMobile] = useState("");
+  const [visitorLoading, setVisitorLoading] = useState(false);
+  const [visitorError, setVisitorError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/community/current")
@@ -176,6 +179,22 @@ export default function AuthPage() {
     setLoading(false);
     if (!res.success) {
       setError(res.error || "Invalid credentials");
+    }
+  };
+
+  const handleVisitorLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setVisitorError(null);
+    const digits = visitorMobile.trim().replace(/\D/g, "");
+    if (digits.length < 10) {
+      setVisitorError("Please enter a valid 10-digit mobile number");
+      return;
+    }
+    setVisitorLoading(true);
+    const res = await visitorLogin(digits);
+    setVisitorLoading(false);
+    if (!res.success) {
+      setVisitorError(res.error || "Could not start visitor session");
     }
   };
 
@@ -377,6 +396,51 @@ export default function AuthPage() {
                 {loading ? "Signing In..." : "Sign In (लॉग इन)"}
               </button>
             </form>
+          )}
+
+          {/* VISITOR / GUEST ACCESS — below signin only */}
+          {activeTab === "signin" && (
+            <div className="mt-5 pt-4 border-t border-slate-100">
+              <div className="flex items-center justify-center space-x-2 mb-3">
+                <div className="h-px flex-1 bg-slate-100" />
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2">or Visit as Guest</span>
+                <div className="h-px flex-1 bg-slate-100" />
+              </div>
+
+              {/* 15-min guest info pill */}
+              <div className="flex items-center justify-center space-x-1.5 mb-3">
+                <span className="text-[10px] text-amber-600 font-bold bg-amber-50 border border-amber-200 px-3 py-1 rounded-full">
+                  ⏱ Read-only access for 15 minutes — no password needed
+                </span>
+              </div>
+
+              {visitorError && (
+                <div className="mb-3 p-2.5 bg-red-50 text-red-600 rounded-xl text-xs font-medium border border-red-100 flex items-center space-x-2">
+                  <span className="w-1.5 h-1.5 bg-red-500 rounded-full shrink-0" />
+                  <span>{visitorError}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleVisitorLogin} className="flex space-x-2">
+                <div className="relative flex-1">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                  <input
+                    type="tel"
+                    placeholder="Your mobile number"
+                    value={visitorMobile}
+                    onChange={(e) => setVisitorMobile(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2.5 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-200 focus:border-amber-400 focus:ring-1 focus:ring-amber-300 text-xs outline-hidden transition-all text-slate-800"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={visitorLoading}
+                  className="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold shadow-sm transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer border-0 shrink-0"
+                >
+                  {visitorLoading ? "..." : "Visit"}
+                </button>
+              </form>
+            </div>
           )}
 
           {/* SIGN UP VIEW */}
