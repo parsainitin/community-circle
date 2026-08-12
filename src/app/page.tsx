@@ -447,7 +447,7 @@ export default function WallPage() {
                         </p>
 
                         {/* ── PREMIUM ICON-BASED RSVP CONTROL BAR ────────────────── */}
-                        <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/60 flex items-center justify-between gap-3">
                           {/* 3 Premium Icon RSVP Buttons with Native Tooltips */}
                           <div className="flex items-center space-x-2">
                             {/* Accept Button */}
@@ -493,29 +493,16 @@ export default function WallPage() {
                             </button>
                           </div>
 
-                          <div className="flex items-center space-x-2">
-                            {/* View Organizer Dashboard Button */}
+                          {/* Direct UPI App Payment Button */}
+                          {(post.eventDetails.contributionFee ?? 0) > 0 && (
                             <button
-                              onClick={() => {
-                                setOrganizerModalPost(post);
-                                setOrganizerTab("accepted");
-                              }}
-                              className="text-[10px] font-extrabold text-indigo-600 hover:underline flex items-center gap-1 cursor-pointer"
+                              onClick={() => handleDirectUpiPayment(post)}
+                              title="Directly open your UPI App and accept RSVP"
+                              className="py-2 px-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-extrabold shadow-xs transition flex items-center gap-1.5 cursor-pointer border-0"
                             >
-                              RSVP Stats &rarr;
+                              <DollarSign className="w-3.5 h-3.5" /> Pay & Accept
                             </button>
-
-                            {/* Direct UPI App Payment Button */}
-                            {(post.eventDetails.contributionFee ?? 0) > 0 && (
-                              <button
-                                onClick={() => handleDirectUpiPayment(post)}
-                                title="Directly open your UPI App and accept RSVP"
-                                className="py-2 px-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-extrabold shadow-xs transition flex items-center gap-1.5 cursor-pointer border-0"
-                              >
-                                <DollarSign className="w-3.5 h-3.5" /> Pay & Accept
-                              </button>
-                            )}
-                          </div>
+                          )}
                         </div>
                       </div>
                     ) : post.type === "announcement" ? (
@@ -543,32 +530,47 @@ export default function WallPage() {
                       </div>
                     )}
 
-                    {/* Interaction Footer (Likes & Comments) */}
-                    <div className="flex items-center space-x-4 pt-2.5 border-t border-slate-100">
-                      <button
-                        onClick={() => handleLike(post._id)}
-                        className={`flex items-center space-x-1.5 text-xs font-bold py-1.5 px-3 rounded-xl transition-all border cursor-pointer ${
-                          hasLiked
-                            ? "bg-rose-50 text-rose-500 border-rose-200"
-                            : "bg-slate-50 text-slate-500 hover:bg-slate-100 border-slate-200/60"
-                        }`}
-                      >
-                        <Heart className={`w-3.5 h-3.5 ${hasLiked ? "fill-rose-500 text-rose-500" : ""}`} />
-                        <span>Like ({post.likes?.length || 0})</span>
-                      </button>
+                    {/* Interaction Footer (RSVP Stats for Events, Likes & Comments for Regular Posts) */}
+                    {post.type === "event" ? (
+                      <div className="flex items-center justify-between pt-2.5 border-t border-slate-100">
+                        <button
+                          onClick={() => {
+                            setOrganizerModalPost(post);
+                            setOrganizerTab("accepted");
+                          }}
+                          className="flex items-center space-x-1.5 text-xs font-extrabold py-1.5 px-3 rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200/80 transition cursor-pointer"
+                        >
+                          <Users className="w-3.5 h-3.5 text-indigo-600" />
+                          <span>RSVP Stats & Details</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center space-x-4 pt-2.5 border-t border-slate-100">
+                        <button
+                          onClick={() => handleLike(post._id)}
+                          className={`flex items-center space-x-1.5 text-xs font-bold py-1.5 px-3 rounded-xl transition-all border cursor-pointer ${
+                            hasLiked
+                              ? "bg-rose-50 text-rose-500 border-rose-200"
+                              : "bg-slate-50 text-slate-500 hover:bg-slate-100 border-slate-200/60"
+                          }`}
+                        >
+                          <Heart className={`w-3.5 h-3.5 ${hasLiked ? "fill-rose-500 text-rose-500" : ""}`} />
+                          <span>Like ({post.likes?.length || 0})</span>
+                        </button>
 
-                      <button
-                        onClick={() => toggleComments(post._id)}
-                        className={`flex items-center space-x-1.5 text-xs font-bold py-1.5 px-3 rounded-xl transition-all border cursor-pointer ${
-                          expandedComments[post._id]
-                            ? "bg-indigo-50 text-indigo-600 border-indigo-200"
-                            : "bg-slate-50 text-slate-500 hover:bg-slate-100 border-slate-200/60"
-                        }`}
-                      >
-                        <MessageSquare className="w-3.5 h-3.5" />
-                        <span>Comment ({post.replies?.length || 0})</span>
-                      </button>
-                    </div>
+                        <button
+                          onClick={() => toggleComments(post._id)}
+                          className={`flex items-center space-x-1.5 text-xs font-bold py-1.5 px-3 rounded-xl transition-all border cursor-pointer ${
+                            expandedComments[post._id]
+                              ? "bg-indigo-50 text-indigo-600 border-indigo-200"
+                              : "bg-slate-50 text-slate-500 hover:bg-slate-100 border-slate-200/60"
+                          }`}
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          <span>Comment ({post.replies?.length || 0})</span>
+                        </button>
+                      </div>
+                    )}
 
                     {/* Expandable Comments Section */}
                     {expandedComments[post._id] && (
