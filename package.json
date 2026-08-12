@@ -4,11 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "dev:all": "powershell -ExecutionPolicy Bypass -File ./start-services.ps1",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "seed:superadmin": "node --env-file=.env.local scripts/seed-superadmin.mjs"
+    "lint": "eslint"
   },
   "dependencies": {
     "cloudinary": "^2.10.0",

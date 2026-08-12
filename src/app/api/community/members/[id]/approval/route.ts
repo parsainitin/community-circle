@@ -1,9 +1,7 @@
 import { NextRequest } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { User } from "@/models/User";
-import { Community } from "@/models/Community";
 import { hashPassword } from "@/lib/auth-crypto";
-import { sendWhatsAppMessage } from "@/lib/msgservice";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -41,9 +39,6 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
 
     let generatedPassword = "";
-    let messageSent = false;
-    let messageError: string | undefined = undefined;
-
     if (action === "toggle_property_manager") {
       targetUser.isPropertyManager = typeof isPropertyManager === "boolean" ? isPropertyManager : !targetUser.isPropertyManager;
     } else {
@@ -60,31 +55,6 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         if (typeof isPropertyManager === "boolean") {
           targetUser.isPropertyManager = isPropertyManager;
         }
-
-        // Fetch community details for customized message
-        let communityName = "Community Circle";
-        if (targetUser.communityId) {
-          const community = await Community.findById(targetUser.communityId).select("name").lean();
-          if (community?.name) {
-            communityName = community.name;
-          }
-        }
-
-        const targetMobile = targetUser.mobileNumber || targetUser.phone;
-        if (targetMobile) {
-          const messageText = `Namaste ${targetUser.name}! 🙏\n\nYour registration request for ${communityName} has been APPROVED! 🎉\n\n🔑 Your Login Credentials:\n• Mobile Number: ${targetMobile}\n• Initial Password: ${plainPassword}\n\nPlease sign in to access your community directory, announcements, and features.\n\nThank you!`;
-          
-          const msgResponse = await sendWhatsAppMessage({
-            phoneNumber: targetMobile,
-            message: messageText,
-            title: `Member Approval - ${targetUser.name}`,
-          });
-
-          messageSent = msgResponse.success;
-          if (!msgResponse.success) {
-            messageError = msgResponse.error;
-          }
-        }
       }
     }
 
@@ -97,11 +67,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       message: `Member ${action} updated successfully`,
       user: userObj,
       generatedPassword: generatedPassword || undefined,
-      messageSent,
-      messageError,
     });
   } catch (error: any) {
     return Response.json({ error: error.message || "Failed to update member approval status" }, { status: 500 });
   }
 }
-

@@ -64,7 +64,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!loading) {
       const isAuthPage = pathname === "/auth" || pathname === "/signup";
       const isAdminPage = pathname.startsWith("/admin") || pathname.startsWith("/community-admin");
-
       if (!user && !isAuthPage) {
         router.replace("/auth");
       } else if (user) {

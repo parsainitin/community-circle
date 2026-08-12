@@ -37,7 +37,6 @@ export async function POST(request: NextRequest) {
     }
 
     const isApprovedStatus = !user.status || user.status === "approved" || (user.status as string) === "active";
-
     const isAdminRole =
       user.role === "admin" || user.role === "super-admin" || (user.role as any) === "COMMUNITY_ADMIN";
 

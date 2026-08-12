@@ -139,7 +139,7 @@ export default function CommunityAdminPage() {
     customPassword?: string,
     isPropMgr?: boolean
   ) => {
-    if (!user) return null;
+    if (!user) return;
     setProcessingId(memberId);
     try {
       const res = await fetch(`/api/community/members/${memberId}/approval`, {
@@ -148,23 +148,17 @@ export default function CommunityAdminPage() {
         body: JSON.stringify({
           callerMobile: user.mobileNumber,
           action,
-          password: customPassword && customPassword.trim() !== "" ? customPassword.trim() : undefined,
+          password: customPassword || "Community123",
           isPropertyManager: isPropMgr,
         }),
       });
       const data = await res.json();
       if (res.ok) {
-        if (action === "approve") {
-          const pwdNotice = data.generatedPassword ? ` | Password: ${data.generatedPassword}` : "";
-          const msgNotice = data.messageSent
-            ? " | 📱 WhatsApp sent!"
-            : data.messageError
-            ? ` | ⚠️ WhatsApp: ${data.messageError}`
-            : "";
-          showToast(`✅ ${data.user.name} approved!${pwdNotice}${msgNotice}`);
-        } else {
-          showToast(`❌ ${data.user.name} registration rejected.`);
-        }
+        showToast(
+          action === "approve"
+            ? `✅ ${data.user.name} approved successfully!`
+            : `❌ ${data.user.name} registration rejected.`
+        );
 
         // Update inspecting member if currently open
         if (inspectMember && inspectMember._id === memberId) {
@@ -176,14 +170,11 @@ export default function CommunityAdminPage() {
         }
 
         fetchMembers();
-        return data;
       } else {
         alert(data.error || `Failed to ${action} member`);
-        return null;
       }
     } catch {
       alert(`Network error trying to ${action} member`);
-      return null;
     } finally {
       setProcessingId(null);
     }
@@ -262,22 +253,21 @@ export default function CommunityAdminPage() {
   const handleApproveWithWhatsApp = async () => {
     if (!approvalModalMember || !user) return;
     const member = approvalModalMember;
-    const passToSet = approvalPassword.trim() || undefined;
+    const passToSet = approvalPassword.trim() || "Community123";
 
-    const data = await handleApprovalAction(member._id, "approve", passToSet, makePropertyManager);
+    await handleApprovalAction(member._id, "approve", passToSet, makePropertyManager);
     setApprovalModalMember(null);
 
-    const activePassword = data?.generatedPassword || passToSet || "6-digit random password";
     const cleanMobile = member.mobileNumber.replace(/\D/g, "");
     const formattedMobile = cleanMobile.length === 10 ? `91${cleanMobile}` : cleanMobile;
-    const message = `Namaste ${member.name}! 🙏\n\nYour registration on Community Circle has been APPROVED! 🎉${makePropertyManager ? "\n🏢 You have been designated as a Property Manager." : ""}\n\n🔑 Your login credentials:\n• Mobile Number: ${cleanMobile}\n• Initial Password: ${activePassword}\n\nPlease sign in at ${window.location.origin}/auth to access your community directory, hubs, and family tree.`;
+    const message = `Namaste ${member.name}! 🙏\n\nYour registration on Community Circle has been APPROVED! 🎉${makePropertyManager ? "\n🏢 You have been designated as a Property Manager." : ""}\n\n🔑 Your login credentials:\n• Mobile Number: ${cleanMobile}\n• Initial Password: ${passToSet}\n\nPlease sign in at ${window.location.origin}/auth to access your community directory, hubs, and family tree.`;
     const waUrl = `https://wa.me/${formattedMobile}?text=${encodeURIComponent(message)}`;
     window.open(waUrl, "_blank");
   };
 
   const handleApproveOnly = async () => {
     if (!approvalModalMember || !user) return;
-    const passToSet = approvalPassword.trim() || undefined;
+    const passToSet = approvalPassword.trim() || "Community123";
     await handleApprovalAction(approvalModalMember._id, "approve", passToSet, makePropertyManager);
     setApprovalModalMember(null);
   };
