@@ -512,7 +512,7 @@ export default function WallPage() {
                                 title="Directly open your UPI App and accept RSVP"
                                 className="py-2 px-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-extrabold shadow-xs transition flex items-center gap-1.5 cursor-pointer border-0"
                               >
-                                <DollarSign className="w-3.5 h-3.5" /> Pay Contribution & Accept
+                                <DollarSign className="w-3.5 h-3.5" /> Pay & Accept
                               </button>
                             )}
                           </div>
