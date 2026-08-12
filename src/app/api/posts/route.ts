@@ -22,10 +22,10 @@ export async function GET(request: NextRequest) {
       PostModel.deleteMany({ type: "event", "eventDetails.date": { $lt: new Date().toISOString() } }).catch(() => {});
     }
 
-    let [posts, total] = await Promise.all([
+    const [posts, total] = await Promise.all([
       PostModel.find(filter)
-        .populate("author", "name phone")
-        .populate({ path: "replies", populate: { path: "author", select: "name phone" } })
+        .populate("author", "name phone avatar mobileNumber")
+        .populate({ path: "replies", populate: { path: "author", select: "name phone avatar mobileNumber" } })
         .populate("rsvps.going", "name")
         .populate("rsvps.maybe", "name")
         .populate("rsvps.cant", "name")
@@ -34,25 +34,6 @@ export async function GET(request: NextRequest) {
         .limit(limit),
       PostModel.countDocuments(filter),
     ]);
-
-    if (posts.length === 0 && PostModel !== Post) {
-      const [fallbackPosts, fallbackTotal] = await Promise.all([
-        Post.find(filter)
-          .populate("author", "name phone")
-          .populate({ path: "replies", populate: { path: "author", select: "name phone" } })
-          .populate("rsvps.going", "name")
-          .populate("rsvps.maybe", "name")
-          .populate("rsvps.cant", "name")
-          .sort({ createdAt: -1 })
-          .skip(skip)
-          .limit(limit),
-        Post.countDocuments(filter),
-      ]);
-      if (fallbackPosts.length > 0) {
-        posts = fallbackPosts;
-        total = fallbackTotal;
-      }
-    }
 
     return Response.json({ posts, hasMore: skip + posts.length < total, total });
   } catch (error: any) {

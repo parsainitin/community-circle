@@ -7,10 +7,10 @@ export async function GET(request: NextRequest) {
   try {
     await dbConnect();
     const PropertyBookingModel = await getTenantPropertyBookingModel(request);
-    let properties = await PropertyBookingModel.find({}).sort({ createdAt: -1 }).lean();
-    if (properties.length === 0 && PropertyBookingModel !== PropertyBooking) {
-      properties = await PropertyBooking.find({}).sort({ createdAt: -1 }).lean();
-    }
+    const properties = await PropertyBookingModel.find({})
+      .populate("owner", "name mobileNumber phone avatar")
+      .sort({ createdAt: -1 })
+      .lean();
     return Response.json({ properties });
   } catch (error: any) {
     return Response.json(

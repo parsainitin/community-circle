@@ -38,6 +38,7 @@ const DonationSchema: Schema<IDonation> = new Schema(
 );
 
 import { getTenantDb, getSubdomainFromRequest } from "@/lib/mongodb";
+import { getTenantUserModel } from "@/models/User";
 
 if (mongoose.models.Donation) {
   delete (mongoose.models as any).Donation;
@@ -52,5 +53,8 @@ export async function getTenantDonationModel(requestOrSubdomain?: any): Promise<
     : getSubdomainFromRequest(requestOrSubdomain);
 
   const tenantDb = await getTenantDb(subdomain);
+  if (!tenantDb.models.User) {
+    await getTenantUserModel(subdomain);
+  }
   return tenantDb.models.Donation || tenantDb.model<IDonation>("Donation", DonationSchema);
 }

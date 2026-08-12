@@ -8,15 +8,9 @@ export async function GET(request: NextRequest) {
   try {
     await dbConnect();
     const DonationModel = await getTenantDonationModel(request);
-    let donations = await DonationModel.find()
-      .populate("donor", "name mobileNumber gotra kulDevi")
+    const donations = await DonationModel.find()
+      .populate("donor", "name mobileNumber gotra kulDevi avatar")
       .sort({ createdAt: -1 });
-
-    if (donations.length === 0 && DonationModel !== Donation) {
-      donations = await Donation.find()
-        .populate("donor", "name mobileNumber gotra kulDevi")
-        .sort({ createdAt: -1 });
-    }
 
     return Response.json(donations);
   } catch (error: any) {

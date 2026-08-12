@@ -7,16 +7,12 @@ export async function GET(request: NextRequest) {
   try {
     await dbConnect();
     const HubModel = await getTenantHubModel(request);
-    const communityId = await getTenantId(request);
 
     const { searchParams } = new URL(request.url);
     const hubType = searchParams.get("hubType");
     const search = searchParams.get("search");
 
     const query: any = {};
-    if (communityId) {
-      query.communityId = communityId;
-    }
 
     if (hubType && hubType !== "all") {
       query.hubType = hubType;
@@ -27,17 +23,10 @@ export async function GET(request: NextRequest) {
       query.$or = [{ title: reg }, { description: reg }, { category: reg }, { location: reg }];
     }
 
-    let hubs = await HubModel.find(query)
+    const hubs = await HubModel.find(query)
       .populate("owner", "name mobileNumber phone avatar city gotra")
       .sort({ createdAt: -1 })
       .lean();
-
-    if (hubs.length === 0 && HubModel !== Hub) {
-      hubs = await Hub.find(query)
-        .populate("owner", "name mobileNumber phone avatar city gotra")
-        .sort({ createdAt: -1 })
-        .lean();
-    }
 
     return Response.json({ hubs });
   } catch (error: any) {

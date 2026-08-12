@@ -39,6 +39,7 @@ const JobSchema: Schema<IJob> = new Schema(
 );
 
 import { getTenantDb, getSubdomainFromRequest } from "@/lib/mongodb";
+import { getTenantUserModel } from "@/models/User";
 
 export const Job: Model<IJob> =
   mongoose.models.Job || mongoose.model<IJob>("Job", JobSchema);
@@ -49,5 +50,8 @@ export async function getTenantJobModel(requestOrSubdomain?: any): Promise<Model
     : getSubdomainFromRequest(requestOrSubdomain);
 
   const tenantDb = await getTenantDb(subdomain);
+  if (!tenantDb.models.User) {
+    await getTenantUserModel(subdomain);
+  }
   return tenantDb.models.Job || tenantDb.model<IJob>("Job", JobSchema);
 }

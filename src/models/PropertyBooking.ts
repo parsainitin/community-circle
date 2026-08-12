@@ -46,6 +46,7 @@ const PropertyBookingSchema: Schema<IPropertyBooking> = new Schema(
 );
 
 import { getTenantDb, getSubdomainFromRequest } from "@/lib/mongodb";
+import { getTenantUserModel } from "@/models/User";
 
 if (mongoose.models.PropertyBooking) {
   delete (mongoose.models as any).PropertyBooking;
@@ -60,5 +61,8 @@ export async function getTenantPropertyBookingModel(requestOrSubdomain?: any): P
     : getSubdomainFromRequest(requestOrSubdomain);
 
   const tenantDb = await getTenantDb(subdomain);
+  if (!tenantDb.models.User) {
+    await getTenantUserModel(subdomain);
+  }
   return tenantDb.models.PropertyBooking || tenantDb.model<IPropertyBooking>("PropertyBooking", PropertyBookingSchema);
 }

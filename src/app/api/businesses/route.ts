@@ -16,15 +16,9 @@ export async function GET(request: NextRequest) {
       filter = { owner };
     }
 
-    let businesses = await BusinessModel.find(filter)
-      .populate("owner", "name phone")
+    const businesses = await BusinessModel.find(filter)
+      .populate("owner", "name phone mobileNumber avatar")
       .sort({ createdAt: -1 });
-
-    if (businesses.length === 0 && BusinessModel !== Business) {
-      businesses = await Business.find(filter)
-        .populate("owner", "name phone")
-        .sort({ createdAt: -1 });
-    }
 
     return Response.json(businesses);
   } catch (error: any) {

@@ -16,17 +16,10 @@ export async function GET(request: NextRequest) {
       filter = { postedBy };
     }
 
-    let jobs = await JobModel.find(filter)
-      .populate("postedBy", "name phone")
-      .populate("applicants", "name phone")
+    const jobs = await JobModel.find(filter)
+      .populate("postedBy", "name phone mobileNumber avatar")
+      .populate("applicants", "name phone mobileNumber avatar")
       .sort({ createdAt: -1 });
-
-    if (jobs.length === 0 && JobModel !== Job) {
-      jobs = await Job.find(filter)
-        .populate("postedBy", "name phone")
-        .populate("applicants", "name phone")
-        .sort({ createdAt: -1 });
-    }
 
     return Response.json(jobs);
   } catch (error: any) {
