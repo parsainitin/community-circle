@@ -3,11 +3,13 @@ import { dbConnect } from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { verifyPassword } from "@/lib/auth-crypto";
 
+import { getSubdomainFromRequest, getTenantDb } from "@/lib/mongodb";
+
 export async function POST(request: NextRequest) {
   try {
     await dbConnect();
     const body = await request.json();
-    const { mobileNumber, password } = body || {};
+    const { mobileNumber, password, subdomain: bodySubdomain } = body || {};
     const cleanMobile = typeof mobileNumber === "string" ? mobileNumber.trim() : String(mobileNumber || "").trim();
     const cleanPassword = typeof password === "string" ? password : String(password || "");
 
@@ -15,8 +17,10 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: "Missing mobileNumber or password" }, { status: 400 });
     }
 
+    const targetSubdomain = bodySubdomain || getSubdomainFromRequest(request);
+
     const digits = cleanMobile.replace(/\D/g, "");
-    const candidates = await User.find({
+    const query = {
       $or: [
         { mobileNumber: cleanMobile },
         { mobile: cleanMobile },
@@ -26,11 +30,27 @@ export async function POST(request: NextRequest) {
         ...(digits.length >= 10 ? [{ mobileNumber: { $regex: digits.slice(-10) + "$" } }] : []),
         ...(digits.length >= 10 ? [{ phone: { $regex: digits.slice(-10) + "$" } }] : []),
       ],
-    });
+    };
+
+    let candidates: any[] = [];
+
+    // Query tenant database comicircle_<subdomain> if available
+    if (targetSubdomain) {
+      try {
+        const tenantDb = await getTenantDb(targetSubdomain);
+        const tenantDocs = await tenantDb.collection("users").find(query).toArray();
+        candidates.push(...tenantDocs);
+      } catch {}
+    }
+
+    // Query default database connection as fallback
+    const defaultDocs = await User.find(query).lean();
+    candidates.push(...defaultDocs);
 
     const user = candidates.find((u) =>
-      verifyPassword(cleanPassword, u.password || (u as any).passwordHash || "")
+      verifyPassword(cleanPassword, u.password || u.passwordHash || "")
     );
+
 
     if (!user) {
       return Response.json({ error: "Invalid mobile number or password" }, { status: 401 });
@@ -56,11 +76,13 @@ export async function POST(request: NextRequest) {
     }
 
 
-    // Remove password from response
-    const userResponse = user.toObject();
+    // Remove sensitive fields from response
+    const userResponse = typeof user.toObject === "function" ? user.toObject() : { ...user };
     delete userResponse.password;
+    delete userResponse.passwordHash;
 
     return Response.json(userResponse);
+
   } catch (error: any) {
     return Response.json({ error: error.message || "Failed to sign in" }, { status: 500 });
   }

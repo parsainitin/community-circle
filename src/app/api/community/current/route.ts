@@ -3,15 +3,34 @@ import { dbConnect } from "@/lib/mongodb";
 import { Community } from "@/models/Community";
 import { User } from "@/models/User";
 
+import { getSubdomainFromRequest } from "@/lib/mongodb";
+
 // GET /api/community/current — public lookup of the community for the current instance
 export async function GET(request: NextRequest) {
   try {
     await dbConnect();
+    const { searchParams } = new URL(request.url);
+    const paramSubdomain = (searchParams.get("subdomain") || "").trim().toLowerCase();
+    const reqSubdomain = paramSubdomain || getSubdomainFromRequest(request);
 
-    const community = await Community.findOne({ isActive: true })
-      .sort({ createdAt: 1 })
-      .select("name subdomain logo description cities gotras kulDevis upiId")
-      .lean();
+    let community = null;
+
+    if (reqSubdomain) {
+      community = await Community.findOne({
+        subdomain: reqSubdomain,
+        isActive: true,
+      })
+        .select("name subdomain logo description cities gotras kulDevis upiId")
+        .lean();
+    }
+
+    if (!community) {
+      community = await Community.findOne({ isActive: true })
+        .sort({ createdAt: -1 })
+        .select("name subdomain logo description cities gotras kulDevis upiId")
+        .lean();
+    }
+
 
     if (community) {
       // Find all distinct Gotras, KulDevis, and Cities added by members of this community
