@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
-import { User } from "@/models/User";
+import { User, getTenantUserModel } from "@/models/User";
 import { Community } from "@/models/Community";
 import { getTenantId } from "@/lib/tenant";
 
@@ -8,6 +8,7 @@ import { getTenantId } from "@/lib/tenant";
 export async function GET(request: NextRequest) {
   try {
     await dbConnect();
+    const UserModel = await getTenantUserModel(request);
     const { searchParams } = new URL(request.url);
     const query = searchParams.get("query");
 
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
       if (community && community.admins && community.admins.length > 0) {
         adminUserIds = community.admins;
         // Backfill communityId, role: "admin", and status: "approved" for all assigned community admins
-        await User.updateMany(
+        await UserModel.updateMany(
           { _id: { $in: adminUserIds } },
           { $set: { communityId, role: "admin", status: "approved" } }
         );
@@ -48,7 +49,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const users = await User.find(filter)
+    const users = await UserModel.find(filter)
       .select("name mobileNumber phone city address village gotra kulDevi avatar role status")
       .limit(query ? 20 : 100)
       .lean();
@@ -62,10 +63,12 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     await dbConnect();
+    const UserModel = await getTenantUserModel(request);
     const body = await request.json();
-    const newUser = await User.create(body);
+    const newUser = await UserModel.create(body);
     return Response.json(newUser, { status: 201 });
   } catch (error: any) {
     return Response.json({ error: error.message || "Failed to create user" }, { status: 400 });
   }
 }
+

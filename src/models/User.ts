@@ -1,4 +1,6 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
+import { getTenantDb, getSubdomainFromRequest } from "@/lib/mongodb";
+
 
 export interface IUser extends Document {
   name: string;
@@ -202,3 +204,13 @@ if (
 
 export const User: Model<IUser> =
   mongoose.models.User || mongoose.model<IUser>("User", UserSchema);
+
+export async function getTenantUserModel(requestOrSubdomain?: any): Promise<Model<IUser>> {
+  const subdomain = typeof requestOrSubdomain === "string"
+    ? requestOrSubdomain
+    : getSubdomainFromRequest(requestOrSubdomain);
+
+  const tenantDb = await getTenantDb(subdomain);
+  return tenantDb.models.User || tenantDb.model<IUser>("User", UserSchema);
+}
+
