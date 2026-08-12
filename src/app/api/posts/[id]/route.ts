@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
-import { Post } from "@/models/Post";
+import { Post, getTenantPostModel } from "@/models/Post";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -10,14 +10,24 @@ interface RouteParams {
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     await dbConnect();
+    const PostModel = await getTenantPostModel(request);
     const { id } = await params;
     
-    const post = await Post.findById(id)
+    let post = await PostModel.findById(id)
       .populate("author", "name phone")
       .populate({
         path: "replies",
         populate: { path: "author", select: "name phone" }
       });
+
+    if (!post) {
+      post = await Post.findById(id)
+        .populate("author", "name phone")
+        .populate({
+          path: "replies",
+          populate: { path: "author", select: "name phone" }
+        });
+    }
 
     if (!post) {
       return Response.json({ error: "Post not found" }, { status: 404 });
@@ -32,13 +42,21 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     await dbConnect();
+    const PostModel = await getTenantPostModel(request);
     const { id } = await params;
     const body = await request.json();
     
-    const updatedPost = await Post.findByIdAndUpdate(id, body, {
+    let updatedPost = await PostModel.findByIdAndUpdate(id, body, {
       new: true,
       runValidators: true,
     }).populate("author", "name phone");
+
+    if (!updatedPost) {
+      updatedPost = await Post.findByIdAndUpdate(id, body, {
+        new: true,
+        runValidators: true,
+      }).populate("author", "name phone");
+    }
 
     if (!updatedPost) {
       return Response.json({ error: "Post not found" }, { status: 404 });
@@ -53,9 +71,13 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     await dbConnect();
+    const PostModel = await getTenantPostModel(request);
     const { id } = await params;
     
-    const deletedPost = await Post.findByIdAndDelete(id);
+    let deletedPost = await PostModel.findByIdAndDelete(id);
+    if (!deletedPost) {
+      deletedPost = await Post.findByIdAndDelete(id);
+    }
     if (!deletedPost) {
       return Response.json({ error: "Post not found" }, { status: 404 });
     }

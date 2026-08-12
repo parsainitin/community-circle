@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
-import { Post } from "@/models/Post";
+import { Post, getTenantPostModel } from "@/models/Post";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -10,6 +10,7 @@ interface RouteParams {
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     await dbConnect();
+    const PostModel = await getTenantPostModel(request);
     const { id } = await params;
     const { userId, content } = await request.json();
 
@@ -18,25 +19,33 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // 1. Create the reply post
-    const reply = await Post.create({
+    const reply = await PostModel.create({
       author: userId,
       content: content.trim(),
       type: "text",
     });
 
     // 2. Add reply to parent post replies array
-    const parentPost = await Post.findByIdAndUpdate(
+    let parentPost = await PostModel.findByIdAndUpdate(
       id,
       { $push: { replies: reply._id } },
       { new: true }
     );
 
     if (!parentPost) {
+      parentPost = await Post.findByIdAndUpdate(
+        id,
+        { $push: { replies: reply._id } },
+        { new: true }
+      );
+    }
+
+    if (!parentPost) {
       return Response.json({ error: "Parent post not found" }, { status: 404 });
     }
 
     // 3. Populate author information for response
-    const populatedReply = await Post.findById(reply._id).populate("author", "name phone");
+    const populatedReply = await PostModel.findById(reply._id).populate("author", "name phone");
 
     return Response.json(populatedReply, { status: 201 });
   } catch (error: any) {

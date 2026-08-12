@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
-import { Post } from "@/models/Post";
+import { Post, getTenantPostModel } from "@/models/Post";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -9,6 +9,7 @@ interface RouteParams {
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     await dbConnect();
+    const PostModel = await getTenantPostModel(request);
     const { id } = await params;
     const { userId, status } = await request.json();
 
@@ -16,7 +17,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return Response.json({ error: "Invalid userId or status" }, { status: 400 });
     }
 
-    const post = await Post.findById(id);
+    let post = await PostModel.findById(id);
+    let ActiveModel = PostModel;
+    if (!post) {
+      post = await Post.findById(id);
+      ActiveModel = Post;
+    }
     if (!post) {
       return Response.json({ error: "Post not found" }, { status: 404 });
     }
@@ -52,7 +58,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     post.rsvps = rsvps;
     await post.save();
 
-    const updatedPost = await Post.findById(id).populate("author", "name phone");
+    const updatedPost = await ActiveModel.findById(id).populate("author", "name phone");
 
     return Response.json(updatedPost);
   } catch (error: any) {

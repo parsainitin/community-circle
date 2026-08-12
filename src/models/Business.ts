@@ -38,6 +38,17 @@ const BusinessSchema: Schema<IBusiness> = new Schema(
   }
 );
 
+import { getTenantDb, getSubdomainFromRequest } from "@/lib/mongodb";
+
 export const Business: Model<IBusiness> =
   mongoose.models.Business ||
   mongoose.model<IBusiness>("Business", BusinessSchema);
+
+export async function getTenantBusinessModel(requestOrSubdomain?: any): Promise<Model<IBusiness>> {
+  const subdomain = typeof requestOrSubdomain === "string"
+    ? requestOrSubdomain
+    : getSubdomainFromRequest(requestOrSubdomain);
+
+  const tenantDb = await getTenantDb(subdomain);
+  return tenantDb.models.Business || tenantDb.model<IBusiness>("Business", BusinessSchema);
+}

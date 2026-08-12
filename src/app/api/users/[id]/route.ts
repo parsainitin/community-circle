@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import mongoose from "mongoose";
 import { dbConnect } from "@/lib/mongodb";
-import { User } from "@/models/User";
+import { User, getTenantUserModel } from "@/models/User";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -11,13 +11,17 @@ interface RouteParams {
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     await dbConnect();
+    const UserModel = await getTenantUserModel(request);
     const { id } = await params;
     
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
       return Response.json({ error: "Invalid user ID format" }, { status: 400 });
     }
 
-    const user = await User.findById(id).populate("familyMembers", "name phone gotra");
+    let user = await UserModel.findById(id).populate("familyMembers", "name phone gotra");
+    if (!user) {
+      user = await User.findById(id).populate("familyMembers", "name phone gotra");
+    }
     if (!user) {
       return Response.json({ error: "User not found" }, { status: 404 });
     }
@@ -31,6 +35,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     await dbConnect();
+    const UserModel = await getTenantUserModel(request);
     const { id } = await params;
 
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
@@ -55,10 +60,17 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       body.googleMapsUrl = `https://www.google.com/maps?q=${body.latitude},${body.longitude}`;
     }
     
-    const updatedUser = await User.findByIdAndUpdate(id, body, {
+    let updatedUser = await UserModel.findByIdAndUpdate(id, body, {
       new: true,
       runValidators: true,
     }).populate("familyMembers", "name phone gotra");
+
+    if (!updatedUser) {
+      updatedUser = await User.findByIdAndUpdate(id, body, {
+        new: true,
+        runValidators: true,
+      }).populate("familyMembers", "name phone gotra");
+    }
 
     if (!updatedUser) {
       return Response.json({ error: "User not found" }, { status: 404 });
@@ -73,13 +85,17 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     await dbConnect();
+    const UserModel = await getTenantUserModel(request);
     const { id } = await params;
     
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
       return Response.json({ error: "Invalid user ID format" }, { status: 400 });
     }
 
-    const deletedUser = await User.findByIdAndDelete(id);
+    let deletedUser = await UserModel.findByIdAndDelete(id);
+    if (!deletedUser) {
+      deletedUser = await User.findByIdAndDelete(id);
+    }
     if (!deletedUser) {
       return Response.json({ error: "User not found" }, { status: 404 });
     }

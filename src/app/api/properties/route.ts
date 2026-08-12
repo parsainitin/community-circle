@@ -1,12 +1,16 @@
 import { NextRequest } from "next/server";
 import mongoose from "mongoose";
 import { dbConnect } from "@/lib/mongodb";
-import { PropertyBooking } from "@/models/PropertyBooking";
+import { PropertyBooking, getTenantPropertyBookingModel } from "@/models/PropertyBooking";
 
 export async function GET(request: NextRequest) {
   try {
     await dbConnect();
-    const properties = await PropertyBooking.find({}).sort({ createdAt: -1 }).lean();
+    const PropertyBookingModel = await getTenantPropertyBookingModel(request);
+    let properties = await PropertyBookingModel.find({}).sort({ createdAt: -1 }).lean();
+    if (properties.length === 0 && PropertyBookingModel !== PropertyBooking) {
+      properties = await PropertyBooking.find({}).sort({ createdAt: -1 }).lean();
+    }
     return Response.json({ properties });
   } catch (error: any) {
     return Response.json(
@@ -19,6 +23,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     await dbConnect();
+    const PropertyBookingModel = await getTenantPropertyBookingModel(request);
     const body = await request.json();
     const {
       propertyName,
@@ -41,7 +46,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const newProperty = await PropertyBooking.create({
+    const newProperty = await PropertyBookingModel.create({
       propertyName: cleanName,
       propertyType: cleanType,
       location: location ? String(location).trim() : undefined,
@@ -65,6 +70,7 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     await dbConnect();
+    const PropertyBookingModel = await getTenantPropertyBookingModel(request);
     const body = await request.json();
     const { propertyId, action, date, bookedBy, contactPhone, notes } = body;
 
@@ -78,7 +84,10 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const property = await PropertyBooking.findById(cleanPropId);
+    let property = await PropertyBookingModel.findById(cleanPropId);
+    if (!property) {
+      property = await PropertyBooking.findById(cleanPropId);
+    }
     if (!property) {
       return Response.json({ error: "Property not found" }, { status: 404 });
     }

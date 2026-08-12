@@ -1,12 +1,13 @@
 import { NextRequest } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
-import { Business } from "@/models/Business";
-import { Post } from "@/models/Post";
+import { Business, getTenantBusinessModel } from "@/models/Business";
+import { Post, getTenantPostModel } from "@/models/Post";
 
 // GET /api/businesses - List all businesses
 export async function GET(request: NextRequest) {
   try {
     await dbConnect();
+    const BusinessModel = await getTenantBusinessModel(request);
     const { searchParams } = new URL(request.url);
     const owner = searchParams.get("owner");
 
@@ -15,9 +16,15 @@ export async function GET(request: NextRequest) {
       filter = { owner };
     }
 
-    const businesses = await Business.find(filter)
+    let businesses = await BusinessModel.find(filter)
       .populate("owner", "name phone")
       .sort({ createdAt: -1 });
+
+    if (businesses.length === 0 && BusinessModel !== Business) {
+      businesses = await Business.find(filter)
+        .populate("owner", "name phone")
+        .sort({ createdAt: -1 });
+    }
 
     return Response.json(businesses);
   } catch (error: any) {
@@ -29,12 +36,14 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     await dbConnect();
+    const BusinessModel = await getTenantBusinessModel(request);
+    const PostModel = await getTenantPostModel(request);
     const body = await request.json();
-    const newBusiness = await Business.create(body);
+    const newBusiness = await BusinessModel.create(body);
 
     // Auto post update to Wall page
     try {
-      await Post.create({
+      await PostModel.create({
         author: newBusiness.owner,
         content: `🏪 Registered a new business catalog: **${newBusiness.title}**! Check it out in the Business Catalog grid.`,
         type: "text",

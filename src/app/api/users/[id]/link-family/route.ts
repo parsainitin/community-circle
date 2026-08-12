@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
-import { User } from "@/models/User";
+import { User, getTenantUserModel } from "@/models/User";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -9,6 +9,7 @@ interface RouteParams {
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     await dbConnect();
+    const UserModel = await getTenantUserModel(request);
     const { id } = await params;
     const { relativeId, relationshipType } = await request.json();
 
@@ -20,8 +21,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return Response.json({ error: "Cannot link a user to themselves" }, { status: 400 });
     }
 
-    const user = await User.findById(id);
-    const relative = await User.findById(relativeId);
+    let user = await UserModel.findById(id);
+    if (!user) user = await User.findById(id);
+
+    let relative = await UserModel.findById(relativeId);
+    if (!relative) relative = await User.findById(relativeId);
 
     if (!user || !relative) {
       return Response.json({ error: "User or relative not found" }, { status: 404 });
@@ -38,6 +42,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       }
       
       // Update parent's familyMembers
+      await UserModel.findByIdAndUpdate(relativeId, {
+        $addToSet: { familyMembers: id },
+      });
       await User.findByIdAndUpdate(relativeId, {
         $addToSet: { familyMembers: id },
       });
@@ -54,6 +61,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       }
 
       // Update user's familyMembers
+      await UserModel.findByIdAndUpdate(id, {
+        $addToSet: { familyMembers: relativeId },
+      });
       await User.findByIdAndUpdate(id, {
         $addToSet: { familyMembers: relativeId },
       });

@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { Community } from "@/models/Community";
-import { User } from "@/models/User";
+import { User, getTenantUserModel } from "@/models/User";
 
 import { getSubdomainFromRequest } from "@/lib/mongodb";
 
@@ -9,6 +9,7 @@ import { getSubdomainFromRequest } from "@/lib/mongodb";
 export async function GET(request: NextRequest) {
   try {
     await dbConnect();
+    const UserModel = await getTenantUserModel(request);
     const { searchParams } = new URL(request.url);
     const paramSubdomain = (searchParams.get("subdomain") || "").trim().toLowerCase();
     const reqSubdomain = paramSubdomain || getSubdomainFromRequest(request);
@@ -34,9 +35,17 @@ export async function GET(request: NextRequest) {
 
     if (community) {
       // Find all distinct Gotras, KulDevis, and Cities added by members of this community
-      const members = await User.find({ communityId: community._id })
+      let members = await UserModel.find({
+        $or: [{ communityId: community._id }, { communityId: { $exists: false } }, { communityId: null }]
+      })
         .select("gotra kulDevi city")
         .lean();
+
+      if (members.length === 0) {
+        members = await User.find({ communityId: community._id })
+          .select("gotra kulDevi city")
+          .lean();
+      }
 
       const gotrasSet = new Set<string>(community.gotras || []);
       const kulDevisSet = new Set<string>(community.kulDevis || []);

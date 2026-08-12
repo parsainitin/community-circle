@@ -45,9 +45,20 @@ const PropertyBookingSchema: Schema<IPropertyBooking> = new Schema(
   { timestamps: true }
 );
 
+import { getTenantDb, getSubdomainFromRequest } from "@/lib/mongodb";
+
 if (mongoose.models.PropertyBooking) {
   delete (mongoose.models as any).PropertyBooking;
 }
 
 export const PropertyBooking: Model<IPropertyBooking> =
   mongoose.model<IPropertyBooking>("PropertyBooking", PropertyBookingSchema);
+
+export async function getTenantPropertyBookingModel(requestOrSubdomain?: any): Promise<Model<IPropertyBooking>> {
+  const subdomain = typeof requestOrSubdomain === "string"
+    ? requestOrSubdomain
+    : getSubdomainFromRequest(requestOrSubdomain);
+
+  const tenantDb = await getTenantDb(subdomain);
+  return tenantDb.models.PropertyBooking || tenantDb.model<IPropertyBooking>("PropertyBooking", PropertyBookingSchema);
+}

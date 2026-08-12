@@ -1,11 +1,12 @@
 import { NextRequest } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
-import { Hub } from "@/models/Hub";
+import { Hub, getTenantHubModel } from "@/models/Hub";
 import { getTenantId } from "@/lib/tenant";
 
 export async function GET(request: NextRequest) {
   try {
     await dbConnect();
+    const HubModel = await getTenantHubModel(request);
     const communityId = await getTenantId(request);
 
     const { searchParams } = new URL(request.url);
@@ -26,10 +27,17 @@ export async function GET(request: NextRequest) {
       query.$or = [{ title: reg }, { description: reg }, { category: reg }, { location: reg }];
     }
 
-    const hubs = await Hub.find(query)
+    let hubs = await HubModel.find(query)
       .populate("owner", "name mobileNumber phone avatar city gotra")
       .sort({ createdAt: -1 })
       .lean();
+
+    if (hubs.length === 0 && HubModel !== Hub) {
+      hubs = await Hub.find(query)
+        .populate("owner", "name mobileNumber phone avatar city gotra")
+        .sort({ createdAt: -1 })
+        .lean();
+    }
 
     return Response.json({ hubs });
   } catch (error: any) {
@@ -40,6 +48,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     await dbConnect();
+    const HubModel = await getTenantHubModel(request);
     const communityId = await getTenantId(request);
     const body = await request.json();
 
@@ -64,7 +73,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const newHub = await Hub.create({
+    const newHub = await HubModel.create({
       owner,
       hubType,
       title,
@@ -79,7 +88,7 @@ export async function POST(request: NextRequest) {
       communityId: communityId ?? undefined,
     });
 
-    const populatedHub = await Hub.findById(newHub._id)
+    const populatedHub = await HubModel.findById(newHub._id)
       .populate("owner", "name mobileNumber phone avatar city gotra")
       .lean();
 

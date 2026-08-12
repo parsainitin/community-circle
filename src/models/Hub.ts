@@ -72,8 +72,19 @@ const HubSchema: Schema<IHub> = new Schema(
   { timestamps: true }
 );
 
+import { getTenantDb, getSubdomainFromRequest } from "@/lib/mongodb";
+
 if (mongoose.models.Hub) {
   delete (mongoose.models as any).Hub;
 }
 
 export const Hub: Model<IHub> = mongoose.model<IHub>("Hub", HubSchema);
+
+export async function getTenantHubModel(requestOrSubdomain?: any): Promise<Model<IHub>> {
+  const subdomain = typeof requestOrSubdomain === "string"
+    ? requestOrSubdomain
+    : getSubdomainFromRequest(requestOrSubdomain);
+
+  const tenantDb = await getTenantDb(subdomain);
+  return tenantDb.models.Hub || tenantDb.model<IHub>("Hub", HubSchema);
+}

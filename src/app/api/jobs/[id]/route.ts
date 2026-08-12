@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
-import { Job } from "@/models/Job";
+import { Job, getTenantJobModel } from "@/models/Job";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -10,11 +10,18 @@ interface RouteParams {
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     await dbConnect();
+    const JobModel = await getTenantJobModel(request);
     const { id } = await params;
     
-    const job = await Job.findById(id)
+    let job = await JobModel.findById(id)
       .populate("postedBy", "name phone gotra")
       .populate("applicants", "name phone gotra mobileNumber");
+
+    if (!job) {
+      job = await Job.findById(id)
+        .populate("postedBy", "name phone gotra")
+        .populate("applicants", "name phone gotra mobileNumber");
+    }
 
     if (!job) {
       return Response.json({ error: "Job not found" }, { status: 404 });
@@ -29,15 +36,25 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     await dbConnect();
+    const JobModel = await getTenantJobModel(request);
     const { id } = await params;
     const body = await request.json();
     
-    const updatedJob = await Job.findByIdAndUpdate(id, body, {
+    let updatedJob = await JobModel.findByIdAndUpdate(id, body, {
       new: true,
       runValidators: true,
     })
       .populate("postedBy", "name phone")
       .populate("applicants", "name phone");
+
+    if (!updatedJob) {
+      updatedJob = await Job.findByIdAndUpdate(id, body, {
+        new: true,
+        runValidators: true,
+      })
+        .populate("postedBy", "name phone")
+        .populate("applicants", "name phone");
+    }
 
     if (!updatedJob) {
       return Response.json({ error: "Job not found" }, { status: 404 });
@@ -52,9 +69,13 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     await dbConnect();
+    const JobModel = await getTenantJobModel(request);
     const { id } = await params;
     
-    const deletedJob = await Job.findByIdAndDelete(id);
+    let deletedJob = await JobModel.findByIdAndDelete(id);
+    if (!deletedJob) {
+      deletedJob = await Job.findByIdAndDelete(id);
+    }
     if (!deletedJob) {
       return Response.json({ error: "Job not found" }, { status: 404 });
     }

@@ -88,9 +88,20 @@ const PostSchema: Schema<IPost> = new Schema(
   }
 );
 
+import { getTenantDb, getSubdomainFromRequest } from "@/lib/mongodb";
+
 if (mongoose.models.Post) {
   delete (mongoose.models as any).Post;
 }
 
 export const Post: Model<IPost> =
   mongoose.model<IPost>("Post", PostSchema);
+
+export async function getTenantPostModel(requestOrSubdomain?: any): Promise<Model<IPost>> {
+  const subdomain = typeof requestOrSubdomain === "string"
+    ? requestOrSubdomain
+    : getSubdomainFromRequest(requestOrSubdomain);
+
+  const tenantDb = await getTenantDb(subdomain);
+  return tenantDb.models.Post || tenantDb.model<IPost>("Post", PostSchema);
+}

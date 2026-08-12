@@ -1,39 +1,60 @@
 import { NextRequest } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
-import { User } from "@/models/User";
+import { User, getTenantUserModel } from "@/models/User";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
 // Helper to get spouse for a user
-async function getSpouse(userId: string): Promise<any | null> {
-  const user = await User.findById(userId).select("parent parentRelationship");
+async function getSpouse(userId: string, UserModel: any): Promise<any | null> {
+  let user = await UserModel.findById(userId).select("parent parentRelationship");
+  if (!user) {
+    user = await User.findById(userId).select("parent parentRelationship");
+  }
   if (!user) return null;
 
   if (user.parent && (user.parentRelationship === "Wife" || user.parentRelationship === "Husband")) {
-    return await User.findById(user.parent).select("name phone gotra kulDevi mobileNumber parent avatar sex parentRelationship city village");
+    let sp = await UserModel.findById(user.parent).select("name phone gotra kulDevi mobileNumber parent avatar sex parentRelationship city village");
+    if (!sp) {
+      sp = await User.findById(user.parent).select("name phone gotra kulDevi mobileNumber parent avatar sex parentRelationship city village");
+    }
+    return sp;
   }
 
-  return await User.findOne({
+  let sp = await UserModel.findOne({
     parent: userId,
     parentRelationship: { $in: ["Wife", "Husband"] }
   }).select("name phone gotra kulDevi mobileNumber parent avatar sex parentRelationship city village");
+  if (!sp) {
+    sp = await User.findOne({
+      parent: userId,
+      parentRelationship: { $in: ["Wife", "Husband"] }
+    }).select("name phone gotra kulDevi mobileNumber parent avatar sex parentRelationship city village");
+  }
+  return sp;
 }
 
 // Recursive helper to get descendants hierarchical tree
-async function getDescendantsTree(userId: string, visited: Set<string>): Promise<any[]> {
-  const spouse = await getSpouse(userId);
+async function getDescendantsTree(userId: string, visited: Set<string>, UserModel: any): Promise<any[]> {
+  const spouse = await getSpouse(userId, UserModel);
   const parentIds = [userId];
   if (spouse) {
     parentIds.push(spouse._id.toString());
   }
 
   // Find all children where parent is either spouse of the couple, excluding spouse relations
-  const children = await User.find({
+  let children = await UserModel.find({
     parent: { $in: parentIds },
     parentRelationship: { $nin: ["Wife", "Husband"] }
   }).select("name phone gotra kulDevi mobileNumber parent avatar sex parentRelationship city village");
+
+  if (children.length === 0) {
+    children = await User.find({
+      parent: { $in: parentIds },
+      parentRelationship: { $nin: ["Wife", "Husband"] }
+    }).select("name phone gotra kulDevi mobileNumber parent avatar sex parentRelationship city village");
+  }
 
   const results: any[] = [];
 
@@ -42,12 +63,12 @@ async function getDescendantsTree(userId: string, visited: Set<string>): Promise
     if (visited.has(childIdStr)) continue; // prevent cycle
     visited.add(childIdStr);
 
-    const childSpouse = await getSpouse(childIdStr);
+    const childSpouse = await getSpouse(childIdStr, UserModel);
     if (childSpouse) {
       visited.add(childSpouse._id.toString());
     }
 
-    const childTree = await getDescendantsTree(childIdStr, visited);
+    const childTree = await getDescendantsTree(childIdStr, visited, UserModel);
     results.push({
       _id: child._id,
       name: child.name,
@@ -83,14 +104,18 @@ async function getDescendantsTree(userId: string, visited: Set<string>): Promise
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     await dbConnect();
+    const UserModel = await getTenantUserModel(request);
     const { id } = await params;
 
-    const user = await User.findById(id).select("name phone gotra kulDevi mobileNumber parent avatar sex parentRelationship city village");
+    let user = await UserModel.findById(id).select("name phone gotra kulDevi mobileNumber parent avatar sex parentRelationship city village");
+    if (!user) {
+      user = await User.findById(id).select("name phone gotra kulDevi mobileNumber parent avatar sex parentRelationship city village");
+    }
     if (!user) {
       return Response.json({ error: "User not found" }, { status: 404 });
     }
 
-    const spouse = await getSpouse(id);
+    const spouse = await getSpouse(id, UserModel);
 
     // Track visited nodes to prevent cycles
     const visited = new Set<string>([id]);
@@ -111,10 +136,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       }
       visited.add(parentIdStr);
 
-      const parentUser = await User.findById(currentParentId).select("name phone gotra kulDevi mobileNumber parent avatar sex parentRelationship city village");
+      let parentUser = await UserModel.findById(currentParentId).select("name phone gotra kulDevi mobileNumber parent avatar sex parentRelationship city village");
+      if (!parentUser) {
+        parentUser = await User.findById(currentParentId).select("name phone gotra kulDevi mobileNumber parent avatar sex parentRelationship city village");
+      }
       if (!parentUser) break;
 
-      const parentSpouse = await getSpouse(parentIdStr);
+      const parentSpouse = await getSpouse(parentIdStr, UserModel);
       if (parentSpouse) {
         visited.add(parentSpouse._id.toString());
       }
@@ -152,7 +180,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // Fetch descendants recursively
-    const descendants = await getDescendantsTree(id, visited);
+    const descendants = await getDescendantsTree(id, visited, UserModel);
 
     return Response.json({
       user: {

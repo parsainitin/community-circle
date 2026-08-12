@@ -1,15 +1,22 @@
 import { NextRequest } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
-import { Donation } from "@/models/Donation";
-import { User } from "@/models/User";
+import { Donation, getTenantDonationModel } from "@/models/Donation";
+import { User, getTenantUserModel } from "@/models/User";
 
 // GET /api/donations - List all donations (for reports)
 export async function GET(request: NextRequest) {
   try {
     await dbConnect();
-    const donations = await Donation.find()
+    const DonationModel = await getTenantDonationModel(request);
+    let donations = await DonationModel.find()
       .populate("donor", "name mobileNumber gotra kulDevi")
       .sort({ createdAt: -1 });
+
+    if (donations.length === 0 && DonationModel !== Donation) {
+      donations = await Donation.find()
+        .populate("donor", "name mobileNumber gotra kulDevi")
+        .sort({ createdAt: -1 });
+    }
 
     return Response.json(donations);
   } catch (error: any) {
@@ -21,13 +28,14 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     await dbConnect();
+    const DonationModel = await getTenantDonationModel(request);
     const { donorId, amount, transactionId, status } = await request.json();
 
     if (!donorId || !amount || !transactionId) {
       return Response.json({ error: "Missing required fields: donorId, amount, transactionId" }, { status: 400 });
     }
 
-    const newDonation = await Donation.create({
+    const newDonation = await DonationModel.create({
       donor: donorId,
       amount: Number(amount),
       transactionId,
@@ -35,7 +43,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Populate donor info for response
-    const populated = await Donation.findById(newDonation._id).populate("donor", "name mobileNumber gotra kulDevi");
+    const populated = await DonationModel.findById(newDonation._id).populate("donor", "name mobileNumber gotra kulDevi");
 
     return Response.json(populated, { status: 201 });
   } catch (error: any) {

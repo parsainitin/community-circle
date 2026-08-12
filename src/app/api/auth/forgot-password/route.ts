@@ -1,12 +1,13 @@
 import { NextRequest } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
-import { User } from "@/models/User";
+import { User, getTenantUserModel } from "@/models/User";
 import { Community } from "@/models/Community";
 import { hashPassword } from "@/lib/auth-crypto";
 
 export async function POST(request: NextRequest) {
   try {
     await dbConnect();
+    const UserModel = await getTenantUserModel(request);
     const body = await request.json();
     const { mobileNumber, newPassword, resetKey } = body || {};
     const cleanMobile = typeof mobileNumber === "string" ? mobileNumber.trim() : String(mobileNumber || "").trim();
@@ -20,7 +21,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const user = await User.findOne({ mobileNumber: cleanMobile });
+    let user = await UserModel.findOne({ mobileNumber: cleanMobile });
+    if (!user) {
+      user = await User.findOne({ mobileNumber: cleanMobile });
+    }
     if (!user) {
       return Response.json({ error: "No user found with this mobile number" }, { status: 404 });
     }

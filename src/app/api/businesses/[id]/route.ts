@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
-import { Business } from "@/models/Business";
+import { Business, getTenantBusinessModel } from "@/models/Business";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -10,9 +10,13 @@ interface RouteParams {
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     await dbConnect();
+    const BusinessModel = await getTenantBusinessModel(request);
     const { id } = await params;
     
-    const business = await Business.findById(id).populate("owner", "name phone gotra");
+    let business = await BusinessModel.findById(id).populate("owner", "name phone gotra");
+    if (!business) {
+      business = await Business.findById(id).populate("owner", "name phone gotra");
+    }
     if (!business) {
       return Response.json({ error: "Business not found" }, { status: 404 });
     }
@@ -26,13 +30,21 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     await dbConnect();
+    const BusinessModel = await getTenantBusinessModel(request);
     const { id } = await params;
     const body = await request.json();
     
-    const updatedBusiness = await Business.findByIdAndUpdate(id, body, {
+    let updatedBusiness = await BusinessModel.findByIdAndUpdate(id, body, {
       new: true,
       runValidators: true,
     }).populate("owner", "name phone gotra");
+
+    if (!updatedBusiness) {
+      updatedBusiness = await Business.findByIdAndUpdate(id, body, {
+        new: true,
+        runValidators: true,
+      }).populate("owner", "name phone gotra");
+    }
 
     if (!updatedBusiness) {
       return Response.json({ error: "Business not found" }, { status: 404 });
@@ -47,9 +59,13 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     await dbConnect();
+    const BusinessModel = await getTenantBusinessModel(request);
     const { id } = await params;
     
-    const deletedBusiness = await Business.findByIdAndDelete(id);
+    let deletedBusiness = await BusinessModel.findByIdAndDelete(id);
+    if (!deletedBusiness) {
+      deletedBusiness = await Business.findByIdAndDelete(id);
+    }
     if (!deletedBusiness) {
       return Response.json({ error: "Business not found" }, { status: 404 });
     }
