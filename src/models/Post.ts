@@ -12,6 +12,13 @@ export interface IPost extends Document {
       location: string;
       poster?: string;
       contributionFee?: number;
+      upiId?: string;
+      contributions?: {
+        userId: mongoose.Types.ObjectId;
+        amount: number;
+        transactionId?: string;
+        paidAt: Date;
+      }[];
     };
   rsvps?: {
     going: mongoose.Types.ObjectId[];
@@ -67,6 +74,15 @@ const PostSchema: Schema<IPost> = new Schema(
       location: { type: String, trim: true },
       poster: { type: String, default: "" },
       contributionFee: { type: Number, default: 0 },
+      upiId: { type: String, trim: true, default: "" },
+      contributions: [
+        {
+          userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+          amount: { type: Number, required: true },
+          transactionId: { type: String, trim: true, default: "" },
+          paidAt: { type: Date, default: Date.now },
+        },
+      ],
     },
     rsvps: {
       going: [{ type: Schema.Types.ObjectId, ref: "User", default: [] }],

@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { Post, getTenantPostModel } from "@/models/Post";
+import { User, getTenantUserModel } from "@/models/User";
 
 // GET /api/posts - List posts with cursor pagination
 export async function GET(request: NextRequest) {
@@ -26,9 +27,10 @@ export async function GET(request: NextRequest) {
       PostModel.find(filter)
         .populate("author", "name phone avatar mobileNumber")
         .populate({ path: "replies", populate: { path: "author", select: "name phone avatar mobileNumber" } })
-        .populate("rsvps.going", "name")
-        .populate("rsvps.maybe", "name")
-        .populate("rsvps.cant", "name")
+        .populate("rsvps.going", "name phone mobileNumber avatar")
+        .populate("rsvps.maybe", "name phone mobileNumber avatar")
+        .populate("rsvps.cant", "name phone mobileNumber avatar")
+        .populate("eventDetails.contributions.userId", "name phone mobileNumber avatar")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit),
@@ -47,8 +49,49 @@ export async function POST(request: NextRequest) {
     await dbConnect();
     const PostModel = await getTenantPostModel(request);
     const body = await request.json();
+    const { author } = body;
+
+    if (!author) {
+      return Response.json({ error: "Author is required" }, { status: 400 });
+    }
+
+    // Check author role
+    const UserModel = await getTenantUserModel(request);
+    let authorUser = await UserModel.findById(author).lean();
+    if (!authorUser) {
+      authorUser = await User.findById(author).lean();
+    }
+
+    const authorRole = authorUser?.role ? String(authorUser.role) : "";
+    const isAdmin = authorRole === "admin" || authorRole === "super-admin" || authorRole === "COMMUNITY_ADMIN";
+
+    // Standard members: enforce 1 post per day limit
+    if (!isAdmin) {
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+
+      const existingPostToday = await PostModel.findOne({
+        author,
+        createdAt: { $gte: startOfDay },
+      }).lean();
+
+      if (existingPostToday) {
+        return Response.json(
+          { error: "Daily limit reached: Community members can only create 1 post per day. Please try again tomorrow!" },
+          { status: 429 }
+        );
+      }
+    }
+
     const newPost = await PostModel.create(body);
-    return Response.json(newPost, { status: 201 });
+    const populatedPost = await PostModel.findById(newPost._id)
+      .populate("author", "name phone avatar mobileNumber")
+      .populate("rsvps.going", "name phone mobileNumber avatar")
+      .populate("rsvps.maybe", "name phone mobileNumber avatar")
+      .populate("rsvps.cant", "name phone mobileNumber avatar")
+      .populate("eventDetails.contributions.userId", "name phone mobileNumber avatar");
+
+    return Response.json(populatedPost, { status: 201 });
   } catch (error: any) {
     return Response.json({ error: error.message || "Failed to create post" }, { status: 400 });
   }
