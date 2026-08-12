@@ -51,6 +51,7 @@ interface PostType {
   type: string;
   likes: string[];
   createdAt: string;
+  expiresAt?: string;
   eventDetails?: {
     title: string;
     date: string;
@@ -81,6 +82,22 @@ function getWhatsAppUrl(mobileNumber?: string) {
   if (!digits) return "";
   const formatted = digits.length === 10 ? `91${digits}` : digits;
   return `https://wa.me/${formatted}`;
+}
+
+/** Returns a short human-readable label for how long until expiresAt, e.g. "expires in 5h", "expires in 47m". */
+function getExpiryLabel(expiresAt?: string): { label: string; urgent: boolean } | null {
+  if (!expiresAt) return null;
+  const diff = new Date(expiresAt).getTime() - Date.now();
+  if (diff <= 0) return null;
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const urgent = diff < 3 * 60 * 60 * 1000; // under 3 hours
+  if (hours >= 24) {
+    const days = Math.floor(hours / 24);
+    return { label: `expires in ${days}d`, urgent: false };
+  }
+  if (hours > 0) return { label: `expires in ${hours}h`, urgent };
+  return { label: `expires in ${mins}m`, urgent: true };
 }
 
 export default function WallPage() {
@@ -389,6 +406,24 @@ export default function WallPage() {
                         ₹{post.eventDetails?.contributionFee}
                       </span>
                     )}
+
+                    {/* Expiry badge */}
+                    {(() => {
+                      const exp = getExpiryLabel(post.expiresAt);
+                      if (!exp) return null;
+                      return (
+                        <span
+                          className={`flex items-center space-x-0.5 text-[9px] font-bold px-2 py-0.5 rounded-full border ${
+                            exp.urgent
+                              ? "bg-red-50 text-red-600 border-red-200 animate-pulse"
+                              : "bg-slate-50 text-slate-500 border-slate-200"
+                          }`}
+                        >
+                          <Clock className="w-2.5 h-2.5" />
+                          <span>{exp.label}</span>
+                        </span>
+                      );
+                    })()}
 
                     {/* Type Badge */}
                     <span

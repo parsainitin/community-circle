@@ -6,6 +6,7 @@ export interface IPost extends Document {
   type: "text" | "image" | "poll" | "event" | "announcement";
   replies: mongoose.Types.ObjectId[] | IPost[];
   likes: mongoose.Types.ObjectId[];
+  expiresAt?: Date;
     eventDetails?: {
       title: string;
       date: string;
@@ -98,6 +99,16 @@ const PostSchema: Schema<IPost> = new Schema(
         optionIndex: { type: Number },
       },
     ],
+    // Auto-expiry timestamp — MongoDB TTL index will delete doc when this date is reached.
+    // • text / image / poll posts  → createdAt + 48 hours
+    // • announcement               → createdAt + 48 hours
+    // • event                      → set to eventDetails.date (end-of-day) at creation
+    // If null / undefined, the document never auto-expires.
+    expiresAt: {
+      type: Date,
+      index: { expireAfterSeconds: 0 }, // MongoDB TTL — deletes when Date <= now
+      default: undefined,
+    },
   },
   {
     timestamps: true,

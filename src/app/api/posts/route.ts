@@ -3,6 +3,15 @@ import { dbConnect } from "@/lib/mongodb";
 import { Post, getTenantPostModel } from "@/models/Post";
 import { User, getTenantUserModel } from "@/models/User";
 
+const POST_TTL_MS = 48 * 60 * 60 * 1000; // 48 hours
+
+/** Returns a Date set to the very end of the day (23:59:59.999) for a given ISO date string. */
+function endOfEventDay(dateStr: string): Date {
+  const d = new Date(dateStr);
+  d.setHours(23, 59, 59, 999);
+  return d;
+}
+
 // GET /api/posts - List posts with cursor pagination
 export async function GET(request: NextRequest) {
   try {
@@ -15,12 +24,21 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") || "10")));
     const skip = (page - 1) * limit;
 
-    let filter: Record<string, any> = {};
+    const now = new Date();
+
+    // Build filter — exclude any document whose expiresAt has passed
+    let filter: Record<string, any> = {
+      $or: [
+        { expiresAt: { $exists: false } },
+        { expiresAt: null },
+        { expiresAt: { $gt: now } },
+      ],
+    };
     if (type) filter.type = type;
 
-    // Fire-and-forget bulk cleanup of expired events (only on first page)
+    // Fire-and-forget hard delete of fully expired posts (belt-and-suspenders alongside TTL index)
     if (page === 1) {
-      PostModel.deleteMany({ type: "event", "eventDetails.date": { $lt: new Date().toISOString() } }).catch(() => {});
+      PostModel.deleteMany({ expiresAt: { $lte: now } }).catch(() => {});
     }
 
     const [posts, total] = await Promise.all([
@@ -83,7 +101,22 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const newPost = await PostModel.create(body);
+    // === Auto-expiry logic ===
+    const postType: string = body.type || "text";
+    let expiresAt: Date | undefined;
+
+    if (postType === "event") {
+      // Event expires at end of the event day
+      const eventDate = body.eventDetails?.date;
+      if (eventDate) {
+        expiresAt = endOfEventDay(eventDate);
+      }
+    } else {
+      // text, image, poll, announcement — expire after 48 hours
+      expiresAt = new Date(Date.now() + POST_TTL_MS);
+    }
+
+    const newPost = await PostModel.create({ ...body, expiresAt });
     const populatedPost = await PostModel.findById(newPost._id)
       .populate("author", "name phone avatar mobileNumber")
       .populate("rsvps.going", "name phone mobileNumber avatar")
