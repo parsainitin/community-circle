@@ -25,6 +25,8 @@ import {
   Check,
   ExternalLink,
   Edit3,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 
 interface UserSummary {
@@ -93,18 +95,15 @@ export default function WallPage() {
   const hasMoreRef = useRef(true);
   const loadingMoreRef = useRef(false);
 
+  // Collapsible cards state
+  const [collapsedPosts, setCollapsedPosts] = useState<Record<string, boolean>>({});
+
   // Comments and accordion toggles
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
   const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
 
   // Toast Notification State
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  // Contribution Modal State
-  const [contributePost, setContributePost] = useState<PostType | null>(null);
-  const [contribAmount, setContribAmount] = useState("");
-  const [transactionId, setTransactionId] = useState("");
-  const [submittingContrib, setSubmittingContrib] = useState(false);
 
   // RSVP / Organizer Details Modal State
   const [organizerModalPost, setOrganizerModalPost] = useState<PostType | null>(null);
@@ -113,6 +112,10 @@ export default function WallPage() {
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  const toggleCollapse = (postId: string) => {
+    setCollapsedPosts((prev) => ({ ...prev, [postId]: !prev[postId] }));
   };
 
   const fetchPosts = async () => {
@@ -250,8 +253,8 @@ export default function WallPage() {
       if (res.ok) {
         const updatedPost = await res.json();
         setPosts((prev) => prev.map((p) => (p._id === postId ? updatedPost : p)));
-        const label = status === "going" ? "Accepted (Going)" : status === "maybe" ? "Tentative (Maybe)" : "Declined";
-        showToast(`RSVP status updated: ${label}`);
+        const label = status === "going" ? "Accept (Going)" : status === "maybe" ? "Tentative (Maybe)" : "Decline (Can't Go)";
+        showToast(`RSVP status: ${label}`);
       } else {
         const data = await res.json();
         alert(data.error || "Failed to update RSVP");
@@ -261,46 +264,40 @@ export default function WallPage() {
     }
   };
 
-  // Submit Contribution Payment
-  const handleSubmitContribution = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !contributePost) return;
-
-    const fee = contributePost.eventDetails?.contributionFee || 0;
-    const amountToPay = contribAmount ? Number(contribAmount) : fee;
-
-    if (!amountToPay || amountToPay <= 0) {
-      alert("Please enter a valid contribution amount");
+  // Direct UPI App Payment Handler
+  const handleDirectUpiPayment = async (post: PostType) => {
+    if (!user) {
+      alert("Please log in to pay contribution and accept RSVP");
       return;
     }
 
+    const fee = post.eventDetails?.contributionFee || 0;
+    const upiId = post.eventDetails?.upiId || "9826017177@upi";
+    const eventTitle = post.eventDetails?.title || "Community Event";
+
+    // 1. Direct launch UPI intent link
+    const upiUrl = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent("Event: " + eventTitle)}&am=${fee}&cu=INR`;
+    window.location.href = upiUrl;
+
+    // 2. Log contribution & auto-set RSVP to Accept (Going)
     try {
-      setSubmittingContrib(true);
-      const res = await fetch(`/api/posts/${contributePost._id}/contribute`, {
+      const res = await fetch(`/api/posts/${post._id}/contribute`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: user._id,
-          amount: amountToPay,
-          transactionId: transactionId.trim(),
+          amount: fee,
+          transactionId: "UPI Direct App Payment",
         }),
       });
 
       if (res.ok) {
         const updatedPost = await res.json();
-        setPosts((prev) => prev.map((p) => (p._id === contributePost._id ? updatedPost : p)));
-        setContributePost(null);
-        setContribAmount("");
-        setTransactionId("");
-        showToast("🎉 Contribution recorded & RSVP automatically set to Accepted (Going)!");
-      } else {
-        const data = await res.json();
-        alert(data.error || "Failed to submit contribution");
+        setPosts((prev) => prev.map((p) => (p._id === post._id ? updatedPost : p)));
+        showToast("📱 Launching UPI App & setting RSVP to Accepted!");
       }
     } catch (err) {
-      console.error("Contribution error", err);
-    } finally {
-      setSubmittingContrib(false);
+      console.error("Direct UPI payment error", err);
     }
   };
 
@@ -344,9 +341,10 @@ export default function WallPage() {
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3.5">
           {posts.map((post) => {
             const hasLiked = post.likes?.includes(user?._id || "");
+            const isCollapsed = collapsedPosts[post._id] ?? false;
 
             // RSVP list extraction
             const goingUsers = extractMemberList(post.rsvps?.going);
@@ -357,263 +355,273 @@ export default function WallPage() {
             const isUserMaybe = maybeUsers.some((u) => u._id === user?._id);
             const isUserCant = cantUsers.some((u) => u._id === user?._id);
 
-            // Contributions count & total amount
-            const contributionsList = post.eventDetails?.contributions || [];
-            const totalCollected = contributionsList.reduce((sum, c) => sum + (c.amount || 0), 0);
+            // Title determination
+            const postTitle =
+              post.type === "event" && post.eventDetails?.title
+                ? post.eventDetails.title
+                : post.content.length > 50
+                ? post.content.substring(0, 50) + "..."
+                : post.content;
 
             return (
               <div
                 key={post._id}
-                className="bg-white rounded-3xl p-5 border border-slate-100 shadow-xs hover:shadow-sm transition-all overflow-hidden space-y-3"
+                className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-100 shadow-xs hover:shadow-sm transition-all overflow-hidden space-y-3"
               >
-                {/* Author Info Header */}
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                  <div className="flex items-center space-x-2.5">
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-amber-600 to-orange-600 text-white font-black text-xs flex items-center justify-center uppercase shadow-xs">
-                      {post.author?.name ? post.author.name.charAt(0) : "U"}
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-extrabold text-slate-800 leading-tight">
-                        {post.author?.name || "Community Member"}
-                      </h4>
-                      <span className="text-[9px] text-slate-400 font-semibold block mt-0.5">
-                        {formatTime(post.createdAt)}
-                      </span>
-                    </div>
+                {/* ── COMPACT TITLE-FIRST COLLAPSIBLE HEADER ─────────────────────────── */}
+                <div
+                  onClick={() => toggleCollapse(post._id)}
+                  className="flex items-center justify-between cursor-pointer group"
+                >
+                  <div className="space-y-0.5 flex-1 min-w-0 pr-2">
+                    <h3 className="text-sm sm:text-base font-extrabold text-slate-900 leading-snug truncate group-hover:text-indigo-600 transition">
+                      {postTitle}
+                    </h3>
+                    <p className="text-[10px] font-semibold text-slate-400">
+                      Posted by <strong className="text-slate-700">{post.author?.name || "Member"}</strong> • {formatTime(post.createdAt)}
+                    </p>
                   </div>
 
-                  {/* Type Badge */}
-                  <span
-                    className={`text-[9px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
-                      post.type === "event"
-                        ? "bg-indigo-50 text-indigo-600 border border-indigo-200"
-                        : post.type === "announcement"
-                        ? "bg-amber-50 text-amber-600 border border-amber-200"
-                        : "bg-slate-100 text-slate-600 border border-slate-200"
-                    }`}
-                  >
-                    {post.type}
-                  </span>
+                  <div className="flex items-center space-x-2 shrink-0">
+                    {/* Contribution Fee Badge on header */}
+                    {post.type === "event" && (post.eventDetails?.contributionFee ?? 0) > 0 && (
+                      <span className="bg-emerald-50 text-emerald-700 text-[10px] font-black px-2 py-0.5 rounded-lg border border-emerald-200">
+                        ₹{post.eventDetails?.contributionFee}
+                      </span>
+                    )}
+
+                    {/* Type Badge */}
+                    <span
+                      className={`text-[9px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
+                        post.type === "event"
+                          ? "bg-indigo-50 text-indigo-600 border border-indigo-200"
+                          : post.type === "announcement"
+                          ? "bg-amber-50 text-amber-600 border border-amber-200"
+                          : "bg-slate-100 text-slate-600 border border-slate-200"
+                      }`}
+                    >
+                      {post.type}
+                    </span>
+
+                    {/* Collapse Toggle Icon */}
+                    <button
+                      type="button"
+                      className="p-1 rounded-full text-slate-400 hover:text-slate-700 transition border-0 bg-transparent cursor-pointer"
+                    >
+                      {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
 
-                {/* ── EVENT CARD CONTENT ─────────────────────────────────── */}
-                {post.type === "event" && post.eventDetails ? (
-                  <div className="space-y-3">
-                    <div className="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-4 space-y-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="space-y-1">
-                          <h3 className="text-sm sm:text-base font-black text-indigo-950">
-                            {post.eventDetails.title}
-                          </h3>
-                          <div className="flex items-center space-x-2 text-xs font-bold text-indigo-600">
-                            <Calendar className="w-3.5 h-3.5 shrink-0" />
-                            <span>{post.eventDetails.date}</span>
+                {/* ── EXPANDABLE CONTENT DETAILS ─────────────────────────────────── */}
+                {!isCollapsed && (
+                  <div className="pt-2 border-t border-slate-100 space-y-3 animate-in fade-in duration-150">
+                    {/* EVENT CONTENT */}
+                    {post.type === "event" && post.eventDetails ? (
+                      <div className="space-y-3">
+                        <div className="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-3.5 space-y-2">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs font-bold text-indigo-700">
+                            <div className="flex items-center space-x-1.5">
+                              <Calendar className="w-3.5 h-3.5 shrink-0 text-indigo-600" />
+                              <span>{post.eventDetails.date}</span>
+                            </div>
+                            <div className="flex items-center space-x-1.5 text-slate-600 font-semibold">
+                              <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                              <span>{post.eventDetails.location}</span>
+                            </div>
                           </div>
-                          <div className="flex items-center space-x-2 text-xs font-semibold text-slate-600">
-                            <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                            <span>{post.eventDetails.location}</span>
-                          </div>
+
+                          {post.eventDetails.poster && (
+                            <div className="rounded-xl overflow-hidden max-h-[240px] border border-indigo-200/60 mt-2">
+                              <img
+                                src={post.eventDetails.poster}
+                                alt="Event Poster"
+                                className="w-full object-cover max-h-[240px]"
+                              />
+                            </div>
+                          )}
                         </div>
 
-                        {/* Contribution Fee Tag */}
-                        {(post.eventDetails.contributionFee ?? 0) > 0 && (
-                          <div className="bg-emerald-100 text-emerald-800 text-xs font-black px-3 py-1.5 rounded-xl border border-emerald-200 shrink-0 flex items-center space-x-1">
-                            <IndianRupee className="w-3.5 h-3.5" />
-                            <span>{post.eventDetails.contributionFee} Fee</span>
+                        <p className="text-xs text-slate-700 font-medium leading-relaxed bg-slate-50 p-3.5 rounded-2xl border border-slate-100 whitespace-pre-wrap">
+                          {post.content}
+                        </p>
+
+                        {/* ── PREMIUM ICON-BASED RSVP CONTROL BAR ────────────────── */}
+                        <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          {/* 3 Premium Icon RSVP Buttons with Native Tooltips */}
+                          <div className="flex items-center space-x-2">
+                            {/* Accept Button */}
+                            <button
+                              onClick={() => handleRsvp(post._id, "going")}
+                              title="Accept (Going)"
+                              className={`p-2 px-3 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border cursor-pointer ${
+                                isUserGoing
+                                  ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
+                                  : "bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-50"
+                              }`}
+                            >
+                              <CheckCircle2 className="w-4 h-4 shrink-0" />
+                              <span>{goingUsers.length}</span>
+                            </button>
+
+                            {/* Tentative Button */}
+                            <button
+                              onClick={() => handleRsvp(post._id, "maybe")}
+                              title="Tentative (Maybe)"
+                              className={`p-2 px-3 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border cursor-pointer ${
+                                isUserMaybe
+                                  ? "bg-amber-500 text-white border-amber-500 shadow-xs"
+                                  : "bg-white text-amber-700 border-amber-200 hover:bg-amber-50"
+                              }`}
+                            >
+                              <HelpCircle className="w-4 h-4 shrink-0" />
+                              <span>{maybeUsers.length}</span>
+                            </button>
+
+                            {/* Decline Button */}
+                            <button
+                              onClick={() => handleRsvp(post._id, "cant")}
+                              title="Decline (Can't Go)"
+                              className={`p-2 px-3 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border cursor-pointer ${
+                                isUserCant
+                                  ? "bg-rose-600 text-white border-rose-600 shadow-xs"
+                                  : "bg-white text-rose-700 border-rose-200 hover:bg-rose-50"
+                              }`}
+                            >
+                              <XCircle className="w-4 h-4 shrink-0" />
+                              <span>{cantUsers.length}</span>
+                            </button>
+                          </div>
+
+                          <div className="flex items-center space-x-2">
+                            {/* View Organizer Dashboard Button */}
+                            <button
+                              onClick={() => {
+                                setOrganizerModalPost(post);
+                                setOrganizerTab("accepted");
+                              }}
+                              className="text-[10px] font-extrabold text-indigo-600 hover:underline flex items-center gap-1 cursor-pointer"
+                            >
+                              RSVP Stats &rarr;
+                            </button>
+
+                            {/* Direct UPI App Payment Button */}
+                            {(post.eventDetails.contributionFee ?? 0) > 0 && (
+                              <button
+                                onClick={() => handleDirectUpiPayment(post)}
+                                title="Directly open your UPI App and accept RSVP"
+                                className="py-2 px-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-extrabold shadow-xs transition flex items-center gap-1.5 cursor-pointer border-0"
+                              >
+                                <DollarSign className="w-3.5 h-3.5" /> Pay Contribution & Accept
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ) : post.type === "announcement" ? (
+                      /* ANNOUNCEMENT CONTENT */
+                      <div className="bg-amber-50/80 border border-amber-200/60 p-4 rounded-2xl space-y-2">
+                        <div className="flex items-center space-x-1.5 text-amber-700 font-black text-xs uppercase tracking-wider">
+                          <Megaphone className="w-4 h-4 shrink-0 text-amber-600" />
+                          <span>Community Announcement</span>
+                        </div>
+                        <p className="text-xs sm:text-sm font-semibold text-slate-800 leading-relaxed whitespace-pre-wrap">
+                          {post.content}
+                        </p>
+                      </div>
+                    ) : (
+                      /* REGULAR TEXT / IMAGE CONTENT */
+                      <div className="space-y-3">
+                        <p className="text-xs sm:text-sm text-slate-800 font-medium leading-relaxed whitespace-pre-wrap">
+                          {post.content}
+                        </p>
+                        {post.eventDetails?.poster && (
+                          <div className="rounded-xl overflow-hidden max-h-[300px] border border-slate-200">
+                            <img src={post.eventDetails.poster} alt="Attachment" className="w-full object-cover" />
                           </div>
                         )}
                       </div>
-
-                      {post.eventDetails.poster && (
-                        <div className="rounded-xl overflow-hidden max-h-[240px] border border-indigo-200/60 mt-2">
-                          <img
-                            src={post.eventDetails.poster}
-                            alt="Event Poster"
-                            className="w-full object-cover max-h-[240px]"
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                    <p className="text-xs text-slate-700 font-medium leading-relaxed bg-slate-50 p-3.5 rounded-2xl border border-slate-100 whitespace-pre-wrap">
-                      {post.content}
-                    </p>
-
-                    {/* ── EVENT RSVP CONTROL BAR ───────────────────────────── */}
-                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/60 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold text-slate-600 flex items-center gap-1.5">
-                          <Users className="w-3.5 h-3.5 text-indigo-500" /> Member Attendance RSVP:
-                        </span>
-                        <button
-                          onClick={() => {
-                            setOrganizerModalPost(post);
-                            setOrganizerTab("accepted");
-                          }}
-                          className="text-[10px] font-extrabold text-indigo-600 hover:underline flex items-center gap-1 cursor-pointer"
-                        >
-                          View All ({goingUsers.length} Accept, {maybeUsers.length} Tentative, {cantUsers.length} Decline) &rarr;
-                        </button>
-                      </div>
-
-                      {/* 3 RSVP Buttons */}
-                      <div className="grid grid-cols-3 gap-2">
-                        <button
-                          onClick={() => handleRsvp(post._id, "going")}
-                          className={`py-2 px-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border cursor-pointer ${
-                            isUserGoing
-                              ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
-                              : "bg-white text-slate-700 border-slate-200 hover:bg-emerald-50"
-                          }`}
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5" /> Accept ({goingUsers.length})
-                        </button>
-
-                        <button
-                          onClick={() => handleRsvp(post._id, "maybe")}
-                          className={`py-2 px-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border cursor-pointer ${
-                            isUserMaybe
-                              ? "bg-amber-500 text-white border-amber-500 shadow-xs"
-                              : "bg-white text-slate-700 border-slate-200 hover:bg-amber-50"
-                          }`}
-                        >
-                          <HelpCircle className="w-3.5 h-3.5" /> Tentative ({maybeUsers.length})
-                        </button>
-
-                        <button
-                          onClick={() => handleRsvp(post._id, "cant")}
-                          className={`py-2 px-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border cursor-pointer ${
-                            isUserCant
-                              ? "bg-rose-600 text-white border-rose-600 shadow-xs"
-                              : "bg-white text-slate-700 border-slate-200 hover:bg-rose-50"
-                          }`}
-                        >
-                          <XCircle className="w-3.5 h-3.5" /> Decline ({cantUsers.length})
-                        </button>
-                      </div>
-
-                      {/* Pay Contribution Button */}
-                      {(post.eventDetails.contributionFee ?? 0) > 0 && (
-                        <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between gap-2">
-                          <div className="text-[11px] font-semibold text-slate-600">
-                            Contribution Fee: <strong className="text-emerald-600 font-bold">₹{post.eventDetails.contributionFee}</strong>
-                            {post.eventDetails.upiId && <span className="text-[10px] text-slate-400 block">UPI: {post.eventDetails.upiId}</span>}
-                          </div>
-                          <button
-                            onClick={() => {
-                              setContributePost(post);
-                              setContribAmount(String(post.eventDetails?.contributionFee || ""));
-                            }}
-                            className="py-2 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs font-extrabold shadow-sm hover:from-emerald-700 hover:to-teal-700 transition flex items-center gap-1.5 cursor-pointer"
-                          >
-                            <DollarSign className="w-3.5 h-3.5" /> Pay Contribution & Accept
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : post.type === "announcement" ? (
-                  /* Announcement Card Render */
-                  <div className="mt-3 bg-amber-50/80 border border-amber-200/60 p-4 rounded-2xl space-y-2">
-                    <div className="flex items-center space-x-1.5 text-amber-700 font-black text-xs uppercase tracking-wider">
-                      <Megaphone className="w-4 h-4 shrink-0 text-amber-600" />
-                      <span>Community Announcement</span>
-                    </div>
-                    <p className="text-xs sm:text-sm font-semibold text-slate-800 leading-relaxed whitespace-pre-wrap">
-                      {post.content}
-                    </p>
-                  </div>
-                ) : (
-                  /* Regular Text / Image Post */
-                  <div className="space-y-3">
-                    <p className="mt-3 text-xs sm:text-sm text-slate-800 font-medium leading-relaxed whitespace-pre-wrap">
-                      {post.content}
-                    </p>
-                    {post.eventDetails?.poster && (
-                      <div className="rounded-xl overflow-hidden max-h-[300px] border border-slate-200">
-                        <img src={post.eventDetails.poster} alt="Attachment" className="w-full object-cover" />
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Interaction Footer (Likes & Comments) */}
-                <div className="flex items-center space-x-4 pt-3 border-t border-slate-100">
-                  <button
-                    onClick={() => handleLike(post._id)}
-                    className={`flex items-center space-x-1.5 text-xs font-bold py-1.5 px-3 rounded-xl transition-all border cursor-pointer ${
-                      hasLiked
-                        ? "bg-rose-50 text-rose-500 border-rose-200"
-                        : "bg-slate-50 text-slate-500 hover:bg-slate-100 border-slate-200/60"
-                    }`}
-                  >
-                    <Heart className={`w-3.5 h-3.5 ${hasLiked ? "fill-rose-500 text-rose-500" : ""}`} />
-                    <span>Like ({post.likes?.length || 0})</span>
-                  </button>
-
-                  <button
-                    onClick={() => toggleComments(post._id)}
-                    className={`flex items-center space-x-1.5 text-xs font-bold py-1.5 px-3 rounded-xl transition-all border cursor-pointer ${
-                      expandedComments[post._id]
-                        ? "bg-indigo-50 text-indigo-600 border-indigo-200"
-                        : "bg-slate-50 text-slate-500 hover:bg-slate-100 border-slate-200/60"
-                    }`}
-                  >
-                    <MessageSquare className="w-3.5 h-3.5" />
-                    <span>Comment ({post.replies?.length || 0})</span>
-                  </button>
-                </div>
-
-                {/* Expandable Comments Section */}
-                {expandedComments[post._id] && (
-                  <div className="mt-3 pt-3 border-t border-slate-100 space-y-3">
-                    {post.replies && post.replies.length > 0 ? (
-                      <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
-                        {post.replies.map((reply: any) => (
-                          <div
-                            key={reply._id}
-                            className="bg-slate-50 p-3 rounded-xl text-xs leading-relaxed text-slate-700 border border-slate-100"
-                          >
-                            <div className="flex justify-between items-center mb-1">
-                              <span className="font-bold text-slate-900">
-                                {reply.author?.name || "Member"}
-                              </span>
-                              <span className="text-[9px] text-slate-400 font-medium">
-                                {formatTime(reply.createdAt)}
-                              </span>
-                            </div>
-                            <p className="font-medium">{reply.content}</p>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-slate-400 italic text-center py-2 font-medium">
-                        No comments yet. Be the first to comment!
-                      </p>
                     )}
 
-                    {/* Add Comment Form */}
-                    <form
-                      onSubmit={(e) => handleAddComment(e, post._id)}
-                      className="flex items-center space-x-2 pt-1"
-                    >
-                      <input
-                        type="text"
-                        required
-                        placeholder="Write a comment..."
-                        value={commentInputs[post._id] || ""}
-                        onChange={(e) =>
-                          setCommentInputs({ ...commentInputs, [post._id]: e.target.value })
-                        }
-                        className="flex-1 bg-slate-50 rounded-xl border border-slate-200 px-3.5 py-2 text-xs focus:ring-2 focus:ring-amber-500 outline-none text-slate-800 font-medium"
-                      />
+                    {/* Interaction Footer (Likes & Comments) */}
+                    <div className="flex items-center space-x-4 pt-2.5 border-t border-slate-100">
                       <button
-                        type="submit"
-                        className="py-2 px-4 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs transition cursor-pointer shadow-xs border-0"
+                        onClick={() => handleLike(post._id)}
+                        className={`flex items-center space-x-1.5 text-xs font-bold py-1.5 px-3 rounded-xl transition-all border cursor-pointer ${
+                          hasLiked
+                            ? "bg-rose-50 text-rose-500 border-rose-200"
+                            : "bg-slate-50 text-slate-500 hover:bg-slate-100 border-slate-200/60"
+                        }`}
                       >
-                        Post
+                        <Heart className={`w-3.5 h-3.5 ${hasLiked ? "fill-rose-500 text-rose-500" : ""}`} />
+                        <span>Like ({post.likes?.length || 0})</span>
                       </button>
-                    </form>
+
+                      <button
+                        onClick={() => toggleComments(post._id)}
+                        className={`flex items-center space-x-1.5 text-xs font-bold py-1.5 px-3 rounded-xl transition-all border cursor-pointer ${
+                          expandedComments[post._id]
+                            ? "bg-indigo-50 text-indigo-600 border-indigo-200"
+                            : "bg-slate-50 text-slate-500 hover:bg-slate-100 border-slate-200/60"
+                        }`}
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        <span>Comment ({post.replies?.length || 0})</span>
+                      </button>
+                    </div>
+
+                    {/* Expandable Comments Section */}
+                    {expandedComments[post._id] && (
+                      <div className="mt-3 pt-3 border-t border-slate-100 space-y-3">
+                        {post.replies && post.replies.length > 0 ? (
+                          <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                            {post.replies.map((reply: any) => (
+                              <div
+                                key={reply._id}
+                                className="bg-slate-50 p-3 rounded-xl text-xs leading-relaxed text-slate-700 border border-slate-100"
+                              >
+                                <div className="flex justify-between items-center mb-1">
+                                  <span className="font-bold text-slate-900">
+                                    {reply.author?.name || "Member"}
+                                  </span>
+                                  <span className="text-[9px] text-slate-400 font-medium">
+                                    {formatTime(reply.createdAt)}
+                                  </span>
+                                </div>
+                                <p className="font-medium">{reply.content}</p>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-slate-400 italic text-center py-2 font-medium">
+                            No comments yet. Be the first to comment!
+                          </p>
+                        )}
+
+                        {/* Add Comment Form */}
+                        <form
+                          onSubmit={(e) => handleAddComment(e, post._id)}
+                          className="flex items-center space-x-2 pt-1"
+                        >
+                          <input
+                            type="text"
+                            required
+                            placeholder="Write a comment..."
+                            value={commentInputs[post._id] || ""}
+                            onChange={(e) =>
+                              setCommentInputs({ ...commentInputs, [post._id]: e.target.value })
+                            }
+                            className="flex-1 bg-slate-50 rounded-xl border border-slate-200 px-3.5 py-2 text-xs focus:ring-2 focus:ring-amber-500 outline-none text-slate-800 font-medium"
+                          />
+                          <button
+                            type="submit"
+                            className="py-2 px-4 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs transition cursor-pointer shadow-xs border-0"
+                          >
+                            Post
+                          </button>
+                        </form>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -631,85 +639,6 @@ export default function WallPage() {
           <p className="text-xs font-semibold text-slate-400">You&apos;re all caught up ✓</p>
         )}
       </div>
-
-      {/* ── PAY CONTRIBUTION MODAL ────────────────────────────────────── */}
-      {contributePost && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border border-slate-100 space-y-5 animate-in zoom-in-95 duration-150">
-            <div className="flex justify-between items-center pb-3 border-b border-slate-100">
-              <div className="flex items-center space-x-2 text-emerald-600 font-bold text-base">
-                <DollarSign className="w-5 h-5" />
-                <span>Pay Event Contribution</span>
-              </div>
-              <button
-                onClick={() => setContributePost(null)}
-                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 cursor-pointer border-0 bg-transparent"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="bg-emerald-50/70 p-4 rounded-2xl border border-emerald-100 space-y-2">
-              <h4 className="text-sm font-bold text-emerald-950">
-                {contributePost.eventDetails?.title}
-              </h4>
-              <p className="text-xs text-slate-600">
-                Fee: <strong>₹{contributePost.eventDetails?.contributionFee}</strong>
-              </p>
-              {contributePost.eventDetails?.upiId && (
-                <div className="pt-2 border-t border-emerald-200/60 flex items-center justify-between text-xs">
-                  <span className="text-slate-600">UPI ID: <strong className="text-emerald-700">{contributePost.eventDetails.upiId}</strong></span>
-                  <a
-                    href={`upi://pay?pa=${encodeURIComponent(contributePost.eventDetails.upiId)}&pn=EventContribution&am=${contributePost.eventDetails.contributionFee}&cu=INR`}
-                    className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 hover:underline"
-                  >
-                    Open UPI App <ExternalLink className="w-3 h-3" />
-                  </a>
-                </div>
-              )}
-            </div>
-
-            <form onSubmit={handleSubmitContribution} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Contribution Amount (₹)
-                </label>
-                <input
-                  type="number"
-                  required
-                  min="1"
-                  value={contribAmount}
-                  onChange={(e) => setContribAmount(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 rounded-xl border border-slate-200 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500 outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Transaction Reference / UTR Number (Optional)
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. 329019238120 or UPI Ref ID"
-                  value={transactionId}
-                  onChange={(e) => setTransactionId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 rounded-xl border border-slate-200 text-sm font-medium text-slate-800 focus:ring-2 focus:ring-emerald-500 outline-none"
-                />
-              </div>
-
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  disabled={submittingContrib}
-                  className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold shadow-md transition flex items-center justify-center gap-2 cursor-pointer border-0"
-                >
-                  <Check className="w-4 h-4" /> {submittingContrib ? "Confirming..." : "Submit Contribution & Accept RSVP"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* ── ORGANIZER RSVP & CONTRIBUTIONS DASHBOARD MODAL ─────────────── */}
       {organizerModalPost && (
