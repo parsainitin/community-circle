@@ -420,8 +420,8 @@ export default function WallPage() {
                     {post.type === "event" && post.eventDetails ? (
                       <div className="space-y-3">
                         <div className="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-3.5 space-y-2">
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs font-bold text-indigo-700">
-                            <div className="flex items-center space-x-1.5">
+                          <div className="space-y-1.5 text-xs font-bold">
+                            <div className="flex items-center space-x-1.5 text-indigo-700">
                               <Calendar className="w-3.5 h-3.5 shrink-0 text-indigo-600" />
                               <span>{post.eventDetails.date}</span>
                             </div>
