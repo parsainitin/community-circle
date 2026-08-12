@@ -56,7 +56,7 @@ export default function BottomNavBar() {
 
   return (
     <>
-      <nav className="sticky bottom-0 z-50 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 shadow-lg px-1 py-2 select-none">
+      <nav className="sticky bottom-0 z-50 bg-white border-t border-slate-100 shadow-lg px-1 py-2 select-none">
         <div className="flex justify-around items-center w-full">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -77,7 +77,7 @@ export default function BottomNavBar() {
                     <div className="p-1.5 rounded-full px-3 mb-1 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-medium shadow-sm">
                       <Icon className="w-5.5 h-5.5 stroke-[2.2]" />
                     </div>
-                    <span className="text-[11px] tracking-wide text-amber-700 dark:text-amber-400 font-bold">
+                    <span className="text-[11px] tracking-wide text-amber-700 font-bold">
                       {item.label}
                     </span>
                   </div>
@@ -100,7 +100,7 @@ export default function BottomNavBar() {
                     className={`p-1.5 rounded-full px-3 mb-1 transition-all duration-200 ${
                       isActive
                         ? "bg-whatsapp-light text-whatsapp-green font-medium"
-                        : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+                        : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"
                     }`}
                   >
                     <Icon className="w-5.5 h-5.5 stroke-[2.2]" />
@@ -109,7 +109,7 @@ export default function BottomNavBar() {
                     className={`text-[11px] tracking-wide transition-all ${
                       isActive
                         ? "text-whatsapp-green font-semibold"
-                        : "text-slate-500 dark:text-slate-400 font-medium"
+                        : "text-slate-500 font-medium"
                     }`}
                   >
                     {item.label}
@@ -124,21 +124,21 @@ export default function BottomNavBar() {
       {/* ── EVENT & POST CREATION POPUP MODAL ──────────────────────────── */}
       {showModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-5 animate-in slide-in-from-bottom-6 duration-200">
-            <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center space-x-2 text-amber-700 dark:text-amber-400 font-bold text-base">
+          <div className="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl border border-slate-100 space-y-5 animate-in slide-in-from-bottom-6 duration-200">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+              <div className="flex items-center space-x-2 text-amber-700 font-bold text-base">
                 <Sparkles className="w-5 h-5" />
                 <span>Create Event & Post</span>
               </div>
               <button
                 onClick={() => setShowModal(false)}
-                className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 cursor-pointer border-0 bg-transparent"
+                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 cursor-pointer border-0 bg-transparent"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-xs text-slate-500 font-medium">
               Select what you would like to share or schedule for your community:
             </p>
 
@@ -149,17 +149,17 @@ export default function BottomNavBar() {
                   setShowModal(false);
                   router.push("/create-event");
                 }}
-                className="w-full p-4 rounded-2xl bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800 text-left flex items-center justify-between hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition cursor-pointer group"
+                className="w-full p-4 rounded-2xl bg-indigo-50/80 border border-indigo-200/80 text-left flex items-center justify-between hover:bg-indigo-100 transition cursor-pointer group"
               >
                 <div className="flex items-center space-x-3.5">
                   <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold shrink-0 shadow-sm">
                     <Calendar className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="text-xs sm:text-sm font-bold text-indigo-950 dark:text-indigo-100 group-hover:text-indigo-700">
+                    <h4 className="text-xs sm:text-sm font-bold text-indigo-950 group-hover:text-indigo-700">
                       📅 Schedule Event
                     </h4>
-                    <p className="text-[10px] text-indigo-800/80 dark:text-indigo-300">
+                    <p className="text-[10px] text-indigo-800/80 font-medium">
                       Organize events, RSVPs & accept UPI contributions
                     </p>
                   </div>
@@ -173,17 +173,17 @@ export default function BottomNavBar() {
                   setShowModal(false);
                   router.push("/create-announcement");
                 }}
-                className="w-full p-4 rounded-2xl bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800 text-left flex items-center justify-between hover:bg-amber-100 dark:hover:bg-amber-900/60 transition cursor-pointer group"
+                className="w-full p-4 rounded-2xl bg-amber-50/80 border border-amber-200/80 text-left flex items-center justify-between hover:bg-amber-100 transition cursor-pointer group"
               >
                 <div className="flex items-center space-x-3.5">
                   <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold shrink-0 shadow-sm">
                     <Megaphone className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="text-xs sm:text-sm font-bold text-amber-950 dark:text-amber-100 group-hover:text-amber-700">
+                    <h4 className="text-xs sm:text-sm font-bold text-amber-950 group-hover:text-amber-700">
                       📢 Post Announcement
                     </h4>
-                    <p className="text-[10px] text-amber-800/80 dark:text-amber-300">
+                    <p className="text-[10px] text-amber-800/80 font-medium">
                       Broadcast notices & news to all community members
                     </p>
                   </div>
@@ -197,17 +197,17 @@ export default function BottomNavBar() {
                   setShowModal(false);
                   router.push("/create-post");
                 }}
-                className="w-full p-4 rounded-2xl bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-800 text-left flex items-center justify-between hover:bg-blue-100 dark:hover:bg-blue-900/60 transition cursor-pointer group"
+                className="w-full p-4 rounded-2xl bg-blue-50/80 border border-blue-200/80 text-left flex items-center justify-between hover:bg-blue-100 transition cursor-pointer group"
               >
                 <div className="flex items-center space-x-3.5">
                   <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold shrink-0 shadow-sm">
                     <Edit3 className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="text-xs sm:text-sm font-bold text-blue-950 dark:text-blue-100 group-hover:text-blue-700">
+                    <h4 className="text-xs sm:text-sm font-bold text-blue-950 group-hover:text-blue-700">
                       ✍️ Share Post
                     </h4>
-                    <p className="text-[10px] text-blue-800/80 dark:text-blue-300">
+                    <p className="text-[10px] text-blue-800/80 font-medium">
                       Share stories, photos, and messages on the Wall
                     </p>
                   </div>

@@ -88,18 +88,18 @@ export default function CreateAnnouncementPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-slate-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Back Button */}
         <button
           onClick={() => router.push("/")}
-          className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 transition"
+          className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-amber-600 transition cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" /> Back to Wall
         </button>
 
         {/* Page Header */}
-        <div className="bg-gradient-to-r from-amber-500 to-orange-600 rounded-2xl p-6 sm:p-8 text-white shadow-lg relative overflow-hidden">
+        <div className="bg-gradient-to-r from-amber-700 via-orange-600 to-amber-800 rounded-3xl p-6 sm:p-8 text-white shadow-md relative overflow-hidden">
           <div className="relative z-10 space-y-2">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/20 backdrop-blur border border-white/20">
               <Megaphone className="w-3.5 h-3.5" /> Community Announcement
@@ -114,16 +114,16 @@ export default function CreateAnnouncementPage() {
 
         {/* Error Alert */}
         {error && (
-          <div className="p-4 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-xl text-red-700 dark:text-red-300 text-sm">
+          <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700 text-sm font-semibold">
             ⚠️ {error}
           </div>
         )}
 
         {/* Form Card */}
-        <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-800 rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-200 dark:border-slate-700 space-y-6">
+        <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-100 space-y-6">
           {/* Title */}
           <div>
-            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+            <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
               Announcement Title / Headline <span className="text-red-500">*</span>
             </label>
             <input
@@ -132,13 +132,13 @@ export default function CreateAnnouncementPage() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Important Notice: Annual General Meeting Scheduled"
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 focus:outline-none"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 font-semibold focus:ring-2 focus:ring-amber-500 focus:outline-none text-sm"
             />
           </div>
 
           {/* Content */}
           <div>
-            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+            <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
               Announcement Details <span className="text-red-500">*</span>
             </label>
             <textarea
@@ -147,13 +147,13 @@ export default function CreateAnnouncementPage() {
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="Write full details of the announcement here..."
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 focus:outline-none"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none text-sm"
             />
           </div>
 
           {/* Banner Image */}
           <div>
-            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+            <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
               Banner / Attachment Image (Optional)
             </label>
             <div className="flex items-center gap-4">
@@ -162,12 +162,12 @@ export default function CreateAnnouncementPage() {
                 accept="image/*"
                 onChange={handleImageUpload}
                 disabled={uploadingBanner}
-                className="block w-full text-sm text-slate-500 dark:text-slate-400 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-amber-50 file:text-amber-700 dark:file:bg-amber-950 dark:file:text-amber-300 hover:file:bg-amber-100 transition"
+                className="block w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100 transition"
               />
-              {uploadingBanner && <span className="text-xs text-amber-600 animate-pulse">Uploading...</span>}
+              {uploadingBanner && <span className="text-xs text-amber-600 animate-pulse font-semibold">Uploading...</span>}
             </div>
             {banner && (
-              <div className="mt-3 relative rounded-xl overflow-hidden max-h-48 border border-slate-200 dark:border-slate-700">
+              <div className="mt-3 relative rounded-2xl overflow-hidden max-h-48 border border-slate-200">
                 <img src={banner} alt="Banner" className="w-full h-full object-cover" />
               </div>
             )}
@@ -178,7 +178,7 @@ export default function CreateAnnouncementPage() {
             <button
               type="submit"
               disabled={submitting || uploadingBanner}
-              className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold shadow-md hover:from-amber-600 hover:to-orange-700 disabled:opacity-50 transition flex items-center justify-center gap-2"
+              className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-amber-600 to-orange-600 text-white font-extrabold text-xs uppercase tracking-wider shadow-md hover:from-amber-700 hover:to-orange-700 disabled:opacity-50 transition flex items-center justify-center gap-2 cursor-pointer border-0"
             >
               <Send className="w-4 h-4" /> {submitting ? "Publishing Announcement..." : "Post Announcement to Wall"}
             </button>

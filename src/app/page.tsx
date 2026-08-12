@@ -331,16 +331,16 @@ export default function WallPage() {
 
       {/* Posts Feed */}
       {loading ? (
-        <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 border border-slate-100 dark:border-slate-700 flex flex-col items-center justify-center space-y-3">
+        <div className="bg-white rounded-3xl p-8 border border-slate-100 flex flex-col items-center justify-center space-y-3">
           <div className="w-7 h-7 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
           <span className="text-xs text-slate-400 font-semibold">Loading Community Feed...</span>
         </div>
       ) : posts.length === 0 ? (
-        <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 text-center border border-slate-100 dark:border-slate-700">
+        <div className="bg-white rounded-3xl p-8 text-center border border-slate-100">
           <FileText className="w-8 h-8 text-slate-300 mx-auto mb-2" />
           <p className="text-xs text-slate-500 font-bold">No community posts yet</p>
           <p className="text-[10px] text-slate-400 mt-1">
-            Tap <strong>Schedule Event</strong> or <strong>Share Post</strong> above to create your first post!
+            Tap <strong>Event & Post</strong> in the bottom bar to create your first post or schedule an event!
           </p>
         </div>
       ) : (
@@ -364,16 +364,16 @@ export default function WallPage() {
             return (
               <div
                 key={post._id}
-                className="bg-white dark:bg-slate-800 rounded-3xl p-5 border border-slate-100 dark:border-slate-700/80 shadow-xs hover:shadow-sm transition-all overflow-hidden space-y-3"
+                className="bg-white rounded-3xl p-5 border border-slate-100 shadow-xs hover:shadow-sm transition-all overflow-hidden space-y-3"
               >
                 {/* Author Info Header */}
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700/60">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                   <div className="flex items-center space-x-2.5">
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 text-white font-black text-xs flex items-center justify-center uppercase shadow-xs">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-amber-600 to-orange-600 text-white font-black text-xs flex items-center justify-center uppercase shadow-xs">
                       {post.author?.name ? post.author.name.charAt(0) : "U"}
                     </div>
                     <div>
-                      <h4 className="text-xs font-extrabold text-slate-800 dark:text-slate-100 leading-tight">
+                      <h4 className="text-xs font-extrabold text-slate-800 leading-tight">
                         {post.author?.name || "Community Member"}
                       </h4>
                       <span className="text-[9px] text-slate-400 font-semibold block mt-0.5">
@@ -386,10 +386,10 @@ export default function WallPage() {
                   <span
                     className={`text-[9px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
                       post.type === "event"
-                        ? "bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800"
+                        ? "bg-indigo-50 text-indigo-600 border border-indigo-200"
                         : post.type === "announcement"
-                        ? "bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
-                        : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600"
+                        ? "bg-amber-50 text-amber-600 border border-amber-200"
+                        : "bg-slate-100 text-slate-600 border border-slate-200"
                     }`}
                   >
                     {post.type}
@@ -399,17 +399,17 @@ export default function WallPage() {
                 {/* ── EVENT CARD CONTENT ─────────────────────────────────── */}
                 {post.type === "event" && post.eventDetails ? (
                   <div className="space-y-3">
-                    <div className="bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 rounded-2xl p-4 space-y-3">
+                    <div className="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-4 space-y-3">
                       <div className="flex items-start justify-between gap-3">
                         <div className="space-y-1">
-                          <h3 className="text-sm sm:text-base font-black text-indigo-950 dark:text-indigo-100">
+                          <h3 className="text-sm sm:text-base font-black text-indigo-950">
                             {post.eventDetails.title}
                           </h3>
-                          <div className="flex items-center space-x-2 text-xs font-bold text-indigo-600 dark:text-indigo-400">
+                          <div className="flex items-center space-x-2 text-xs font-bold text-indigo-600">
                             <Calendar className="w-3.5 h-3.5 shrink-0" />
                             <span>{post.eventDetails.date}</span>
                           </div>
-                          <div className="flex items-center space-x-2 text-xs font-semibold text-slate-600 dark:text-slate-400">
+                          <div className="flex items-center space-x-2 text-xs font-semibold text-slate-600">
                             <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                             <span>{post.eventDetails.location}</span>
                           </div>
@@ -417,7 +417,7 @@ export default function WallPage() {
 
                         {/* Contribution Fee Tag */}
                         {(post.eventDetails.contributionFee ?? 0) > 0 && (
-                          <div className="bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-xs font-black px-3 py-1.5 rounded-xl border border-emerald-200 dark:border-emerald-800 shrink-0 flex items-center space-x-1">
+                          <div className="bg-emerald-100 text-emerald-800 text-xs font-black px-3 py-1.5 rounded-xl border border-emerald-200 shrink-0 flex items-center space-x-1">
                             <IndianRupee className="w-3.5 h-3.5" />
                             <span>{post.eventDetails.contributionFee} Fee</span>
                           </div>
@@ -425,7 +425,7 @@ export default function WallPage() {
                       </div>
 
                       {post.eventDetails.poster && (
-                        <div className="rounded-xl overflow-hidden max-h-[240px] border border-indigo-200/60 dark:border-indigo-800 mt-2">
+                        <div className="rounded-xl overflow-hidden max-h-[240px] border border-indigo-200/60 mt-2">
                           <img
                             src={post.eventDetails.poster}
                             alt="Event Poster"
@@ -435,14 +435,14 @@ export default function WallPage() {
                       )}
                     </div>
 
-                    <p className="text-xs text-slate-700 dark:text-slate-300 font-medium leading-relaxed bg-slate-50 dark:bg-slate-900/50 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800 whitespace-pre-wrap">
+                    <p className="text-xs text-slate-700 font-medium leading-relaxed bg-slate-50 p-3.5 rounded-2xl border border-slate-100 whitespace-pre-wrap">
                       {post.content}
                     </p>
 
                     {/* ── EVENT RSVP CONTROL BAR ───────────────────────────── */}
-                    <div className="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-2xl border border-slate-200/60 dark:border-slate-800 space-y-3">
+                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/60 space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
+                        <span className="text-[11px] font-bold text-slate-600 flex items-center gap-1.5">
                           <Users className="w-3.5 h-3.5 text-indigo-500" /> Member Attendance RSVP:
                         </span>
                         <button
@@ -450,7 +450,7 @@ export default function WallPage() {
                             setOrganizerModalPost(post);
                             setOrganizerTab("accepted");
                           }}
-                          className="text-[10px] font-extrabold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer"
+                          className="text-[10px] font-extrabold text-indigo-600 hover:underline flex items-center gap-1 cursor-pointer"
                         >
                           View All ({goingUsers.length} Accept, {maybeUsers.length} Tentative, {cantUsers.length} Decline) &rarr;
                         </button>
@@ -463,7 +463,7 @@ export default function WallPage() {
                           className={`py-2 px-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border cursor-pointer ${
                             isUserGoing
                               ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
-                              : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                              : "bg-white text-slate-700 border-slate-200 hover:bg-emerald-50"
                           }`}
                         >
                           <CheckCircle2 className="w-3.5 h-3.5" /> Accept ({goingUsers.length})
@@ -474,7 +474,7 @@ export default function WallPage() {
                           className={`py-2 px-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border cursor-pointer ${
                             isUserMaybe
                               ? "bg-amber-500 text-white border-amber-500 shadow-xs"
-                              : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-amber-50 dark:hover:bg-amber-950/40"
+                              : "bg-white text-slate-700 border-slate-200 hover:bg-amber-50"
                           }`}
                         >
                           <HelpCircle className="w-3.5 h-3.5" /> Tentative ({maybeUsers.length})
@@ -485,7 +485,7 @@ export default function WallPage() {
                           className={`py-2 px-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border cursor-pointer ${
                             isUserCant
                               ? "bg-rose-600 text-white border-rose-600 shadow-xs"
-                              : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                              : "bg-white text-slate-700 border-slate-200 hover:bg-rose-50"
                           }`}
                         >
                           <XCircle className="w-3.5 h-3.5" /> Decline ({cantUsers.length})
@@ -494,8 +494,8 @@ export default function WallPage() {
 
                       {/* Pay Contribution Button */}
                       {(post.eventDetails.contributionFee ?? 0) > 0 && (
-                        <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800 flex items-center justify-between gap-2">
-                          <div className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">
+                        <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between gap-2">
+                          <div className="text-[11px] font-semibold text-slate-600">
                             Contribution Fee: <strong className="text-emerald-600 font-bold">₹{post.eventDetails.contributionFee}</strong>
                             {post.eventDetails.upiId && <span className="text-[10px] text-slate-400 block">UPI: {post.eventDetails.upiId}</span>}
                           </div>
@@ -514,23 +514,23 @@ export default function WallPage() {
                   </div>
                 ) : post.type === "announcement" ? (
                   /* Announcement Card Render */
-                  <div className="mt-3 bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200/60 dark:border-amber-900/60 p-4 rounded-2xl space-y-2">
-                    <div className="flex items-center space-x-1.5 text-amber-700 dark:text-amber-300 font-black text-xs uppercase tracking-wider">
+                  <div className="mt-3 bg-amber-50/80 border border-amber-200/60 p-4 rounded-2xl space-y-2">
+                    <div className="flex items-center space-x-1.5 text-amber-700 font-black text-xs uppercase tracking-wider">
                       <Megaphone className="w-4 h-4 shrink-0 text-amber-600" />
                       <span>Community Announcement</span>
                     </div>
-                    <p className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 leading-relaxed whitespace-pre-wrap">
+                    <p className="text-xs sm:text-sm font-semibold text-slate-800 leading-relaxed whitespace-pre-wrap">
                       {post.content}
                     </p>
                   </div>
                 ) : (
                   /* Regular Text / Image Post */
                   <div className="space-y-3">
-                    <p className="mt-3 text-xs sm:text-sm text-slate-800 dark:text-slate-100 font-medium leading-relaxed whitespace-pre-wrap">
+                    <p className="mt-3 text-xs sm:text-sm text-slate-800 font-medium leading-relaxed whitespace-pre-wrap">
                       {post.content}
                     </p>
                     {post.eventDetails?.poster && (
-                      <div className="rounded-xl overflow-hidden max-h-[300px] border border-slate-200 dark:border-slate-700">
+                      <div className="rounded-xl overflow-hidden max-h-[300px] border border-slate-200">
                         <img src={post.eventDetails.poster} alt="Attachment" className="w-full object-cover" />
                       </div>
                     )}
@@ -538,13 +538,13 @@ export default function WallPage() {
                 )}
 
                 {/* Interaction Footer (Likes & Comments) */}
-                <div className="flex items-center space-x-4 pt-3 border-t border-slate-100 dark:border-slate-700/60">
+                <div className="flex items-center space-x-4 pt-3 border-t border-slate-100">
                   <button
                     onClick={() => handleLike(post._id)}
                     className={`flex items-center space-x-1.5 text-xs font-bold py-1.5 px-3 rounded-xl transition-all border cursor-pointer ${
                       hasLiked
-                        ? "bg-rose-50 dark:bg-rose-950/40 text-rose-500 border-rose-200 dark:border-rose-800"
-                        : "bg-slate-50 dark:bg-slate-900/40 text-slate-500 dark:text-slate-400 hover:bg-slate-100 border-slate-200/60 dark:border-slate-700"
+                        ? "bg-rose-50 text-rose-500 border-rose-200"
+                        : "bg-slate-50 text-slate-500 hover:bg-slate-100 border-slate-200/60"
                     }`}
                   >
                     <Heart className={`w-3.5 h-3.5 ${hasLiked ? "fill-rose-500 text-rose-500" : ""}`} />
@@ -555,8 +555,8 @@ export default function WallPage() {
                     onClick={() => toggleComments(post._id)}
                     className={`flex items-center space-x-1.5 text-xs font-bold py-1.5 px-3 rounded-xl transition-all border cursor-pointer ${
                       expandedComments[post._id]
-                        ? "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800"
-                        : "bg-slate-50 dark:bg-slate-900/40 text-slate-500 dark:text-slate-400 hover:bg-slate-100 border-slate-200/60 dark:border-slate-700"
+                        ? "bg-indigo-50 text-indigo-600 border-indigo-200"
+                        : "bg-slate-50 text-slate-500 hover:bg-slate-100 border-slate-200/60"
                     }`}
                   >
                     <MessageSquare className="w-3.5 h-3.5" />
@@ -566,16 +566,16 @@ export default function WallPage() {
 
                 {/* Expandable Comments Section */}
                 {expandedComments[post._id] && (
-                  <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 space-y-3">
+                  <div className="mt-3 pt-3 border-t border-slate-100 space-y-3">
                     {post.replies && post.replies.length > 0 ? (
                       <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
                         {post.replies.map((reply: any) => (
                           <div
                             key={reply._id}
-                            className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl text-xs leading-relaxed text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-slate-800"
+                            className="bg-slate-50 p-3 rounded-xl text-xs leading-relaxed text-slate-700 border border-slate-100"
                           >
                             <div className="flex justify-between items-center mb-1">
-                              <span className="font-bold text-slate-900 dark:text-slate-100">
+                              <span className="font-bold text-slate-900">
                                 {reply.author?.name || "Member"}
                               </span>
                               <span className="text-[9px] text-slate-400 font-medium">
@@ -605,11 +605,11 @@ export default function WallPage() {
                         onChange={(e) =>
                           setCommentInputs({ ...commentInputs, [post._id]: e.target.value })
                         }
-                        className="flex-1 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 px-3.5 py-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none text-slate-800 dark:text-slate-100 font-medium"
+                        className="flex-1 bg-slate-50 rounded-xl border border-slate-200 px-3.5 py-2 text-xs focus:ring-2 focus:ring-amber-500 outline-none text-slate-800 font-medium"
                       />
                       <button
                         type="submit"
-                        className="py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition cursor-pointer shadow-xs"
+                        className="py-2 px-4 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs transition cursor-pointer shadow-xs border-0"
                       >
                         Post
                       </button>
@@ -625,7 +625,7 @@ export default function WallPage() {
       {/* Infinite scroll sentinel */}
       <div ref={sentinelRef} className="flex justify-center py-4">
         {loadingMore && (
-          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-600" />
+          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-amber-600" />
         )}
         {!hasMore && posts.length > 0 && !loading && (
           <p className="text-xs font-semibold text-slate-400">You&apos;re all caught up ✓</p>
@@ -635,33 +635,33 @@ export default function WallPage() {
       {/* ── PAY CONTRIBUTION MODAL ────────────────────────────────────── */}
       {contributePost && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 w-full max-w-md rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-5 animate-in zoom-in-95 duration-150">
-            <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-700">
-              <div className="flex items-center space-x-2 text-emerald-600 dark:text-emerald-400 font-bold text-base">
+          <div className="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border border-slate-100 space-y-5 animate-in zoom-in-95 duration-150">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+              <div className="flex items-center space-x-2 text-emerald-600 font-bold text-base">
                 <DollarSign className="w-5 h-5" />
                 <span>Pay Event Contribution</span>
               </div>
               <button
                 onClick={() => setContributePost(null)}
-                className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 cursor-pointer"
+                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 cursor-pointer border-0 bg-transparent"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="bg-emerald-50/70 dark:bg-emerald-950/40 p-4 rounded-2xl border border-emerald-100 dark:border-emerald-900/60 space-y-2">
-              <h4 className="text-sm font-bold text-emerald-950 dark:text-emerald-100">
+            <div className="bg-emerald-50/70 p-4 rounded-2xl border border-emerald-100 space-y-2">
+              <h4 className="text-sm font-bold text-emerald-950">
                 {contributePost.eventDetails?.title}
               </h4>
-              <p className="text-xs text-slate-600 dark:text-slate-300">
+              <p className="text-xs text-slate-600">
                 Fee: <strong>₹{contributePost.eventDetails?.contributionFee}</strong>
               </p>
               {contributePost.eventDetails?.upiId && (
-                <div className="pt-2 border-t border-emerald-200/60 dark:border-emerald-800 flex items-center justify-between text-xs">
-                  <span className="text-slate-600 dark:text-slate-400">UPI ID: <strong className="text-emerald-700 dark:text-emerald-300">{contributePost.eventDetails.upiId}</strong></span>
+                <div className="pt-2 border-t border-emerald-200/60 flex items-center justify-between text-xs">
+                  <span className="text-slate-600">UPI ID: <strong className="text-emerald-700">{contributePost.eventDetails.upiId}</strong></span>
                   <a
                     href={`upi://pay?pa=${encodeURIComponent(contributePost.eventDetails.upiId)}&pn=EventContribution&am=${contributePost.eventDetails.contributionFee}&cu=INR`}
-                    className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 hover:underline"
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 hover:underline"
                   >
                     Open UPI App <ExternalLink className="w-3 h-3" />
                   </a>
@@ -671,7 +671,7 @@ export default function WallPage() {
 
             <form onSubmit={handleSubmitContribution} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Contribution Amount (₹)
                 </label>
                 <input
@@ -680,12 +680,12 @@ export default function WallPage() {
                   min="1"
                   value={contribAmount}
                   onChange={(e) => setContribAmount(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 outline-none"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 rounded-xl border border-slate-200 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500 outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Transaction Reference / UTR Number (Optional)
                 </label>
                 <input
@@ -693,7 +693,7 @@ export default function WallPage() {
                   placeholder="e.g. 329019238120 or UPI Ref ID"
                   value={transactionId}
                   onChange={(e) => setTransactionId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 outline-none"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 rounded-xl border border-slate-200 text-sm font-medium text-slate-800 focus:ring-2 focus:ring-emerald-500 outline-none"
                 />
               </div>
 
@@ -701,7 +701,7 @@ export default function WallPage() {
                 <button
                   type="submit"
                   disabled={submittingContrib}
-                  className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold shadow-md transition flex items-center justify-center gap-2 cursor-pointer border-0"
                 >
                   <Check className="w-4 h-4" /> {submittingContrib ? "Confirming..." : "Submit Contribution & Accept RSVP"}
                 </button>
@@ -714,19 +714,19 @@ export default function WallPage() {
       {/* ── ORGANIZER RSVP & CONTRIBUTIONS DASHBOARD MODAL ─────────────── */}
       {organizerModalPost && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 w-full max-w-2xl rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-5 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-150">
-            <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-700">
+          <div className="bg-white w-full max-w-2xl rounded-3xl p-6 shadow-2xl border border-slate-100 space-y-5 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-150">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-100">
               <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                <h3 className="text-base font-bold text-slate-900">
                   Event RSVP & Contribution Dashboard
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-slate-500">
                   {organizerModalPost.eventDetails?.title}
                 </p>
               </div>
               <button
                 onClick={() => setOrganizerModalPost(null)}
-                className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 cursor-pointer"
+                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 cursor-pointer border-0 bg-transparent"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -734,42 +734,42 @@ export default function WallPage() {
 
             {/* Stats Summary Bar */}
             <div className="grid grid-cols-4 gap-2 text-center">
-              <div className="bg-emerald-50 dark:bg-emerald-950/50 p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-800">
-                <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 block">Accepted</span>
-                <span className="text-base font-black text-emerald-900 dark:text-emerald-100">
+              <div className="bg-emerald-50 p-2.5 rounded-xl border border-emerald-200">
+                <span className="text-[10px] font-bold text-emerald-700 block">Accepted</span>
+                <span className="text-base font-black text-emerald-900">
                   {extractMemberList(organizerModalPost.rsvps?.going).length}
                 </span>
               </div>
 
-              <div className="bg-amber-50 dark:bg-amber-950/50 p-2.5 rounded-xl border border-amber-200 dark:border-amber-800">
-                <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 block">Tentative</span>
-                <span className="text-base font-black text-amber-900 dark:text-amber-100">
+              <div className="bg-amber-50 p-2.5 rounded-xl border border-amber-200">
+                <span className="text-[10px] font-bold text-amber-700 block">Tentative</span>
+                <span className="text-base font-black text-amber-900">
                   {extractMemberList(organizerModalPost.rsvps?.maybe).length}
                 </span>
               </div>
 
-              <div className="bg-rose-50 dark:bg-rose-950/50 p-2.5 rounded-xl border border-rose-200 dark:border-rose-800">
-                <span className="text-[10px] font-bold text-rose-700 dark:text-rose-300 block">Declined</span>
-                <span className="text-base font-black text-rose-900 dark:text-rose-100">
+              <div className="bg-rose-50 p-2.5 rounded-xl border border-rose-200">
+                <span className="text-[10px] font-bold text-rose-700 block">Declined</span>
+                <span className="text-base font-black text-rose-900">
                   {extractMemberList(organizerModalPost.rsvps?.cant).length}
                 </span>
               </div>
 
-              <div className="bg-indigo-50 dark:bg-indigo-950/50 p-2.5 rounded-xl border border-indigo-200 dark:border-indigo-800">
-                <span className="text-[10px] font-bold text-indigo-700 dark:text-indigo-300 block">Collected</span>
-                <span className="text-base font-black text-indigo-900 dark:text-indigo-100">
+              <div className="bg-indigo-50 p-2.5 rounded-xl border border-indigo-200">
+                <span className="text-[10px] font-bold text-indigo-700 block">Collected</span>
+                <span className="text-base font-black text-indigo-900">
                   ₹{(organizerModalPost.eventDetails?.contributions || []).reduce((sum, c) => sum + (c.amount || 0), 0)}
                 </span>
               </div>
             </div>
 
             {/* Navigation Tabs */}
-            <div className="flex border-b border-slate-200 dark:border-slate-700">
+            <div className="flex border-b border-slate-200">
               <button
                 onClick={() => setOrganizerTab("accepted")}
                 className={`flex-1 py-2 text-xs font-bold border-b-2 text-center transition cursor-pointer ${
                   organizerTab === "accepted"
-                    ? "border-emerald-600 text-emerald-600 dark:text-emerald-400"
+                    ? "border-emerald-600 text-emerald-600"
                     : "border-transparent text-slate-500 hover:text-slate-800"
                 }`}
               >
@@ -780,7 +780,7 @@ export default function WallPage() {
                 onClick={() => setOrganizerTab("tentative")}
                 className={`flex-1 py-2 text-xs font-bold border-b-2 text-center transition cursor-pointer ${
                   organizerTab === "tentative"
-                    ? "border-amber-500 text-amber-600 dark:text-amber-400"
+                    ? "border-amber-500 text-amber-600"
                     : "border-transparent text-slate-500 hover:text-slate-800"
                 }`}
               >
@@ -791,7 +791,7 @@ export default function WallPage() {
                 onClick={() => setOrganizerTab("declined")}
                 className={`flex-1 py-2 text-xs font-bold border-b-2 text-center transition cursor-pointer ${
                   organizerTab === "declined"
-                    ? "border-rose-600 text-rose-600 dark:text-rose-400"
+                    ? "border-rose-600 text-rose-600"
                     : "border-transparent text-slate-500 hover:text-slate-800"
                 }`}
               >
@@ -802,7 +802,7 @@ export default function WallPage() {
                 onClick={() => setOrganizerTab("contributions")}
                 className={`flex-1 py-2 text-xs font-bold border-b-2 text-center transition cursor-pointer ${
                   organizerTab === "contributions"
-                    ? "border-indigo-600 text-indigo-600 dark:text-indigo-400"
+                    ? "border-indigo-600 text-indigo-600"
                     : "border-transparent text-slate-500 hover:text-slate-800"
                 }`}
               >
@@ -815,13 +815,13 @@ export default function WallPage() {
               {organizerTab === "accepted" && (
                 extractMemberList(organizerModalPost.rsvps?.going).length > 0 ? (
                   extractMemberList(organizerModalPost.rsvps?.going).map((m) => (
-                    <div key={m._id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
+                    <div key={m._id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100">
                       <div className="flex items-center space-x-3">
                         <div className="w-8 h-8 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center">
                           {m.name.charAt(0)}
                         </div>
                         <div>
-                          <h5 className="text-xs font-bold text-slate-800 dark:text-slate-100">{m.name}</h5>
+                          <h5 className="text-xs font-bold text-slate-800">{m.name}</h5>
                           <span className="text-[10px] text-slate-500">{m.mobileNumber || m.phone || "No phone"}</span>
                         </div>
                       </div>
@@ -830,7 +830,7 @@ export default function WallPage() {
                           href={getWhatsAppUrl(m.mobileNumber || m.phone)}
                           target="_blank"
                           rel="noreferrer"
-                          className="px-3 py-1 bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold rounded-lg hover:underline"
+                          className="px-3 py-1 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-lg hover:underline"
                         >
                           WhatsApp
                         </a>
@@ -845,13 +845,13 @@ export default function WallPage() {
               {organizerTab === "tentative" && (
                 extractMemberList(organizerModalPost.rsvps?.maybe).length > 0 ? (
                   extractMemberList(organizerModalPost.rsvps?.maybe).map((m) => (
-                    <div key={m._id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
+                    <div key={m._id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100">
                       <div className="flex items-center space-x-3">
                         <div className="w-8 h-8 rounded-full bg-amber-500 text-white font-bold text-xs flex items-center justify-center">
                           {m.name.charAt(0)}
                         </div>
                         <div>
-                          <h5 className="text-xs font-bold text-slate-800 dark:text-slate-100">{m.name}</h5>
+                          <h5 className="text-xs font-bold text-slate-800">{m.name}</h5>
                           <span className="text-[10px] text-slate-500">{m.mobileNumber || m.phone || "No phone"}</span>
                         </div>
                       </div>
@@ -865,13 +865,13 @@ export default function WallPage() {
               {organizerTab === "declined" && (
                 extractMemberList(organizerModalPost.rsvps?.cant).length > 0 ? (
                   extractMemberList(organizerModalPost.rsvps?.cant).map((m) => (
-                    <div key={m._id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
+                    <div key={m._id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100">
                       <div className="flex items-center space-x-3">
                         <div className="w-8 h-8 rounded-full bg-rose-600 text-white font-bold text-xs flex items-center justify-center">
                           {m.name.charAt(0)}
                         </div>
                         <div>
-                          <h5 className="text-xs font-bold text-slate-800 dark:text-slate-100">{m.name}</h5>
+                          <h5 className="text-xs font-bold text-slate-800">{m.name}</h5>
                           <span className="text-[10px] text-slate-500">{m.mobileNumber || m.phone || "No phone"}</span>
                         </div>
                       </div>
@@ -887,13 +887,13 @@ export default function WallPage() {
                   (organizerModalPost.eventDetails?.contributions || []).map((c, idx) => {
                     const contributor = typeof c.userId === "object" && c.userId !== null ? c.userId : null;
                     return (
-                      <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-indigo-50/50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50">
+                      <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-indigo-50/50 border border-indigo-100">
                         <div className="flex items-center space-x-3">
                           <div className="w-8 h-8 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center">
                             {contributor?.name ? contributor.name.charAt(0) : "C"}
                           </div>
                           <div>
-                            <h5 className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                            <h5 className="text-xs font-bold text-slate-800">
                               {contributor?.name || "Contributor Member"}
                             </h5>
                             {c.transactionId && (
@@ -902,7 +902,7 @@ export default function WallPage() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 block">₹{c.amount}</span>
+                          <span className="text-xs font-black text-emerald-600 block">₹{c.amount}</span>
                           {c.paidAt && <span className="text-[9px] text-slate-400">{formatTime(c.paidAt)}</span>}
                         </div>
                       </div>
