@@ -2,8 +2,10 @@ import { NextRequest } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { Post } from "@/models/Post";
+import { Community } from "@/models/Community";
 import { getTenantId } from "@/lib/tenant";
 import { hashPassword } from "@/lib/auth-crypto";
+import { notifyAdminNewRegistration } from "@/lib/msgservice";
 
 export async function POST(request: NextRequest) {
   try {
@@ -153,6 +155,56 @@ export async function POST(request: NextRequest) {
     // Explicitly update status in database to pending to ensure field is set in MongoDB
     await User.updateOne({ _id: newUser._id }, { $set: { status: "pending" } });
 
+    // Fetch community name
+    let communityName = "Community Circle";
+    if (communityId) {
+      const commObj = await Community.findById(communityId).select("name").lean();
+      if (commObj?.name) {
+        communityName = commObj.name;
+      }
+    }
+
+    // Notify Community Admin ONLY via WhatsApp (excluding super-admin and fallback numbers)
+    try {
+      const adminList: string[] = [];
+      if (communityId) {
+        // Query users who are assigned as community admin for this community
+        const communityAdmins = await User.find({
+          communityId: communityId,
+          role: "admin",
+        }).select("mobileNumber phone").lean();
+
+        for (const adm of communityAdmins) {
+          const num = adm.mobileNumber || adm.phone;
+          const cleanNum = num ? num.replace(/\D/g, "") : "";
+          if (
+            cleanNum &&
+            cleanNum !== "9999912345" &&
+            cleanNum !== "919644019992" &&
+            cleanNum !== "9644019992"
+          ) {
+            adminList.push(num);
+          }
+        }
+      }
+
+      if (adminList.length > 0) {
+        await notifyAdminNewRegistration({
+          adminPhoneNumbers: adminList,
+          memberName: newUser.name,
+          memberMobile: finalMobileNumber,
+          memberCity: finalCity || "Not specified",
+          communityName,
+          memberId: String(newUser._id),
+        });
+      } else {
+        console.log(`[signup route] No dedicated Community Admin found for communityId: ${communityId}. Notification omitted.`);
+      }
+    } catch (notifyErr: any) {
+      console.error("[signup route] Failed to notify admin via WhatsApp:", notifyErr.message || notifyErr);
+    }
+
+
     // Remove password from response and ensure status is pending
     const userResponse = newUser.toObject();
     delete userResponse.password;
@@ -163,3 +215,4 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: error.message || "Failed to sign up" }, { status: 400 });
   }
 }
+

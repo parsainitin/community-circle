@@ -15,13 +15,33 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: "Missing mobileNumber or password" }, { status: 400 });
     }
 
-    const candidates = await User.find({ mobileNumber: cleanMobile });
-    const user = candidates.find((u) => verifyPassword(cleanPassword, u.password || ""));
+    const digits = cleanMobile.replace(/\D/g, "");
+    const candidates = await User.find({
+      $or: [
+        { mobileNumber: cleanMobile },
+        { mobile: cleanMobile },
+        { phone: cleanMobile },
+        { email: cleanMobile.toLowerCase() },
+        ...(digits.length >= 10 ? [{ mobile: { $regex: digits.slice(-10) + "$" } }] : []),
+        ...(digits.length >= 10 ? [{ mobileNumber: { $regex: digits.slice(-10) + "$" } }] : []),
+        ...(digits.length >= 10 ? [{ phone: { $regex: digits.slice(-10) + "$" } }] : []),
+      ],
+    });
+
+    const user = candidates.find((u) =>
+      verifyPassword(cleanPassword, u.password || (u as any).passwordHash || "")
+    );
+
     if (!user) {
       return Response.json({ error: "Invalid mobile number or password" }, { status: 401 });
     }
 
-    if (user.role !== "super-admin" && user.status && user.status !== "approved") {
+    const isApprovedStatus = !user.status || user.status === "approved" || (user.status as string) === "active";
+
+    const isAdminRole =
+      user.role === "admin" || user.role === "super-admin" || (user.role as any) === "COMMUNITY_ADMIN";
+
+    if (!isAdminRole && !isApprovedStatus) {
       if (user.status === "pending") {
         return Response.json(
           { error: "Your account registration is pending approval by your community admin." },
@@ -35,6 +55,7 @@ export async function POST(request: NextRequest) {
         );
       }
     }
+
 
     // Remove password from response
     const userResponse = user.toObject();

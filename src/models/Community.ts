@@ -10,6 +10,14 @@ export interface ICommunity extends Document {
   kulDevis?: string[];
   passwordResetKey?: string;
   upiId?: string;
+  modules?: {
+    directory?: boolean;
+    marketplace?: boolean;
+    panchang?: boolean;
+    booking?: boolean;
+    events?: boolean;
+    donations?: boolean;
+  };
   admins: mongoose.Types.ObjectId[];
   isActive: boolean;
   createdAt: Date;
@@ -34,6 +42,14 @@ const CommunitySchema: Schema<ICommunity> = new Schema(
     kulDevis: [{ type: String, trim: true }],
     passwordResetKey: { type: String, trim: true, default: "RESET123" },
     upiId: { type: String, trim: true },
+    modules: {
+      directory: { type: Boolean, default: true },
+      marketplace: { type: Boolean, default: true },
+      panchang: { type: Boolean, default: true },
+      booking: { type: Boolean, default: true },
+      events: { type: Boolean, default: true },
+      donations: { type: Boolean, default: true },
+    },
     admins: [{ type: Schema.Types.ObjectId, ref: "User" }],
     isActive: { type: Boolean, default: true },
   },
@@ -43,7 +59,8 @@ const CommunitySchema: Schema<ICommunity> = new Schema(
 if (
   mongoose.models.Community &&
   (!mongoose.models.Community.schema.path("cities") ||
-   !mongoose.models.Community.schema.path("upiId"))
+   !mongoose.models.Community.schema.path("upiId") ||
+   !mongoose.models.Community.schema.path("modules"))
 ) {
   delete (mongoose.models as any).Community;
 }

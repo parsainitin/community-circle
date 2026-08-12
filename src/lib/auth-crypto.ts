@@ -20,7 +20,18 @@ export function verifyPassword(password: string, storedHash: string): boolean {
     return crypto.timingSafeEqual(Buffer.from(derivedKey, "hex"), Buffer.from(originalDerivedKey, "hex"));
   }
 
+  // Handle pbkdf2Sync hashes from platform onboarding
+  if (storedHash.length === 128) {
+    try {
+      const pbkdf2Hash = crypto.pbkdf2Sync(password, "mysocialclan-salt-2026", 1000, 64, "sha512").toString("hex");
+      if (crypto.timingSafeEqual(Buffer.from(pbkdf2Hash, "hex"), Buffer.from(storedHash, "hex"))) {
+        return true;
+      }
+    } catch {}
+  }
+
   // Backward compatibility fallback for legacy SHA-256 hashes
   const legacySha256 = crypto.createHash("sha256").update(password).digest("hex");
   return legacySha256 === storedHash;
 }
+
