@@ -20,8 +20,27 @@ interface Community {
   gotras?: string[];
   kulDevis?: string[];
   upiId?: string;
+  modules?: {
+    directory?: boolean;
+    marketplace?: boolean;
+    panchang?: boolean;
+    booking?: boolean;
+    events?: boolean;
+    donations?: boolean;
+  };
   admins: AdminUser[];
   isActive: boolean;
+  createdAt: string;
+}
+
+interface CommunityRequestItem {
+  _id: string;
+  name: string;
+  subdomain: string;
+  description?: string;
+  adminName: string;
+  adminMobile: string;
+  status: "pending" | "approved" | "rejected";
   createdAt: string;
 }
 
@@ -29,6 +48,7 @@ export default function SuperAdminPage() {
   const { user, logout } = useAuth();
 
   const [communities, setCommunities] = useState<Community[]>([]);
+  const [creationRequests, setCreationRequests] = useState<CommunityRequestItem[]>([]);
   const [loadingList, setLoadingList] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -89,9 +109,58 @@ export default function SuperAdminPage() {
     }
   };
 
+  const fetchRequests = async () => {
+    try {
+      const res = await fetch("/api/admin/community-requests", {
+        headers: { "x-caller-mobile": user?.mobileNumber || "" },
+      });
+      if (res.ok) setCreationRequests(await res.json());
+    } catch {}
+  };
+
   useEffect(() => {
-    if (user) fetchCommunities();
+    if (user) {
+      fetchCommunities();
+      fetchRequests();
+    }
   }, [user]);
+
+  const handleApproveRequest = async (reqId: string, provisionNow: boolean = false) => {
+    try {
+      const res = await fetch(`/api/admin/community-requests/${reqId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          callerMobile: user?.mobileNumber,
+          status: "approved",
+          provisionNow,
+        }),
+      });
+      if (res.ok) {
+        showToast("Request approved & marked for offline setup!");
+        fetchRequests();
+        fetchCommunities();
+      }
+    } catch {}
+  };
+
+  const handleRejectRequest = async (reqId: string) => {
+    if (!confirm("Reject this community creation request?")) return;
+    try {
+      const res = await fetch(`/api/admin/community-requests/${reqId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          callerMobile: user?.mobileNumber,
+          status: "rejected",
+        }),
+      });
+      if (res.ok) {
+        showToast("Request rejected");
+        fetchRequests();
+      }
+    } catch {}
+  };
 
   const handleCreateCommunity = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -231,6 +300,25 @@ export default function SuperAdminPage() {
     }
   };
 
+  const handleToggleActiveStatus = async (c: Community) => {
+    try {
+      const res = await fetch(`/api/admin/communities/${c._id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          callerMobile: user?.mobileNumber,
+          name: c.name,
+          subdomain: c.subdomain,
+          isActive: !c.isActive,
+        }),
+      });
+      if (res.ok) {
+        showToast(`Community "${c.name}" status updated to ${!c.isActive ? "Active" : "Inactive"}`);
+        fetchCommunities();
+      }
+    } catch {}
+  };
+
   const handleDeleteCommunity = async (c: Community) => {
     if (!confirm(`Delete "${c.name}"? This cannot be undone. Its admins will be demoted to regular members.`)) return;
     setDeletingId(c._id);
@@ -293,6 +381,64 @@ export default function SuperAdminPage() {
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl text-xs font-semibold">
             {error}
+          </div>
+        )}
+
+        {/* Pending Offline Creation Requests Section */}
+        {creationRequests.length > 0 && (
+          <div className="bg-amber-50/60 border border-amber-200 rounded-3xl p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
+                <h2 className="text-xs font-extrabold text-amber-950 uppercase tracking-wider">
+                  Pending Community Creation Requests ({creationRequests.filter((r) => r.status === "pending").length})
+                </h2>
+              </div>
+            </div>
+
+            <div className="space-y-2.5">
+              {creationRequests.map((req) => (
+                <div
+                  key={req._id}
+                  className="bg-white p-3.5 rounded-2xl border border-amber-200/80 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs"
+                >
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <span className="font-black text-slate-900 text-sm">{req.name}</span>
+                      <span className="font-mono text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-md text-[11px]">
+                        {req.subdomain}.mysocialclan.com
+                      </span>
+                    </div>
+                    <p className="text-slate-500 mt-1">
+                      Applicant: <strong>{req.adminName}</strong> ({req.adminMobile})
+                    </p>
+                    <span className="text-[10px] text-slate-400">
+                      Requested on {new Date(req.createdAt).toLocaleDateString()} · Status:{" "}
+                      <strong className={req.status === "approved" ? "text-emerald-600" : req.status === "rejected" ? "text-red-500" : "text-amber-600"}>
+                        {req.status.toUpperCase()}
+                      </strong>
+                    </span>
+                  </div>
+
+                  {req.status === "pending" && (
+                    <div className="flex items-center space-x-2 w-full sm:w-auto shrink-0">
+                      <button
+                        onClick={() => handleApproveRequest(req._id, true)}
+                        className="flex-1 sm:flex-none py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs border-0 cursor-pointer transition-all"
+                      >
+                        Approve & Provision
+                      </button>
+                      <button
+                        onClick={() => handleRejectRequest(req._id)}
+                        className="py-1.5 px-2.5 bg-red-100 hover:bg-red-200 text-red-600 rounded-xl font-bold text-xs border-0 cursor-pointer transition-all"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -476,9 +622,17 @@ export default function SuperAdminPage() {
                       </div>
                     </div>
                     <div className="flex items-center space-x-1.5 shrink-0">
-                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${c.isActive ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-400"}`}>
+                      <button
+                        onClick={() => handleToggleActiveStatus(c)}
+                        className={`text-[9px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider border-0 cursor-pointer transition-all ${
+                          c.isActive
+                            ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                            : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                        }`}
+                        title="Click to toggle active status"
+                      >
                         {c.isActive ? "Active" : "Inactive"}
-                      </span>
+                      </button>
                       <button
                         onClick={() => editingCommunity === c._id ? setEditingCommunity(null) : openEditForm(c)}
                         className="p-1.5 text-slate-300 hover:text-violet-500 hover:bg-violet-50 rounded-lg transition-all border-0 cursor-pointer bg-transparent"
