@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
-import { User } from "@/models/User";
+import { User, getTenantUserModel } from "@/models/User";
 import { Community } from "@/models/Community";
 import { hashPassword } from "@/lib/auth-crypto";
 import { sendWhatsAppMessage } from "@/lib/msgservice";
@@ -12,6 +12,7 @@ interface RouteParams {
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     await dbConnect();
+    const UserModel = await getTenantUserModel(request);
     const { id } = await params;
     const { searchParams } = new URL(request.url);
     const action = searchParams.get("action"); // "approve" | "reject"
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const targetUser = await User.findById(id);
+    const targetUser = await UserModel.findById(id);
     if (!targetUser) {
       return new Response(
         renderHtmlPage({

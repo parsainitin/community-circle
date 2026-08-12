@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
-import { User } from "@/models/User";
+import { User, getTenantUserModel } from "@/models/User";
 import { Community } from "@/models/Community";
 import { hashPassword } from "@/lib/auth-crypto";
 import { sendWhatsAppMessage } from "@/lib/msgservice";
@@ -13,6 +13,7 @@ interface RouteParams {
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
     await dbConnect();
+    const UserModel = await getTenantUserModel(request);
     const { id } = await params;
     const body = await request.json();
     const { callerMobile, action, password, isPropertyManager } = body; // action: "approve" | "reject" | "toggle_property_manager"
@@ -25,12 +26,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return Response.json({ error: "Action must be 'approve', 'reject', or 'toggle_property_manager'" }, { status: 400 });
     }
 
-    const caller = await User.findOne({ mobileNumber: callerMobile }).lean();
+    const caller = await UserModel.findOne({ mobileNumber: callerMobile }).lean();
     if (!caller || (caller.role !== "admin" && caller.role !== "super-admin")) {
       return Response.json({ error: "Forbidden: Only community admins can manage member roles" }, { status: 403 });
     }
 
-    const targetUser = await User.findById(id);
+    const targetUser = await UserModel.findById(id);
     if (!targetUser) {
       return Response.json({ error: "Member not found" }, { status: 404 });
     }

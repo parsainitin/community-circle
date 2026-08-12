@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
-import { User } from "@/models/User";
+import { User, getTenantUserModel } from "@/models/User";
 import { getTenantId } from "@/lib/tenant";
 import { hashPassword } from "@/lib/auth-crypto";
 
@@ -37,6 +37,7 @@ function normalizeBloodGroup(val?: any): string | undefined {
 export async function POST(request: NextRequest) {
   try {
     await dbConnect();
+    const UserModel = await getTenantUserModel(request);
     const body = await request.json();
     const { callerMobile, membersData } = body;
 
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: "Unauthorized: Admin mobile number required" }, { status: 401 });
     }
 
-    const caller = await User.findOne({ mobileNumber: callerHeaderMobile }).lean();
+    const caller = await UserModel.findOne({ mobileNumber: callerHeaderMobile }).lean();
     if (!caller || (caller.role !== "admin" && caller.role !== "super-admin")) {
       return Response.json({ error: "Forbidden: Only community admins can bulk upload members" }, { status: 403 });
     }
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Check if user already exists
-      const existing = await User.findOne({ mobileNumber });
+      const existing = await UserModel.findOne({ mobileNumber });
       if (existing) {
         skippedCount++;
         errors.push(`Row ${i + 1} (${name}): Mobile number ${mobileNumber} already registered`);
@@ -99,7 +100,7 @@ export async function POST(request: NextRequest) {
       if (rawEmail && String(rawEmail).trim() !== "") {
         const parsedEmail = String(rawEmail).trim().toLowerCase();
         if (parsedEmail.includes("@")) {
-          const existingEmail = await User.findOne({ email: parsedEmail });
+          const existingEmail = await UserModel.findOne({ email: parsedEmail });
           if (existingEmail) {
             skippedCount++;
             errors.push(`Row ${i + 1} (${name}): Email ${parsedEmail} is already registered`);
@@ -128,7 +129,7 @@ export async function POST(request: NextRequest) {
       const bloodGroup = normalizeBloodGroup(rawBlood);
 
       try {
-        await User.create({
+        await UserModel.create({
           name,
           phone: mobileNumber,
           mobileNumber,

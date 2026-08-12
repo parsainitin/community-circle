@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WhastFlow Dashboard | WhatsApp Management</title>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-dark: #0b0f19;
+      --bg-card: #131b2e;
+      --bg-card-hover: #1c2742;
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --accent: #06b6d4;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #1e293b;
+      --glass-bg: rgba(19, 27, 46, 0.75);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+    }
+
+    body {
+      background: var(--bg-dark);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Navbar */
+    .navbar {
+      background: var(--glass-bg);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 800;
+      font-size: 1.35rem;
+      background: linear-gradient(135deg, #a855f7, #6366f1, #06b6d4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-icon {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 1.2rem;
+      box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+    }
+
+    .nav-controls {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .tag-config-box {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(15, 23, 42, 0.8);
+      padding: 0.3rem 0.6rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+
+    .tag-input {
+      width: 90px !important;
+      padding: 0.3rem 0.6rem !important;
+      font-size: 0.85rem !important;
+      border-radius: 8px !important;
+      text-align: center;
+      font-weight: 700;
+      color: var(--accent) !important;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 0.9rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border);
+    }
+
+    .status-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+    }
+
+    .status-dot.online { background: var(--success); box-shadow: 0 0 10px var(--success); }
+    .status-dot.connecting { background: var(--warning); box-shadow: 0 0 10px var(--warning); }
+    .status-dot.offline { background: var(--danger); box-shadow: 0 0 10px var(--danger); }
+
+    /* Layout */
+    .main-container {
+      max-width: 1200px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+      width: 100%;
+      flex: 1;
+    }
+
+    /* Tabs */
+    .tabs-header {
+      display: flex;
+      gap: 0.5rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      padding: 0.75rem 1.25rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s ease;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-main);
+    }
+
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.75rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      margin-bottom: 1.5rem;
+    }
+
+    .card-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .card-desc {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 1.5rem;
+    }
+
+    /* QR Code Display */
+    .qr-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      background: rgba(15, 23, 42, 0.6);
+      border-radius: 14px;
+      border: 1px dashed var(--border);
+      text-align: center;
+    }
+
+    .pairing-code-box {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: 6px;
+      color: var(--accent);
+      background: #0f172a;
+      padding: 1rem 2rem;
+      border-radius: 12px;
+      border: 2px solid var(--accent);
+      margin: 1rem 0;
+      font-family: monospace;
+    }
+
+    .qr-container {
+      width: 260px;
+      height: 260px;
+      background: white;
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 1.5rem 0;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+    }
+
+    .qr-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .connected-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      color: var(--success);
+      padding: 2rem;
+    }
+
+    .connected-icon {
+      font-size: 3.5rem;
+    }
+
+    /* Table */
+    .table-container {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    th, td {
+      padding: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    tr:hover {
+      background: var(--bg-card-hover);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.65rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .badge-pending { background: rgba(245, 158, 11, 0.2); color: var(--warning); border: 1px solid var(--warning); }
+    .badge-verified { background: rgba(16, 185, 129, 0.2); color: var(--success); border: 1px solid var(--success); }
+    .badge-rejected { background: rgba(239, 68, 68, 0.2); color: var(--danger); border: 1px solid var(--danger); }
+
+    /* Form Controls */
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text-main);
+      font-size: 0.95rem;
+      outline: none;
+      transition: border 0.2s;
+    }
+
+    input:focus, textarea:focus {
+      border-color: var(--primary);
+    }
+
+    .btn {
+      padding: 0.75rem 1.5rem;
+      border-radius: 10px;
+      border: none;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+      color: white;
+      box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-accent {
+      background: linear-gradient(135deg, var(--accent), #0284c7);
+      color: white;
+      box-shadow: 0 4px 15px rgba(6, 182, 212, 0.3);
+    }
+
+    .btn-primary:hover, .btn-accent:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .btn-success { background: var(--success); color: white; }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="brand">
+      <div class="brand-icon">⚡</div>
+      WhastFlow
+    </div>
+
+    <div class="nav-controls">
+      <!-- Dynamic Bot Tag Config -->
+      <div class="tag-config-box">
+        <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">Bot Tag:</span>
+        <input type="text" id="bot-tag-input" class="tag-input" value="@jbs" placeholder="@jbs">
+        <button class="btn btn-primary btn-sm" style="padding: 0.25rem 0.5rem;" onclick="saveBotTriggerTag()">Save</button>
+      </div>
+
+      <!-- Device Connection Status -->
+      <div class="status-badge" id="nav-status-badge">
+        <div class="status-dot connecting" id="nav-status-dot"></div>
+        <span id="nav-status-text">Checking Connection...</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Container -->
+  <div class="main-container">
+    
+    <!-- Navigation Tabs -->
+    <div class="tabs-header">
+      <button class="tab-btn active" onclick="switchTab('qr-tab')">📱 Device Link (QR or Phone)</button>
+      <button class="tab-btn" onclick="switchTab('groups-tab')">👥 Group Management</button>
+      <button class="tab-btn" onclick="switchTab('direct-tab')">💬 Direct Messaging</button>
+      <button class="tab-btn" onclick="switchTab('broadcast-tab')">📢 Group Broadcast</button>
+    </div>
+
+    <!-- TAB 1: QR CODE / PAIRING CODE DEVICE SCANNER -->
+    <div id="qr-tab" class="tab-content active">
+      <div class="card">
+        <h2 class="card-title">Connect WhatsApp Device</h2>
+        <p class="card-desc">Choose to link via <b>QR Code Scan</b> or by entering your <b>Phone Number</b> (8-digit Pairing Code).</p>
+
+        <!-- Method Selection -->
+        <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; justify-content: center;">
+          <button class="btn btn-primary btn-sm" id="btn-mode-qr" onclick="setLinkMode('qr')">📷 QR Code Scan</button>
+          <button class="btn btn-accent btn-sm" id="btn-mode-phone" onclick="setLinkMode('phone')">🔢 Link by Phone Number</button>
+        </div>
+
+        <!-- Phone Number Pairing Form (Hidden by default) -->
+        <div id="phone-pairing-box" style="display: none; max-width: 450px; margin: 0 auto 1.5rem auto; background: #0f172a; padding: 1.25rem; border-radius: 12px; border: 1px solid var(--border);">
+          <label for="pairing-phone">Enter Phone Number with Country Code:</label>
+          <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+            <input type="text" id="pairing-phone" placeholder="e.g. 917999782728" style="flex: 1;">
+            <button class="btn btn-accent btn-sm" onclick="requestPairingCode()">Get Pairing Code</button>
+          </div>
+        </div>
+
+        <div class="qr-wrapper" id="qr-wrapper-content">
+          <div class="status-badge">
+            <div class="status-dot connecting"></div>
+            <span>Waiting for Connection Code...</span>
+          </div>
+
+          <div class="qr-container">
+            <div style="color: #64748b; font-size: 0.9rem;">Loading QR Code...</div>
+          </div>
+
+          <p style="color: var(--text-muted); font-size: 0.9rem; max-width: 400px;">
+            Open <b>WhatsApp</b> on your phone &rarr; <b>Linked Devices</b> &rarr; <b>Link a Device</b> and point your camera at the QR code.
+          </p>
+
+          <button class="btn btn-primary" style="margin-top: 1.5rem;" onclick="fetchInstanceStatus()">
+            🔄 Refresh Status / Code
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: GROUPS MANAGEMENT -->
+    <div id="groups-tab" class="tab-content">
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+          <div>
+            <h2 class="card-title">Registered WhatsApp Groups</h2>
+            <p class="card-desc">WhastFlow processes group messages tagged with <b id="group-desc-tag" style="color: var(--accent);">@jbs</b>. Approve or reject groups to enable broadcasts.</p>
+          </div>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button class="btn btn-primary btn-sm" id="btn-sync-all" onclick="syncAllGroups()">⚡ Auto Sync All WhatsApp Groups</button>
+            <button class="btn btn-primary btn-sm" onclick="toggleRegisterModal()">➕ Add Manually</button>
+            <button class="btn btn-primary btn-sm" onclick="loadGroups()">🔄 Refresh</button>
+          </div>
+        </div>
+
+        <!-- Notification Banner -->
+        <div id="sync-banner" style="display: none; padding: 0.75rem 1rem; border-radius: 10px; margin-bottom: 1rem; font-size: 0.9rem; font-weight: 600;"></div>
+
+        <!-- Manual Registration Card -->
+        <div id="manual-reg-card" style="display: none; background: #0f172a; padding: 1.25rem; border-radius: 12px; margin-bottom: 1.5rem; border: 1px solid var(--border);">
+          <h3 style="font-size: 1rem; margin-bottom: 0.75rem;">Add Group Manually</h3>
+          <form onsubmit="handleManualGroupRegister(event)">
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+              <input type="text" id="reg-name" placeholder="Group Name (e.g. Dev Updates)" required style="flex: 1; min-width: 200px;">
+              <input type="text" id="reg-jid" placeholder="Group JID (e.g. 1203630XXXXX@g.us)" required style="flex: 1; min-width: 250px;">
+              <button type="submit" class="btn btn-success btn-sm">Save Group</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Group Name</th>
+                <th>Group JID</th>
+                <th>Status</th>
+                <th>Subscribed Topics</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="groups-table-body">
+              <tr>
+                <td colspan="5" style="text-align: center; color: var(--text-muted);">Loading groups...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: DIRECT MESSAGING -->
+    <div id="direct-tab" class="tab-content">
+      <div class="card">
+        <h2 class="card-title">Send Direct Message to Members</h2>
+        <p class="card-desc">Send individual WhatsApp messages directly to single or multiple member phone numbers with country code.</p>
+
+        <form id="direct-form" onsubmit="handleDirectMessageSubmit(event)">
+          <div class="form-group">
+            <label for="dm-numbers">Phone Number(s)</label>
+            <textarea id="dm-numbers" rows="3" placeholder="Enter phone numbers with country code (e.g. 917999782728 or one per line)" required></textarea>
+            <span style="font-size: 0.8rem; color: var(--text-muted);">Include country code without '+' sign (e.g. 917999782728 for India). If 10 digits entered, 91 is auto-added.</span>
+          </div>
+
+          <div class="form-group">
+            <label for="dm-message">Direct Message Text</label>
+            <textarea id="dm-message" rows="4" placeholder="Enter your direct message here..." required></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-accent" id="btn-send-direct">
+            💬 Send Direct Message
+          </button>
+        </form>
+
+        <div id="direct-result" style="margin-top: 1.5rem; display: none;" class="card">
+          <!-- Live Result -->
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: BROADCAST ENGINE -->
+    <div id="broadcast-tab" class="tab-content">
+      <div class="card">
+        <h2 class="card-title">Trigger Event Broadcast</h2>
+        <p class="card-desc">Send an event broadcast to all VERIFIED WhatsApp groups matching selected topics.</p>
+
+        <form id="broadcast-form" onsubmit="handleBroadcastSubmit(event)">
+          <div class="form-group">
+            <label for="bcast-title">Broadcast Title</label>
+            <input type="text" id="bcast-title" placeholder="e.g. 🎉 New Product Release!" required>
+          </div>
+
+          <div class="form-group">
+            <label for="bcast-content">Message Content</label>
+            <textarea id="bcast-content" rows="4" placeholder="Enter message text to broadcast to verified groups..." required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="bcast-topics">Target Topics (comma separated)</label>
+            <input type="text" id="bcast-topics" value="general" placeholder="e.g. general, announcements">
+          </div>
+
+          <button type="submit" class="btn btn-primary" id="btn-send-broadcast">
+            🚀 Enqueue Broadcast (5-7s Rate Limited)
+          </button>
+        </form>
+
+        <div id="broadcast-result" style="margin-top: 1.5rem; display: none;" class="card">
+          <!-- Live Result -->
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    let currentLinkMode = 'qr';
+
+    function setLinkMode(mode) {
+      currentLinkMode = mode;
+      document.getElementById('phone-pairing-box').style.display = mode === 'phone' ? 'block' : 'none';
+      fetchInstanceStatus();
+    }
+
+    function requestPairingCode() {
+      const num = document.getElementById('pairing-phone').value;
+      if (!num) { alert('Please enter your phone number with country code (e.g. 917999782728)'); return; }
+      fetchInstanceStatus(num);
+    }
+
+    // Tab Switcher
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+      event.target.classList.add('active');
+      document.getElementById(tabId).classList.add('active');
+
+      if (tabId === 'groups-tab') loadGroups();
+      if (tabId === 'qr-tab') fetchInstanceStatus();
+    }
+
+    // Bot Config Fetch & Save
+    async function loadBotConfig() {
+      try {
+        const res = await fetch('/api/config');
+        const data = await res.json();
+        if (data.success && data.triggerTag) {
+          document.getElementById('bot-tag-input').value = data.triggerTag;
+          document.getElementById('group-desc-tag').innerText = data.triggerTag;
+        }
+      } catch (err) {
+        console.error('Failed to load bot config:', err);
+      }
+    }
+
+    async function saveBotTriggerTag() {
+      const input = document.getElementById('bot-tag-input');
+      const newTag = input.value;
+      try {
+        const res = await fetch('/api/config', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ triggerTag: newTag })
+        });
+        const data = await res.json();
+        if (data.success) {
+          input.value = data.triggerTag;
+          document.getElementById('group-desc-tag').innerText = data.triggerTag;
+          alert(`Bot Trigger Tag updated to: ${data.triggerTag}`);
+        }
+      } catch (err) {
+        alert('Failed to save Bot Trigger Tag: ' + err.message);
+      }
+    }
+
+    function toggleRegisterModal() {
+      const card = document.getElementById('manual-reg-card');
+      card.style.display = card.style.display === 'none' ? 'block' : 'none';
+    }
+
+    async function syncAllGroups() {
+      const btn = document.getElementById('btn-sync-all');
+      const banner = document.getElementById('sync-banner');
+      btn.disabled = true;
+      btn.innerText = 'Syncing...';
+
+      try {
+        const res = await fetch('/api/groups/sync', { method: 'POST' });
+        const data = await res.json();
+
+        banner.style.display = 'block';
+        if (data.success) {
+          banner.style.background = 'rgba(16, 185, 129, 0.2)';
+          banner.style.color = 'var(--success)';
+          banner.style.border = '1px solid var(--success)';
+          banner.innerText = `✅ ${data.message}`;
+          loadGroups();
+        } else {
+          banner.style.background = 'rgba(239, 68, 68, 0.2)';
+          banner.style.color = 'var(--danger)';
+          banner.style.border = '1px solid var(--danger)';
+          banner.innerText = `❌ Error: ${data.error}`;
+        }
+      } catch (err) {
+        banner.style.display = 'block';
+        banner.style.background = 'rgba(239, 68, 68, 0.2)';
+        banner.style.color = 'var(--danger)';
+        banner.style.border = '1px solid var(--danger)';
+        banner.innerText = `❌ Failed to sync: ${err.message}`;
+      } finally {
+        btn.disabled = false;
+        btn.innerText = '⚡ Auto Sync All WhatsApp Groups';
+      }
+    }
+
+    async function handleManualGroupRegister(e) {
+      e.preventDefault();
+      const groupName = document.getElementById('reg-name').value;
+      const groupJid = document.getElementById('reg-jid').value;
+
+      try {
+        const res = await fetch('/api/groups/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ groupJid, groupName })
+        });
+        const data = await res.json();
+        if (data.success) {
+          toggleRegisterModal();
+          document.getElementById('reg-name').value = '';
+          document.getElementById('reg-jid').value = '';
+          loadGroups();
+        } else {
+          alert('Error: ' + data.error);
+        }
+      } catch (err) {
+        alert('Failed to register group: ' + err.message);
+      }
+    }
+
+    // Direct Message Handler
+    async function handleDirectMessageSubmit(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn-send-direct');
+      const resultDiv = document.getElementById('broadcast-result');
+      btn.disabled = true;
+      btn.innerText = 'Sending...';
+
+      const phoneNumbers = document.getElementById('dm-numbers').value;
+      const message = document.getElementById('dm-message').value;
+
+      try {
+        const res = await fetch('/api/message/direct', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phoneNumbers, message })
+        });
+        const data = await res.json();
+
+        resultDiv.style.display = 'block';
+        if (data.success) {
+          resultDiv.innerHTML = `
+            <h3 style="color: var(--success); font-size: 1.1rem; margin-bottom: 0.5rem;">Direct Message Sent Successfully!</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">${data.message}</p>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Total Recipients: <b>${data.data.totalRecipients}</b> | Success: <b style="color: var(--success);">${data.data.successfulDeliveries}</b> | Failed: <b style="color: var(--danger);">${data.data.failedDeliveries}</b></p>
+          `;
+        } else {
+          resultDiv.innerHTML = `<h3 style="color: var(--danger);">Direct Message Failed: ${data.error}</h3>`;
+        }
+      } catch (err) {
+        resultDiv.style.display = 'block';
+        resultDiv.innerHTML = `<h3 style="color: var(--danger);">Error: ${err.message}</h3>`;
+      } finally {
+        btn.disabled = false;
+        btn.innerText = '💬 Send Direct Message';
+      }
+    }
+
+    // Fetch Instance Status, QR Code or Pairing Code
+    async function fetchInstanceStatus(overridePhone) {
+      const navBadge = document.getElementById('nav-status-badge');
+      const navDot = document.getElementById('nav-status-dot');
+      const navText = document.getElementById('nav-status-text');
+      const qrWrapper = document.getElementById('qr-wrapper-content');
+
+      const phone = overridePhone || (currentLinkMode === 'phone' ? document.getElementById('pairing-phone').value : '');
+      const url = phone ? `/api/instance/status?phoneNumber=${encodeURIComponent(phone)}` : '/api/instance/status';
+
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (data.isOnline) {
+          navDot.className = 'status-dot online';
+          navText.innerText = 'Connected / Online';
+          qrWrapper.innerHTML = `
+            <div class="connected-box">
+              <div class="connected-icon">✅</div>
+              <h3 style="color: var(--success); font-size: 1.4rem;">WhatsApp Device Connected!</h3>
+              <p style="color: var(--text-muted);">Instance "<b>${data.instanceName}</b>" is active and ready to receive & send messages.</p>
+            </div>
+          `;
+        } else if (data.pairingCode) {
+          navDot.className = 'status-dot connecting';
+          navText.innerText = 'Pairing Code Active';
+          qrWrapper.innerHTML = `
+            <div class="status-badge">
+              <div class="status-dot connecting"></div>
+              <span>Enter 8-Digit Pairing Code on WhatsApp</span>
+            </div>
+            <div class="pairing-code-box">${data.pairingCode}</div>
+            <p style="color: var(--text-muted); font-size: 0.9rem; max-width: 450px;">
+              Open <b>WhatsApp</b> on your phone &rarr; <b>Linked Devices</b> &rarr; <b>Link a Device</b> &rarr; tap <b>"Link with phone number instead"</b> and enter the code above!
+            </p>
+            <button class="btn btn-primary" style="margin-top: 1.5rem;" onclick="fetchInstanceStatus()">
+              🔄 Refresh Code
+            </button>
+          `;
+        } else if (data.qrCodeBase64) {
+          navDot.className = 'status-dot connecting';
+          navText.innerText = 'Scan QR Code';
+          qrWrapper.innerHTML = `
+            <div class="status-badge">
+              <div class="status-dot connecting"></div>
+              <span>Scan QR Code to Connect</span>
+            </div>
+            <div class="qr-container">
+              <img src="${data.qrCodeBase64}" alt="WhatsApp QR Code" />
+            </div>
+            <p style="color: var(--text-muted); font-size: 0.9rem; max-width: 400px;">
+              Open <b>WhatsApp</b> on your phone &rarr; <b>Linked Devices</b> &rarr; <b>Link a Device</b> and point your camera at this QR code.
+            </p>
+            <button class="btn btn-primary" style="margin-top: 1.5rem;" onclick="fetchInstanceStatus()">
+              🔄 Refresh QR Code
+            </button>
+          `;
+        } else {
+          navDot.className = 'status-dot offline';
+          navText.innerText = 'Disconnected';
+          qrWrapper.innerHTML = `
+            <div class="status-badge">
+              <div class="status-dot offline"></div>
+              <span>Evolution API Disconnected</span>
+            </div>
+            <p style="margin: 1.5rem 0; color: var(--text-muted);">
+              Evolution API server is offline or generating connection code.
+            </p>
+            <button class="btn btn-primary" onclick="fetchInstanceStatus()">🔄 Retry Connection</button>
+          `;
+        }
+      } catch (err) {
+        navDot.className = 'status-dot offline';
+        navText.innerText = 'Server Offline';
+      }
+    }
+
+    // Load Groups List
+    async function loadGroups() {
+      const tbody = document.getElementById('groups-table-body');
+      try {
+        const res = await fetch('/api/groups');
+        const json = await res.json();
+
+        if (!json.success || !json.data || json.data.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 2rem;">No WhatsApp groups registered in MongoDB Atlas yet.<br><br><b>Click the button below to fetch all your existing WhatsApp groups in 1-click:</b><br><br><button class="btn btn-primary btn-sm" onclick="syncAllGroups()">⚡ Auto Sync All WhatsApp Groups Now</button></td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = json.data.map(g => `
+          <tr>
+            <td><b>${g.groupName}</b></td>
+            <td><code style="color: var(--accent);">${g.groupJid}</code></td>
+            <td><span class="badge badge-${g.status.toLowerCase()}">${g.status}</span></td>
+            <td>${g.subscribedTopics.join(', ')}</td>
+            <td>
+              ${g.status !== 'VERIFIED' ? `<button class="btn btn-success btn-sm" onclick="updateStatus('${g.groupJid}', 'VERIFIED')">Approve</button>` : ''}
+              ${g.status !== 'REJECTED' ? `<button class="btn btn-danger btn-sm" onclick="updateStatus('${g.groupJid}', 'REJECTED')">Reject</button>` : ''}
+            </td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--danger);">Failed to load groups.</td></tr>`;
+      }
+    }
+
+    // Update Status
+    async function updateStatus(groupJid, status) {
+      await fetch(`/api/groups/${encodeURIComponent(groupJid)}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, verifiedByUser: 'Web Dashboard' })
+      });
+      loadGroups();
+    }
+
+    // Send Broadcast
+    async function handleBroadcastSubmit(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn-send-broadcast');
+      const resultDiv = document.getElementById('broadcast-result');
+      btn.disabled = true;
+      btn.innerText = 'Enqueuing...';
+
+      const title = document.getElementById('bcast-title').value;
+      const content = document.getElementById('bcast-content').value;
+      const topics = document.getElementById('bcast-topics').value.split(',').map(t => t.trim());
+
+      try {
+        const res = await fetch('/api/broadcast', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, content, topics })
+        });
+        const data = await res.json();
+
+        resultDiv.style.display = 'block';
+        resultDiv.innerHTML = `
+          <h3 style="color: var(--success); font-size: 1.1rem; margin-bottom: 0.5rem;">Broadcast Enqueued Successfully!</h3>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">Broadcast ID: <code>${data.data.broadcastId}</code></p>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">Target Groups: <b>${data.data.targetGroupCount}</b></p>
+        `;
+      } catch (err) {
+        resultDiv.style.display = 'block';
+        resultDiv.innerHTML = `<h3 style="color: var(--danger);">Broadcast Error: ${err.message}</h3>`;
+      } finally {
+        btn.disabled = false;
+        btn.innerText = '🚀 Enqueue Broadcast (5-7s Rate Limited)';
+      }
+    }
+
+    // Auto-poll status on load
+    loadBotConfig();
+    fetchInstanceStatus();
+    setInterval(fetchInstanceStatus, 5000);
+  </script>
+</body>
+</html>
