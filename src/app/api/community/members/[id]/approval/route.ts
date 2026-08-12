@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { User, getTenantUserModel } from "@/models/User";
 import { Community } from "@/models/Community";
+import { getTenantId } from "@/lib/tenant";
 import { hashPassword } from "@/lib/auth-crypto";
 import { sendWhatsAppMessage } from "@/lib/msgservice";
 
@@ -36,9 +37,24 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return Response.json({ error: "Member not found" }, { status: 404 });
     }
 
+    const tenantCommunityId = await getTenantId(request);
+
     // Verify admin is in the same community (super-admin bypasses)
-    if (caller.role === "admin" && String(caller.communityId) !== String(targetUser.communityId)) {
-      return Response.json({ error: "Forbidden: Cannot manage members outside your community" }, { status: 403 });
+    if (caller.role === "admin") {
+      const callerCommId = caller.communityId ? String(caller.communityId) : tenantCommunityId ? String(tenantCommunityId) : undefined;
+      const targetCommId = targetUser.communityId ? String(targetUser.communityId) : tenantCommunityId ? String(tenantCommunityId) : undefined;
+
+      if (callerCommId && targetCommId && callerCommId !== targetCommId) {
+        if (tenantCommunityId && (callerCommId === String(tenantCommunityId) || targetCommId === String(tenantCommunityId))) {
+          targetUser.communityId = tenantCommunityId;
+        } else {
+          return Response.json({ error: "Forbidden: Cannot manage members outside your community" }, { status: 403 });
+        }
+      }
+    }
+
+    if (!targetUser.communityId && tenantCommunityId) {
+      targetUser.communityId = tenantCommunityId;
     }
 
     let generatedPassword = "";
