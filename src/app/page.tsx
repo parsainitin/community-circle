@@ -101,7 +101,7 @@ function getExpiryLabel(expiresAt?: string): { label: string; urgent: boolean } 
 }
 
 export default function WallPage() {
-  const { user } = useAuth();
+  const { user, isVisitor } = useAuth();
   const router = useRouter();
   const [posts, setPosts] = useState<PostType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -195,6 +195,7 @@ export default function WallPage() {
   };
 
   const handleLike = async (postId: string) => {
+    if (isVisitor) { showToast("🔒 Sign in as a member to like posts"); return; }
     if (!user) return;
     const previousPosts = [...posts];
 
@@ -230,6 +231,7 @@ export default function WallPage() {
 
   const handleAddComment = async (e: React.FormEvent, postId: string) => {
     e.preventDefault();
+    if (isVisitor) { showToast("🔒 Sign in as a member to comment"); return; }
     const text = commentInputs[postId];
     if (!text || !text.trim() || !user) return;
 
@@ -255,6 +257,7 @@ export default function WallPage() {
 
   // RSVP Action Handler (Accept, Tentative, Decline)
   const handleRsvp = async (postId: string, status: "going" | "maybe" | "cant") => {
+    if (isVisitor) { showToast("🔒 Sign in as a member to RSVP for events"); return; }
     if (!user) {
       alert("Please log in to RSVP for events");
       return;
@@ -283,6 +286,7 @@ export default function WallPage() {
 
   // Direct UPI App Payment Handler
   const handleDirectUpiPayment = async (post: PostType) => {
+    if (isVisitor) { showToast("🔒 Sign in as a member to pay & accept events"); return; }
     if (!user) {
       alert("Please log in to pay contribution and accept RSVP");
       return;
@@ -488,9 +492,11 @@ export default function WallPage() {
                             {/* Accept Button */}
                             <button
                               onClick={() => handleRsvp(post._id, "going")}
-                              title="Accept (Going)"
+                              title={isVisitor ? "Sign in as member to RSVP" : "Accept (Going)"}
                               className={`p-2 px-3 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border cursor-pointer ${
-                                isUserGoing
+                                isVisitor
+                                  ? "opacity-40 cursor-not-allowed bg-white text-emerald-700 border-emerald-200"
+                                  : isUserGoing
                                   ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
                                   : "bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-50"
                               }`}
@@ -502,9 +508,11 @@ export default function WallPage() {
                             {/* Tentative Button */}
                             <button
                               onClick={() => handleRsvp(post._id, "maybe")}
-                              title="Tentative (Maybe)"
+                              title={isVisitor ? "Sign in as member to RSVP" : "Tentative (Maybe)"}
                               className={`p-2 px-3 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border cursor-pointer ${
-                                isUserMaybe
+                                isVisitor
+                                  ? "opacity-40 cursor-not-allowed bg-white text-amber-700 border-amber-200"
+                                  : isUserMaybe
                                   ? "bg-amber-500 text-white border-amber-500 shadow-xs"
                                   : "bg-white text-amber-700 border-amber-200 hover:bg-amber-50"
                               }`}
@@ -516,9 +524,11 @@ export default function WallPage() {
                             {/* Decline Button */}
                             <button
                               onClick={() => handleRsvp(post._id, "cant")}
-                              title="Decline (Can't Go)"
+                              title={isVisitor ? "Sign in as member to RSVP" : "Decline (Can't Go)"}
                               className={`p-2 px-3 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border cursor-pointer ${
-                                isUserCant
+                                isVisitor
+                                  ? "opacity-40 cursor-not-allowed bg-white text-rose-700 border-rose-200"
+                                  : isUserCant
                                   ? "bg-rose-600 text-white border-rose-600 shadow-xs"
                                   : "bg-white text-rose-700 border-rose-200 hover:bg-rose-50"
                               }`}
@@ -528,8 +538,8 @@ export default function WallPage() {
                             </button>
                           </div>
 
-                          {/* Direct UPI App Payment Button */}
-                          {(post.eventDetails.contributionFee ?? 0) > 0 && (
+                          {/* Direct UPI App Payment Button — hidden for visitors */}
+                          {(post.eventDetails.contributionFee ?? 0) > 0 && !isVisitor && (
                             <button
                               onClick={() => handleDirectUpiPayment(post)}
                               title="Directly open your UPI App and accept RSVP"
@@ -570,10 +580,16 @@ export default function WallPage() {
                       <div className="flex items-center justify-between pt-2.5 border-t border-slate-100">
                         <button
                           onClick={() => {
+                            if (isVisitor) { showToast("🔒 Sign in as a member to view RSVP details"); return; }
                             setOrganizerModalPost(post);
                             setOrganizerTab("accepted");
                           }}
-                          className="flex items-center space-x-1.5 text-xs font-extrabold py-1.5 px-3 rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200/80 transition cursor-pointer"
+                          title={isVisitor ? "Sign in as member to view RSVP details" : "View RSVP stats"}
+                          className={`flex items-center space-x-1.5 text-xs font-extrabold py-1.5 px-3 rounded-xl border transition cursor-pointer ${
+                            isVisitor
+                              ? "opacity-40 cursor-not-allowed bg-indigo-50 text-indigo-700 border-indigo-200/80"
+                              : "bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-200/80"
+                          }`}
                         >
                           <Users className="w-3.5 h-3.5 text-indigo-600" />
                           <span>RSVP Stats & Details</span>
@@ -583,20 +599,26 @@ export default function WallPage() {
                       <div className="flex items-center space-x-4 pt-2.5 border-t border-slate-100">
                         <button
                           onClick={() => handleLike(post._id)}
+                          title={isVisitor ? "Sign in as member to like" : "Like this post"}
                           className={`flex items-center space-x-1.5 text-xs font-bold py-1.5 px-3 rounded-xl transition-all border cursor-pointer ${
-                            hasLiked
+                            isVisitor
+                              ? "opacity-40 cursor-not-allowed bg-slate-50 text-slate-500 border-slate-200/60"
+                              : hasLiked
                               ? "bg-rose-50 text-rose-500 border-rose-200"
                               : "bg-slate-50 text-slate-500 hover:bg-slate-100 border-slate-200/60"
                           }`}
                         >
-                          <Heart className={`w-3.5 h-3.5 ${hasLiked ? "fill-rose-500 text-rose-500" : ""}`} />
+                          <Heart className={`w-3.5 h-3.5 ${hasLiked && !isVisitor ? "fill-rose-500 text-rose-500" : ""}`} />
                           <span>Like ({post.likes?.length || 0})</span>
                         </button>
 
                         <button
-                          onClick={() => toggleComments(post._id)}
+                          onClick={() => !isVisitor && toggleComments(post._id)}
+                          title={isVisitor ? "Sign in as member to comment" : "View comments"}
                           className={`flex items-center space-x-1.5 text-xs font-bold py-1.5 px-3 rounded-xl transition-all border cursor-pointer ${
-                            expandedComments[post._id]
+                            isVisitor
+                              ? "opacity-40 cursor-not-allowed bg-slate-50 text-slate-500 border-slate-200/60"
+                              : expandedComments[post._id]
                               ? "bg-indigo-50 text-indigo-600 border-indigo-200"
                               : "bg-slate-50 text-slate-500 hover:bg-slate-100 border-slate-200/60"
                           }`}
@@ -635,28 +657,30 @@ export default function WallPage() {
                           </p>
                         )}
 
-                        {/* Add Comment Form */}
-                        <form
-                          onSubmit={(e) => handleAddComment(e, post._id)}
-                          className="flex items-center space-x-2 pt-1"
-                        >
-                          <input
-                            type="text"
-                            required
-                            placeholder="Write a comment..."
-                            value={commentInputs[post._id] || ""}
-                            onChange={(e) =>
-                              setCommentInputs({ ...commentInputs, [post._id]: e.target.value })
-                            }
-                            className="flex-1 bg-slate-50 rounded-xl border border-slate-200 px-3.5 py-2 text-xs focus:ring-2 focus:ring-amber-500 outline-none text-slate-800 font-medium"
-                          />
-                          <button
-                            type="submit"
-                            className="py-2 px-4 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs transition cursor-pointer shadow-xs border-0"
+                        {/* Add Comment Form — hidden for visitors */}
+                        {!isVisitor && (
+                          <form
+                            onSubmit={(e) => handleAddComment(e, post._id)}
+                            className="flex items-center space-x-2 pt-1"
                           >
-                            Post
-                          </button>
-                        </form>
+                            <input
+                              type="text"
+                              required
+                              placeholder="Write a comment..."
+                              value={commentInputs[post._id] || ""}
+                              onChange={(e) =>
+                                setCommentInputs({ ...commentInputs, [post._id]: e.target.value })
+                              }
+                              className="flex-1 bg-slate-50 rounded-xl border border-slate-200 px-3.5 py-2 text-xs focus:ring-2 focus:ring-amber-500 outline-none text-slate-800 font-medium"
+                            />
+                            <button
+                              type="submit"
+                              className="py-2 px-4 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs transition cursor-pointer shadow-xs border-0"
+                            >
+                              Post
+                            </button>
+                          </form>
+                        )}
                       </div>
                     )}
                   </div>
