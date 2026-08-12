@@ -1,13 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-
-interface CommunityProfile {
-  name: string;
-  subdomain: string;
-  logo?: string;
-  description?: string;
-}
+import React from "react";
+import { useCommunity } from "@/context/CommunityContext";
 
 interface CommunityBrandProps {
   variant?: "topbar" | "auth";
@@ -16,17 +10,11 @@ interface CommunityBrandProps {
 }
 
 export default function CommunityBrand({ variant = "topbar", className, imageClassName }: CommunityBrandProps) {
-  const [community, setCommunity] = useState<CommunityProfile | null>(null);
+  const { community } = useCommunity();
 
-  useEffect(() => {
-    fetch("/api/community/current")
-      .then((res) => res.json())
-      .then((data) => setCommunity(data.community))
-      .catch(() => setCommunity(null));
-  }, []);
-
-  const logoSrc = community?.logo || "/logo.png";
-  const altText = community?.name ? `${community.name} logo` : "MySocialClan logo";
+  // Use community logo if provided, otherwise fall back to the default logo
+  const logoSrc = community?.logo?.trim() ? community.logo : "/logo.png";
+  const altText = community?.name ? `${community.name} logo` : "Community Circle logo";
 
   if (variant === "auth") {
     return (
@@ -35,6 +23,10 @@ export default function CommunityBrand({ variant = "topbar", className, imageCla
           src={logoSrc}
           alt={altText}
           className={imageClassName || "h-20 w-auto object-contain max-w-[280px] mb-3"}
+          onError={(e) => {
+            // If community logo fails to load (broken URL), fall back to default
+            (e.target as HTMLImageElement).src = "/logo.png";
+          }}
         />
         {community && <h1 className="text-lg font-black text-slate-800">{community.name}</h1>}
         <p className="text-xs text-slate-500 mt-1 max-w-xs font-semibold">
@@ -49,6 +41,9 @@ export default function CommunityBrand({ variant = "topbar", className, imageCla
       src={logoSrc}
       alt={altText}
       className={imageClassName || "h-11 w-auto object-contain max-w-[200px]"}
+      onError={(e) => {
+        (e.target as HTMLImageElement).src = "/logo.png";
+      }}
     />
   );
 }

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Outfit, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
+import { CommunityProvider } from "@/context/CommunityContext";
 import AppLayout from "@/components/AppLayout";
 import PWARegister from "@/components/PWARegister";
 
@@ -47,8 +48,10 @@ export default function RootLayout({
     >
       <body className="bg-slate-100 flex justify-center min-h-screen w-full">
         <AuthProvider>
-          <PWARegister />
-          <AppLayout>{children}</AppLayout>
+          <CommunityProvider>
+            <PWARegister />
+            <AppLayout>{children}</AppLayout>
+          </CommunityProvider>
         </AuthProvider>
       </body>
     </html>

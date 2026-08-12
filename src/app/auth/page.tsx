@@ -9,13 +9,6 @@ import CommunityBrand from "@/components/CommunityBrand";
 
 type AuthTab = "signin" | "signup" | "forgot";
 
-interface CurrentCommunity {
-  name: string;
-  subdomain: string;
-  logo?: string;
-  description?: string;
-}
-
 export default function AuthPage() {
   const { login, signup, forgotPassword, visitorLogin } = useAuth();
   const router = useRouter();
@@ -23,17 +16,9 @@ export default function AuthPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [community, setCommunity] = useState<CurrentCommunity | null>(null);
   const [visitorMobile, setVisitorMobile] = useState("");
   const [visitorLoading, setVisitorLoading] = useState(false);
   const [visitorError, setVisitorError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch("/api/community/current")
-      .then((res) => res.json())
-      .then((data) => setCommunity(data.community))
-      .catch(() => setCommunity(null));
-  }, []);
 
   // Form states
   const [mobileNumber, setMobileNumber] = useState("");
