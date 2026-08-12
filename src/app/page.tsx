@@ -324,51 +324,9 @@ export default function WallPage() {
         <div>
           <h2 className="text-lg font-extrabold tracking-wide drop-shadow-xs">Jambu Community Wall</h2>
           <p className="text-xs text-amber-100 font-medium mt-1">
-            Connect, share announcements, schedule community events & collect contributions
+            Connect, view announcements, schedule community events & collect contributions
           </p>
         </div>
-      </div>
-
-      {/* ── DEDICATED SEPARATE PAGE NAVIGATION CARDS ────────────────────── */}
-      <div className="grid grid-cols-3 gap-3">
-        <button
-          onClick={() => router.push("/create-post")}
-          className="bg-white dark:bg-slate-800 p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-xs hover:shadow-md transition-all text-left flex flex-col sm:flex-row items-center sm:items-start gap-2 sm:gap-3 group cursor-pointer"
-        >
-          <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
-            <Edit3 className="w-5 h-5" />
-          </div>
-          <div>
-            <h3 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 group-hover:text-blue-600 transition">Share Post</h3>
-            <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">Post stories & updates</p>
-          </div>
-        </button>
-
-        <button
-          onClick={() => router.push("/create-event")}
-          className="bg-white dark:bg-slate-800 p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-xs hover:shadow-md transition-all text-left flex flex-col sm:flex-row items-center sm:items-start gap-2 sm:gap-3 group cursor-pointer"
-        >
-          <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
-            <Calendar className="w-5 h-5" />
-          </div>
-          <div>
-            <h3 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 transition">Schedule Event</h3>
-            <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">Events & UPI Payments</p>
-          </div>
-        </button>
-
-        <button
-          onClick={() => router.push("/create-announcement")}
-          className="bg-white dark:bg-slate-800 p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-xs hover:shadow-md transition-all text-left flex flex-col sm:flex-row items-center sm:items-start gap-2 sm:gap-3 group cursor-pointer"
-        >
-          <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
-            <Megaphone className="w-5 h-5" />
-          </div>
-          <div>
-            <h3 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 group-hover:text-amber-600 transition">Announcement</h3>
-            <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">Broadcast notice to all</p>
-          </div>
-        </button>
       </div>
 
       {/* Posts Feed */}

@@ -23,6 +23,7 @@ import {
   CalendarCheck,
   Landmark,
   Megaphone,
+  Briefcase,
 } from "lucide-react";
 import { compressImage, checkFileSize } from "@/lib/imageCompression";
 
@@ -337,8 +338,29 @@ export default function HubsPage() {
         </p>
       </div>
 
-      {/* Visual Category Hub Cards - Horizontal layout (without create button) */}
+      {/* Visual Category Hub Cards - Horizontal layout */}
       <div className="space-y-2.5">
+        {/* Card 00: Listing (Business & Jobs) */}
+        <Link
+          href="/opportunities"
+          className="group rounded-2xl p-3.5 border transition-all cursor-pointer shadow-xs hover:shadow-md relative overflow-hidden flex items-center space-x-3.5 bg-gradient-to-r from-teal-50/90 to-cyan-50/70 hover:from-teal-100 hover:to-cyan-100 text-teal-950 border-teal-200/60 no-underline"
+        >
+          <div className="p-3 rounded-2xl shrink-0 transition-transform duration-200 group-hover:scale-105 bg-teal-600 text-white shadow-xs">
+            <Briefcase className="w-5 h-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-black leading-tight tracking-wide">💼 Listing (Business & Jobs)</h3>
+              <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-teal-600 text-white shrink-0">
+                Explore Listings →
+              </span>
+            </div>
+            <p className="text-[10px] text-teal-800/80 font-medium mt-0.5 leading-relaxed">
+              Business Catalogs, Services & Job Opportunities
+            </p>
+          </div>
+        </Link>
+
         {/* Card 0: Mahurth & Panchang */}
         <Link
           href="/mahurth-panchang"
