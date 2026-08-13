@@ -5,6 +5,14 @@ export interface IBookedSlot {
   bookedBy: string;
   contactPhone?: string;
   notes?: string;
+  packageName?: string;
+}
+
+export interface IPropertyPackage {
+  _id?: string;
+  name: string;
+  pricePerDay: number;
+  description?: string;
 }
 
 export interface IPropertyBooking extends Document {
@@ -16,6 +24,7 @@ export interface IPropertyBooking extends Document {
   pricePerDay?: number;
   contactPhone?: string;
   description?: string;
+  packages?: IPropertyPackage[];
   bookedDates: IBookedSlot[];
   communityId?: mongoose.Types.ObjectId;
   createdAt: Date;
@@ -32,12 +41,20 @@ const PropertyBookingSchema: Schema<IPropertyBooking> = new Schema(
     pricePerDay: { type: Number },
     contactPhone: { type: String, trim: true },
     description: { type: String, trim: true },
+    packages: [
+      {
+        name: { type: String, required: true, trim: true },
+        pricePerDay: { type: Number, required: true },
+        description: { type: String, trim: true },
+      },
+    ],
     bookedDates: [
       {
         date: { type: String, required: true },
         bookedBy: { type: String, required: true },
         contactPhone: { type: String },
         notes: { type: String },
+        packageName: { type: String },
       },
     ],
     communityId: { type: Schema.Types.ObjectId, ref: "Community" },

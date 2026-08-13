@@ -340,28 +340,7 @@ export default function HubsPage() {
 
       {/* Visual Category Hub Cards - Horizontal layout */}
       <div className="space-y-2.5">
-        {/* Card 00: Listing (Business & Jobs) */}
-        <Link
-          href="/opportunities"
-          className="group rounded-2xl p-3.5 border transition-all cursor-pointer shadow-xs hover:shadow-md relative overflow-hidden flex items-center space-x-3.5 bg-gradient-to-r from-teal-50/90 to-cyan-50/70 hover:from-teal-100 hover:to-cyan-100 text-teal-950 border-teal-200/60 no-underline"
-        >
-          <div className="p-3 rounded-2xl shrink-0 transition-transform duration-200 group-hover:scale-105 bg-teal-600 text-white shadow-xs">
-            <Briefcase className="w-5 h-5" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-black leading-tight tracking-wide">💼 Listing (Business & Jobs)</h3>
-              <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-teal-600 text-white shrink-0">
-                Explore Listings →
-              </span>
-            </div>
-            <p className="text-[10px] text-teal-800/80 font-medium mt-0.5 leading-relaxed">
-              Business Catalogs, Services & Job Opportunities
-            </p>
-          </div>
-        </Link>
-
-        {/* Card 0: Mahurth & Panchang */}
+        {/* Card 1: Mahurth & Panchang (Always 1st Card) */}
         <Link
           href="/mahurth-panchang"
           className="group rounded-2xl p-3.5 border transition-all cursor-pointer shadow-xs hover:shadow-md relative overflow-hidden flex items-center space-x-3.5 bg-gradient-to-r from-amber-50/90 to-orange-50/70 hover:from-amber-100 hover:to-orange-100 text-amber-950 border-amber-200/60 no-underline"
@@ -382,7 +361,28 @@ export default function HubsPage() {
           </div>
         </Link>
 
-        {/* Card 1: Bookings */}
+        {/* Card 2: Invitation (आमंत्रण) */}
+        <Link
+          href="/invitations"
+          className="group rounded-2xl p-3.5 border transition-all cursor-pointer shadow-xs hover:shadow-md relative overflow-hidden flex items-center space-x-3.5 bg-gradient-to-r from-emerald-50/90 via-teal-50/70 to-emerald-100/60 hover:from-emerald-100 hover:to-teal-100 text-emerald-950 border-emerald-300/70 no-underline"
+        >
+          <div className="p-3 rounded-2xl shrink-0 transition-transform duration-200 group-hover:scale-105 bg-emerald-600 text-white shadow-xs">
+            <Send className="w-5 h-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-black leading-tight tracking-wide">✉️ Invitation (आमंत्रण)</h3>
+              <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-600 text-white shrink-0">
+                Send WhatsApp Invitations →
+              </span>
+            </div>
+            <p className="text-[10px] text-emerald-800/80 font-medium mt-0.5 leading-relaxed">
+              Design & Broadcast Digital Cards to Community Members
+            </p>
+          </div>
+        </Link>
+
+        {/* Card 3: Bookings */}
         <Link
           href="/bookings"
           className="group rounded-2xl p-3.5 border transition-all cursor-pointer shadow-xs hover:shadow-md relative overflow-hidden flex items-center space-x-3.5 bg-gradient-to-r from-indigo-50/90 to-blue-50/70 hover:from-indigo-100 hover:to-blue-100 text-indigo-950 border-indigo-200/60 no-underline"
@@ -403,7 +403,7 @@ export default function HubsPage() {
           </div>
         </Link>
 
-        {/* Card 2: Organizations */}
+        {/* Card 4: Organizations */}
         <div
           onClick={() => setActiveTab("organization")}
           className={`group rounded-2xl p-3.5 border transition-all cursor-pointer shadow-xs hover:shadow-md relative overflow-hidden flex items-center space-x-3.5 ${
@@ -437,6 +437,27 @@ export default function HubsPage() {
             </p>
           </div>
         </div>
+
+        {/* Card 5: Listing (Business & Jobs) */}
+        <Link
+          href="/opportunities"
+          className="group rounded-2xl p-3.5 border transition-all cursor-pointer shadow-xs hover:shadow-md relative overflow-hidden flex items-center space-x-3.5 bg-gradient-to-r from-teal-50/90 to-cyan-50/70 hover:from-teal-100 hover:to-cyan-100 text-teal-950 border-teal-200/60 no-underline"
+        >
+          <div className="p-3 rounded-2xl shrink-0 transition-transform duration-200 group-hover:scale-105 bg-teal-600 text-white shadow-xs">
+            <Briefcase className="w-5 h-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-black leading-tight tracking-wide">💼 Listing (Business & Jobs)</h3>
+              <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-teal-600 text-white shrink-0">
+                Explore Listings →
+              </span>
+            </div>
+            <p className="text-[10px] text-teal-800/80 font-medium mt-0.5 leading-relaxed">
+              Business Catalogs, Services & Job Opportunities
+            </p>
+          </div>
+        </Link>
 
         {/* Card 3: Shoping */}
         <div

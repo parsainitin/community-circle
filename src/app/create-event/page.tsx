@@ -159,8 +159,8 @@ export default function CreateEventPage() {
             />
           </div>
 
-          {/* Date & Location Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Date & Location Stack */}
+          <div className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
                 Date & Time <span className="text-red-500">*</span>
@@ -196,15 +196,15 @@ export default function CreateEventPage() {
             </div>
           </div>
 
-          {/* Contribution & UPI Details Grid */}
+          {/* Contribution & UPI Details Stack */}
           <div className="bg-amber-50/60 p-4 sm:p-5 rounded-2xl border border-amber-200/60 space-y-4">
             <h3 className="text-xs font-extrabold text-amber-900 uppercase tracking-wider flex items-center gap-2">
-              <DollarSign className="w-4 h-4 text-amber-600" /> Optional Contribution Settings
+              <DollarSign className="w-4 h-4 text-amber-600" /> Contribution Settings
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Contribution Fee per Member (₹)
+                  Fee per Member (₹)
                 </label>
                 <input
                   type="number"
@@ -218,7 +218,7 @@ export default function CreateEventPage() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  UPI ID for Direct Contribution Payments
+                  UPI ID
                 </label>
                 <div className="relative">
                   <QrCode className="w-4 h-4 absolute left-3 top-3 text-slate-400" />

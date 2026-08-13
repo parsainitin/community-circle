@@ -467,7 +467,7 @@ export default function OpportunitiesPage() {
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Description & Requirements</label>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Description</label>
                 <textarea
                   required
                   placeholder="Job specifications, location, salary, experience..."
@@ -478,7 +478,7 @@ export default function OpportunitiesPage() {
                 />
               </div>
               <button type="submit" className="w-full py-2.5 bg-whatsapp-green text-white font-bold rounded-xl text-sm shadow-md hover:bg-whatsapp-teal cursor-pointer border-0 active:scale-95 transition-transform">
-                Post Job Opportunity
+                Post Job
               </button>
             </form>
           </div>
@@ -508,7 +508,7 @@ export default function OpportunitiesPage() {
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Description & Catalog Details</label>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Description</label>
                 <textarea
                   required
                   placeholder="Describe your services, store address, catalog items, timings..."
@@ -519,7 +519,7 @@ export default function OpportunitiesPage() {
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Catalog Photo (Optional)</label>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Photo</label>
                 <input
                   type="file"
                   accept="image/*"
@@ -544,7 +544,7 @@ export default function OpportunitiesPage() {
                 )}
               </div>
               <button type="submit" className="w-full py-2.5 bg-whatsapp-green text-white font-bold rounded-xl text-sm shadow-md hover:bg-whatsapp-teal cursor-pointer border-0 active:scale-95 transition-transform">
-                Register Business Catalog
+                Add Business
               </button>
             </form>
           </div>

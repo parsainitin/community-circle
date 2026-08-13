@@ -7,6 +7,9 @@ import {
   Building2,
   Calendar as CalendarIcon,
   Plus,
+  PlusCircle,
+  PackagePlus,
+  Sparkles,
   CheckCircle2,
   XCircle,
   MapPin,
@@ -19,14 +22,26 @@ import {
   ChevronDown,
   ChevronUp,
   ShieldCheck,
+  Package,
+  Layers,
+  Trash2,
+  Edit3,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+
+interface PropertyPackage {
+  _id?: string;
+  name: string;
+  pricePerDay: number;
+  description?: string;
+}
 
 interface BookedSlot {
   date: string; // YYYY-MM-DD
   bookedBy: string;
   contactPhone?: string;
   notes?: string;
+  packageName?: string;
 }
 
 interface Property {
@@ -38,6 +53,7 @@ interface Property {
   pricePerDay?: number;
   contactPhone?: string;
   description?: string;
+  packages?: PropertyPackage[];
   bookedDates: BookedSlot[];
 }
 
@@ -71,13 +87,25 @@ export default function BookingsPage() {
   // Add Property Modal State
   const [addPropertyModalOpen, setAddPropertyModalOpen] = useState(false);
   const [newPropName, setNewPropName] = useState("");
-  const [newPropType, setNewPropType] = useState("Community Hall");
+  const [newPropType, setNewPropType] = useState("Marriage Garden & Hall");
   const [newPropLocation, setNewPropLocation] = useState("");
   const [newPropCapacity, setNewPropCapacity] = useState("");
   const [newPropPrice, setNewPropPrice] = useState("");
   const [newPropPhone, setNewPropPhone] = useState("");
   const [newPropDesc, setNewPropDesc] = useState("");
+  const [newPropPackages, setNewPropPackages] = useState<
+    Array<{ name: string; pricePerDay: string; description: string }>
+  >([{ name: "", pricePerDay: "", description: "" }]);
   const [submittingProperty, setSubmittingProperty] = useState(false);
+
+  // Manage / Edit Property Packages Modal State
+  const [managePackagesModalOpen, setManagePackagesModalOpen] = useState(false);
+  const [editingPropertyId, setEditingPropertyId] = useState<string>("");
+  const [editingPropertyName, setEditingPropertyName] = useState<string>("");
+  const [editPropPackages, setEditPropPackages] = useState<
+    Array<{ name: string; pricePerDay: string; description: string }>
+  >([]);
+  const [submittingPackages, setSubmittingPackages] = useState(false);
 
   // Manage Booking Date Modal State
   const [targetPropertyId, setTargetPropertyId] = useState<string>("");
@@ -87,6 +115,7 @@ export default function BookingsPage() {
   const [bookedByName, setBookedByName] = useState("");
   const [bookedByPhone, setBookedByPhone] = useState("");
   const [bookingNotes, setBookingNotes] = useState("");
+  const [selectedPackageName, setSelectedPackageName] = useState<string>("");
   const [submittingBooking, setSubmittingBooking] = useState(false);
 
   const showToast = (msg: string) => {
@@ -217,10 +246,113 @@ export default function BookingsPage() {
     }
   };
 
+  // Dynamic Package Builder Handlers
+  const handleAddPackageRow = (target: "new" | "edit") => {
+    if (target === "new") {
+      setNewPropPackages((prev) => [...prev, { name: "", pricePerDay: "", description: "" }]);
+    } else {
+      setEditPropPackages((prev) => [...prev, { name: "", pricePerDay: "", description: "" }]);
+    }
+  };
+
+  const handleRemovePackageRow = (index: number, target: "new" | "edit") => {
+    if (target === "new") {
+      setNewPropPackages((prev) => prev.filter((_, i) => i !== index));
+    } else {
+      setEditPropPackages((prev) => prev.filter((_, i) => i !== index));
+    }
+  };
+
+  const handlePackageChange = (
+    index: number,
+    field: "name" | "pricePerDay" | "description",
+    value: string,
+    target: "new" | "edit"
+  ) => {
+    if (target === "new") {
+      setNewPropPackages((prev) => {
+        const updated = [...prev];
+        updated[index] = { ...updated[index], [field]: value };
+        return updated;
+      });
+    } else {
+      setEditPropPackages((prev) => {
+        const updated = [...prev];
+        updated[index] = { ...updated[index], [field]: value };
+        return updated;
+      });
+    }
+  };
+
+  const openManagePackagesModal = (prop: Property) => {
+    setEditingPropertyId(prop._id);
+    setEditingPropertyName(prop.propertyName);
+    if (prop.packages && prop.packages.length > 0) {
+      setEditPropPackages(
+        prop.packages.map((pkg) => ({
+          name: pkg.name || "",
+          pricePerDay: pkg.pricePerDay ? pkg.pricePerDay.toString() : "",
+          description: pkg.description || "",
+        }))
+      );
+    } else {
+      setEditPropPackages([{ name: "", pricePerDay: "", description: "" }]);
+    }
+    setManagePackagesModalOpen(true);
+  };
+
+  const handleSavePackages = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPropertyId) return;
+
+    const validPackages = editPropPackages
+      .filter((p) => p.name.trim() && p.pricePerDay)
+      .map((p) => ({
+        name: p.name.trim(),
+        pricePerDay: parseInt(p.pricePerDay) || 0,
+        description: p.description.trim() || undefined,
+      }));
+
+    setSubmittingPackages(true);
+    try {
+      const res = await fetch("/api/properties", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          propertyId: editingPropertyId,
+          action: "updatePackages",
+          packages: validPackages,
+        }),
+      });
+
+      if (res.ok) {
+        showToast("📦 Property Packages Updated!");
+        setManagePackagesModalOpen(false);
+        fetchProperties();
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to update packages");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error updating property packages");
+    } finally {
+      setSubmittingPackages(false);
+    }
+  };
+
   // Create New Property
   const handleAddProperty = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPropName.trim() || !newPropType.trim()) return;
+
+    const validPackages = newPropPackages
+      .filter((p) => p.name.trim() && p.pricePerDay)
+      .map((p) => ({
+        name: p.name.trim(),
+        pricePerDay: parseInt(p.pricePerDay) || 0,
+        description: p.description.trim() || undefined,
+      }));
 
     setSubmittingProperty(true);
     try {
@@ -235,6 +367,7 @@ export default function BookingsPage() {
           pricePerDay: newPropPrice ? parseInt(newPropPrice) : undefined,
           contactPhone: newPropPhone.trim() || user?.mobileNumber || undefined,
           description: newPropDesc.trim() || undefined,
+          packages: validPackages,
           owner: user?._id,
         }),
       });
@@ -249,6 +382,7 @@ export default function BookingsPage() {
         setNewPropPrice("");
         setNewPropPhone("");
         setNewPropDesc("");
+        setNewPropPackages([{ name: "", pricePerDay: "", description: "" }]);
         if (data.property) {
           setExpandedPropIds((prev) => [...prev, data.property._id]);
         }
@@ -282,6 +416,7 @@ export default function BookingsPage() {
           bookedBy: bookedByName.trim() || "Community Member",
           contactPhone: bookedByPhone.trim(),
           notes: bookingNotes.trim(),
+          packageName: selectedPackageName || undefined,
         }),
       });
 
@@ -317,39 +452,42 @@ export default function BookingsPage() {
       )}
 
       {/* Header Bar */}
-      <div className="bg-gradient-to-r from-indigo-800 via-indigo-700 to-blue-800 text-white p-4 sticky top-0 z-30 shadow-md">
-        <div className="max-w-3xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-3">
+      <div className="bg-gradient-to-r from-indigo-800 via-indigo-700 to-blue-800 text-white px-4 py-3.5 sticky top-0 z-30 shadow-md">
+        <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
             <Link
               href="/events"
-              className="p-2 rounded-full hover:bg-white/10 text-white transition-colors cursor-pointer"
+              className="p-2 -ml-1 rounded-full hover:bg-white/10 text-white transition-colors cursor-pointer shrink-0"
+              title="Back to Events"
             >
               <ArrowLeft className="w-5 h-5" />
             </Link>
-            <div>
-              <h1 className="text-base font-black tracking-wide flex items-center space-x-1.5">
-                <Building2 className="w-4.5 h-4.5 text-indigo-200" />
-                <span>Property Bookings & Calendar</span>
-              </h1>
-              <p className="text-[10px] text-indigo-100 font-medium flex items-center space-x-1">
-                <span>Expand any property to view booking status & connect</span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-base sm:text-lg font-bold tracking-tight text-white flex items-center gap-1.5 leading-snug">
+                  <Building2 className="w-5 h-5 text-indigo-200 shrink-0" />
+                  <span className="truncate">Property Bookings</span>
+                </h1>
                 {isManagerOrAdmin && (
-                  <span className="bg-emerald-500/30 text-white px-1.5 py-0.2 rounded-md font-bold text-[9px] border border-white/20">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-500/25 border border-emerald-300/30 text-emerald-100 text-[10px] font-semibold whitespace-nowrap">
                     Manager Access
                   </span>
                 )}
+              </div>
+              <p className="text-xs text-indigo-100/90 font-normal truncate mt-0.5">
+                Select a property to view availability & book
               </p>
             </div>
           </div>
 
           {isManagerOrAdmin && (
-            <button
-              onClick={() => setAddPropertyModalOpen(true)}
-              className="px-3 py-2 bg-white/20 hover:bg-white/30 text-white text-xs font-extrabold rounded-xl border border-white/30 backdrop-blur-xs flex items-center space-x-1.5 cursor-pointer active:scale-95 transition-all shadow-xs"
+            <Link
+              href="/bookings/add"
+              className="px-3.5 py-2 bg-white/20 hover:bg-white/30 active:bg-white/35 text-white text-xs font-bold rounded-xl border border-white/25 backdrop-blur-xs flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all shadow-xs shrink-0 whitespace-nowrap no-underline"
             >
-              <Plus className="w-4 h-4" />
+              <PlusCircle className="w-4 h-4 text-indigo-200" />
               <span>Add Property</span>
-            </button>
+            </Link>
           )}
         </div>
       </div>
@@ -376,13 +514,13 @@ export default function BookingsPage() {
                 : "There are currently no community properties listed for booking."}
             </p>
             {isManagerOrAdmin && (
-              <button
-                onClick={() => setAddPropertyModalOpen(true)}
-                className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-xs border-0 cursor-pointer active:scale-95 transition-all inline-flex items-center space-x-1.5"
+              <Link
+                href="/bookings/add"
+                className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-xs border-0 cursor-pointer active:scale-95 transition-all inline-flex items-center space-x-1.5 no-underline"
               >
-                <Plus className="w-4 h-4" />
+                <PlusCircle className="w-4 h-4" />
                 <span>Add New Property</span>
-              </button>
+              </Link>
             )}
           </div>
         ) : (
@@ -563,6 +701,70 @@ export default function BookingsPage() {
                             </button>
                           )}
                         </div>
+                      </div>
+
+                      {/* ── PROPERTY PACKAGES & DAILY RATES ────────────────── */}
+                      <div className="bg-gradient-to-br from-indigo-50/70 via-purple-50/40 to-slate-50 p-4 rounded-2xl border border-indigo-100 space-y-3">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div className="flex items-center space-x-2">
+                            <div className="p-1.5 bg-indigo-600 text-white rounded-xl shadow-xs shrink-0">
+                              <Package className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <h4 className="text-xs font-black text-slate-900 tracking-tight flex items-center space-x-1.5">
+                                <span>Packages</span>
+                              </h4>
+                              <p className="text-[10px] text-slate-500 font-medium">
+                                View available package options and daily rates
+                              </p>
+                            </div>
+                          </div>
+
+                          {isManagerOrAdmin && (
+                            <button
+                              onClick={() => openManagePackagesModal(prop)}
+                              className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-extrabold rounded-xl shadow-xs transition-transform active:scale-95 flex items-center space-x-1.5 border-0 cursor-pointer"
+                            >
+                              <PackagePlus className="w-4 h-4 text-indigo-200" />
+                              <span>Manage Packages</span>
+                            </button>
+                          )}
+                        </div>
+
+                        {(!prop.packages || prop.packages.length === 0) ? (
+                          <div className="p-3 bg-white/90 rounded-xl border border-dashed border-indigo-200 text-center text-xs text-slate-500 font-medium">
+                            Standard Base Rate: <span className="font-extrabold text-slate-800">₹{prop.pricePerDay || 0} / day</span>
+                            {isManagerOrAdmin && (
+                              <div className="mt-1 text-[11px] text-indigo-600 font-bold">
+                                💡 Click "Manage Packages" to define custom packages (e.g. Marriage Hall + Dinner)
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            {prop.packages.map((pkg, pIdx) => (
+                              <div
+                                key={pIdx}
+                                className="bg-white p-3 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between space-y-1.5"
+                              >
+                                <div className="flex justify-between items-start gap-2">
+                                  <span className="text-xs font-black text-slate-900 flex items-center space-x-1.5 min-w-0">
+                                    <Layers className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                                    <span className="truncate">{pkg.name}</span>
+                                  </span>
+                                  <span className="text-xs font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200/80 shrink-0 whitespace-nowrap">
+                                    ₹{pkg.pricePerDay.toLocaleString("en-IN")} / day
+                                  </span>
+                                </div>
+                                {pkg.description && (
+                                  <p className="text-[10.5px] text-slate-500 font-medium leading-relaxed">
+                                    {pkg.description}
+                                  </p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
                       {/* ── CALENDAR VIEW: BOOKED vs FREE DAYS ────────────────── */}
@@ -764,60 +966,56 @@ export default function BookingsPage() {
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                    City / Location
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Vijay Nagar, Indore"
-                    value={newPropLocation}
-                    onChange={(e) => setNewPropLocation(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 outline-hidden focus:border-indigo-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                    Capacity (Guests)
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="e.g. 500"
-                    value={newPropCapacity}
-                    onChange={(e) => setNewPropCapacity(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 outline-hidden focus:border-indigo-500"
-                  />
-                </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  City / Location
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Vijay Nagar, Indore"
+                  value={newPropLocation}
+                  onChange={(e) => setNewPropLocation(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 outline-hidden focus:border-indigo-500"
+                />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                    Price Per Day (₹)
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="e.g. 15000"
-                    value={newPropPrice}
-                    onChange={(e) => setNewPropPrice(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 outline-hidden focus:border-indigo-500"
-                  />
-                </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Capacity (Guests)
+                </label>
+                <input
+                  type="number"
+                  placeholder="e.g. 500"
+                  value={newPropCapacity}
+                  onChange={(e) => setNewPropCapacity(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 outline-hidden focus:border-indigo-500"
+                />
+              </div>
 
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                    Manager Contact Phone
-                  </label>
-                  <input
-                    type="tel"
-                    placeholder="e.g. 9826017177"
-                    value={newPropPhone}
-                    onChange={(e) => setNewPropPhone(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 outline-hidden focus:border-indigo-500"
-                  />
-                </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Price Per Day (₹)
+                </label>
+                <input
+                  type="number"
+                  placeholder="e.g. 15000"
+                  value={newPropPrice}
+                  onChange={(e) => setNewPropPrice(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 outline-hidden focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Manager Contact Phone
+                </label>
+                <input
+                  type="tel"
+                  placeholder="e.g. 9826017177"
+                  value={newPropPhone}
+                  onChange={(e) => setNewPropPhone(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 outline-hidden focus:border-indigo-500"
+                />
               </div>
 
               <div>
@@ -831,6 +1029,64 @@ export default function BookingsPage() {
                   onChange={(e) => setNewPropDesc(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 outline-hidden focus:border-indigo-500 resize-none"
                 />
+              </div>
+
+              {/* Dynamic Packages Builder Section */}
+              <div className="pt-2 border-t border-slate-100 space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="block text-[10px] font-extrabold text-slate-700 uppercase tracking-wider">
+                    Packages
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => handleAddPackageRow("new")}
+                    className="text-[11px] font-extrabold text-indigo-600 hover:text-indigo-700 flex items-center space-x-1 border-0 cursor-pointer bg-indigo-50 px-2 py-1 rounded-lg"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>+ Add Package</span>
+                  </button>
+                </div>
+
+                {newPropPackages.map((pkg, idx) => (
+                  <div key={idx} className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2 relative">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-bold text-indigo-700">Package #{idx + 1}</span>
+                      {newPropPackages.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePackageRow(idx, "new")}
+                          className="text-rose-500 hover:text-rose-700 p-0.5 border-0 cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        placeholder="e.g. Marriage Hall + Dinner"
+                        value={pkg.name}
+                        onChange={(e) => handlePackageChange(idx, "name", e.target.value, "new")}
+                        className="w-full px-2.5 py-1.5 bg-white rounded-lg border border-slate-200 text-xs font-semibold text-slate-800"
+                      />
+                      <input
+                        type="number"
+                        placeholder="Price / Day (₹)"
+                        value={pkg.pricePerDay}
+                        onChange={(e) => handlePackageChange(idx, "pricePerDay", e.target.value, "new")}
+                        className="w-full px-2.5 py-1.5 bg-white rounded-lg border border-slate-200 text-xs font-semibold text-slate-800"
+                      />
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Optional details (e.g. AC Main Hall + Catering Space)"
+                      value={pkg.description}
+                      onChange={(e) => handlePackageChange(idx, "description", e.target.value, "new")}
+                      className="w-full px-2.5 py-1.5 bg-white rounded-lg border border-slate-200 text-[11px] font-medium text-slate-700"
+                    />
+                  </div>
+                ))}
               </div>
 
               <div className="pt-2">
@@ -917,6 +1173,26 @@ export default function BookingsPage() {
 
               {bookingAction === "book" && (
                 <div className="space-y-3">
+                  {getTargetProperty()?.packages && getTargetProperty()!.packages!.length > 0 && (
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                        Select Package (पैकेज चुनें)
+                      </label>
+                      <select
+                        value={selectedPackageName}
+                        onChange={(e) => setSelectedPackageName(e.target.value)}
+                        className="w-full px-3.5 py-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 outline-hidden focus:border-indigo-500 cursor-pointer"
+                      >
+                        <option value="">-- Standard Booking --</option>
+                        {getTargetProperty()!.packages!.map((pkg, idx) => (
+                          <option key={idx} value={pkg.name}>
+                            {pkg.name} (₹{pkg.pricePerDay.toLocaleString("en-IN")}/day)
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
                   <div>
                     <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
                       Booked By Member Name *
@@ -976,6 +1252,117 @@ export default function BookingsPage() {
                       ? "Save Booking Date"
                       : "Mark Date as Free"}
                   </span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL 3: MANAGE PROPERTY PACKAGES (For Managers & Admins) ─────────────── */}
+      {managePackagesModalOpen && isManagerOrAdmin && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white w-full max-w-lg rounded-3xl p-5 shadow-2xl border border-slate-100 flex flex-col space-y-4 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-150">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+              <div>
+                <h3 className="text-sm font-black text-slate-900 flex items-center space-x-2">
+                  <Package className="w-4 h-4 text-indigo-600" />
+                  <span>Manage Packages</span>
+                </h3>
+                <p className="text-[10px] text-slate-500 font-bold">
+                  Property: {editingPropertyName}
+                </p>
+              </div>
+              <button
+                onClick={() => setManagePackagesModalOpen(false)}
+                className="p-1 rounded-full hover:bg-slate-100 text-slate-400 border-0 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSavePackages} className="space-y-3">
+              <div className="space-y-3">
+                {editPropPackages.map((pkg, idx) => (
+                  <div key={idx} className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2 relative">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-extrabold text-indigo-800 uppercase tracking-wider">
+                        Package #{idx + 1}
+                      </span>
+                      {editPropPackages.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePackageRow(idx, "edit")}
+                          className="text-rose-500 hover:text-rose-700 text-xs font-bold flex items-center space-x-1 border-0 cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Remove</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <div>
+                        <label className="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">
+                          Package Name *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. Marriage Hall + Dinner"
+                          value={pkg.name}
+                          onChange={(e) => handlePackageChange(idx, "name", e.target.value, "edit")}
+                          className="w-full px-3 py-2 bg-white rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 outline-hidden focus:border-indigo-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">
+                          Price / Day (₹) *
+                        </label>
+                        <input
+                          type="number"
+                          required
+                          placeholder="e.g. 50000"
+                          value={pkg.pricePerDay}
+                          onChange={(e) => handlePackageChange(idx, "pricePerDay", e.target.value, "edit")}
+                          className="w-full px-3 py-2 bg-white rounded-xl border border-slate-200 text-xs font-bold text-emerald-800 outline-hidden focus:border-indigo-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">
+                        Description & Details
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Includes main AC hall, lawn, sound & dining space"
+                        value={pkg.description}
+                        onChange={(e) => handlePackageChange(idx, "description", e.target.value, "edit")}
+                        className="w-full px-3 py-1.5 bg-white rounded-xl border border-slate-200 text-[11px] font-medium text-slate-700 outline-hidden focus:border-indigo-500"
+                      />
+                    </div>
+                  </div>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={() => handleAddPackageRow("edit")}
+                  className="w-full py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-extrabold text-xs rounded-xl border border-indigo-200 transition-colors flex items-center justify-center space-x-1.5 cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>+ Add Another Package</span>
+                </button>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={submittingPackages}
+                  className="w-full py-3 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 disabled:opacity-50 text-white font-extrabold text-xs rounded-2xl shadow-md transition-all flex items-center justify-center space-x-2 border-0 cursor-pointer"
+                >
+                  <span>{submittingPackages ? "Saving Packages..." : "Save All Packages"}</span>
                 </button>
               </div>
             </form>

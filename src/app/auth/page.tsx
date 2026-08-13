@@ -652,7 +652,7 @@ export default function AuthPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3.5">
+                  <div className="space-y-3.5">
                     <div>
                       <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
                         City *
@@ -675,7 +675,7 @@ export default function AuthPage() {
 
                     <div>
                       <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
-                        Village (Optional)
+                        Village
                       </label>
                       <div className="relative">
                         <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />

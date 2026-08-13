@@ -1650,10 +1650,10 @@ export default function UserProfilePage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3.5">
+                  <div className="space-y-3.5">
                     <div className="space-y-1">
                       <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                        Full Name (पूरा नाम) *
+                        Full Name *
                       </label>
                       <input
                         type="text"
@@ -1667,7 +1667,7 @@ export default function UserProfilePage() {
 
                     <div className="space-y-1">
                       <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                        Mobile No. (मोबाइल नं.) *
+                        Mobile *
                       </label>
                       <input
                         type="tel"
@@ -1685,10 +1685,10 @@ export default function UserProfilePage() {
               {/* STEP 1: Lineage & Family */}
               {editWizardStep === 1 && (
                 <div className="space-y-4 animate-fade-in">
-                  <div className="grid grid-cols-2 gap-3.5">
+                  <div className="space-y-3.5">
                     <div className="space-y-1">
                       <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                        Gotra (गोत्र)
+                        Gotra
                       </label>
                       {communityGotras.length > 0 ? (
                         <select
@@ -1696,7 +1696,7 @@ export default function UserProfilePage() {
                           onChange={(e) => setEditGotra(e.target.value)}
                           className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800 cursor-pointer"
                         >
-                          <option value="">— Select Gotra (गोत्र चुनें) —</option>
+                          <option value="">— Select Gotra —</option>
                           {communityGotras.map((g) => (
                             <option key={g} value={g}>
                               {g}
@@ -1719,7 +1719,7 @@ export default function UserProfilePage() {
 
                     <div className="space-y-1">
                       <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                        KulDevi (कुलदेवी)
+                        KulDevi
                       </label>
                       {communityKulDevis.length > 0 ? (
                         <select
@@ -1727,7 +1727,7 @@ export default function UserProfilePage() {
                           onChange={(e) => setEditKulDevi(e.target.value)}
                           className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800 cursor-pointer"
                         >
-                          <option value="">— Select KulDevi (कुलदेवी चुनें) —</option>
+                          <option value="">— Select KulDevi —</option>
                           {communityKulDevis.map((k) => (
                             <option key={k} value={k}>
                               {k}
@@ -1754,10 +1754,10 @@ export default function UserProfilePage() {
               {/* STEP 2: Personal Details */}
               {editWizardStep === 2 && (
                 <div className="space-y-4 animate-fade-in">
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-3.5">
                     <div className="space-y-1">
                       <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                        Date of Birth (जन्म तिथि)
+                        Date of Birth
                       </label>
                       <input
                         type="date"
@@ -1769,23 +1769,23 @@ export default function UserProfilePage() {
 
                     <div className="space-y-1">
                       <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                        Sex (लिंग)
+                        Sex
                       </label>
                       <select
                         value={editSex}
                         onChange={(e) => setEditSex(e.target.value)}
                         className="w-full px-2.5 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs text-slate-800 focus:border-whatsapp-green outline-hidden font-semibold"
                       >
-                        <option value="Male">Male (पुरुष)</option>
-                        <option value="Female">Female (महिला)</option>
-                        <option value="Other">Other (अन्य)</option>
-                        <option value="Prefer not to say">Prefer not to say (बताना नहीं चाहते)</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                        <option value="Prefer not to say">Prefer not to say</option>
                       </select>
                     </div>
 
                     <div className="space-y-1">
                       <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                        Blood Group (रक्त समूह)
+                        Blood Group
                       </label>
                       <select
                         value={editBloodGroup}
@@ -1807,18 +1807,18 @@ export default function UserProfilePage() {
 
                   <div className="space-y-1">
                     <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                      Marital Status (वैवाहिक स्थिति)
+                      Marital Status
                     </label>
                     <select
                       value={editMarital}
                       onChange={(e) => setEditMarital(e.target.value)}
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs text-slate-800 focus:border-whatsapp-green outline-hidden font-semibold"
                     >
-                      <option value="Single">Single (अविवाहित)</option>
-                      <option value="Married">Married (विवाहित)</option>
-                      <option value="Divorced">Divorced (तलाकशुदा)</option>
-                      <option value="Widowed">Widowed (विधवा/विधुर)</option>
-                      <option value="Separated">Separated (अलग)</option>
+                      <option value="Single">Single</option>
+                      <option value="Married">Married</option>
+                      <option value="Divorced">Divorced</option>
+                      <option value="Widowed">Widowed</option>
+                      <option value="Separated">Separated</option>
                     </select>
                   </div>
                 </div>
@@ -1829,7 +1829,7 @@ export default function UserProfilePage() {
                 <div className="space-y-4 animate-fade-in">
                   <div className="space-y-1">
                     <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                      Address (आवासीय पता)
+                      Address
                     </label>
                     <textarea
                       placeholder="Enter address"
@@ -1840,10 +1840,10 @@ export default function UserProfilePage() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3.5">
+                  <div className="space-y-3.5">
                     <div className="space-y-1">
                       <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                        City (शहर)
+                        City
                       </label>
                       {communityCities.length > 0 ? (
                         <select
@@ -1851,7 +1851,7 @@ export default function UserProfilePage() {
                           onChange={(e) => setEditCity(e.target.value)}
                           className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800 cursor-pointer"
                         >
-                          <option value="">— Select City (शहर चुनें) —</option>
+                          <option value="">— Select City —</option>
                           {communityCities.map((c) => (
                             <option key={c} value={c}>
                               {c}
@@ -1874,7 +1874,7 @@ export default function UserProfilePage() {
 
                     <div className="space-y-1">
                       <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                        Village (गांव)
+                        Village
                       </label>
                       <input
                         type="text"
@@ -1891,7 +1891,7 @@ export default function UserProfilePage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-1.5 text-indigo-900 font-bold text-[11px]">
                         <MapPin className="w-4 h-4 text-indigo-600 shrink-0" />
-                        <span>GPS Pin (जीपीएस लोकेशन)</span>
+                        <span>GPS Pin</span>
                       </div>
                       <button
                         type="button"
@@ -1939,10 +1939,10 @@ export default function UserProfilePage() {
               {/* STEP 4: Education & Career */}
               {editWizardStep === 4 && (
                 <div className="space-y-4 animate-fade-in">
-                  <div className="grid grid-cols-2 gap-3.5">
+                  <div className="space-y-3.5">
                     <div className="space-y-1">
                       <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                        Education (शिक्षा)
+                        Education
                       </label>
                       <input
                         type="text"
@@ -1955,7 +1955,7 @@ export default function UserProfilePage() {
 
                     <div className="space-y-1">
                       <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                        Institution (संस्थान)
+                        Institution
                       </label>
                       <input
                         type="text"
@@ -1967,49 +1967,49 @@ export default function UserProfilePage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="col-span-1 space-y-1">
+                  <div className="space-y-3.5">
+                    <div className="space-y-1">
                       <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                        Occupation (व्यवसाय)
+                        Occupation
                       </label>
                       <select
                         value={editOccupationType}
                         onChange={(e) => setEditOccupationType(e.target.value)}
-                        className="w-full px-2 py-2 bg-slate-50 border border-slate-100 rounded-xl text-[10px] text-slate-800 focus:border-whatsapp-green outline-hidden font-semibold"
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs text-slate-800 focus:border-whatsapp-green outline-hidden font-semibold"
                       >
                         <option value="">Select Occupation</option>
-                        <option value="Salaried">Salaried (नौकरीपेशा)</option>
-                        <option value="Self-Employed">Business / Self-Employed (स्वरोजगार)</option>
-                        <option value="Student">Student (छात्र)</option>
-                        <option value="Retired">Retired (सेवानिवृत्त)</option>
-                        <option value="Homemaker">Homemaker (गृहणी)</option>
-                        <option value="Unemployed">Unemployed (बेरोजगार)</option>
+                        <option value="Salaried">Salaried</option>
+                        <option value="Self-Employed">Business / Self-Employed</option>
+                        <option value="Student">Student</option>
+                        <option value="Retired">Retired</option>
+                        <option value="Homemaker">Homemaker</option>
+                        <option value="Unemployed">Unemployed</option>
                       </select>
                     </div>
 
-                    <div className="col-span-1 space-y-1">
+                    <div className="space-y-1">
                       <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                        Designation (पद)
+                        Designation
                       </label>
                       <input
                         type="text"
                         placeholder="Job Title"
                         value={editProfession}
                         onChange={(e) => setEditProfession(e.target.value)}
-                        className="w-full px-2.5 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800"
+                        className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800"
                       />
                     </div>
 
-                    <div className="col-span-1 space-y-1">
+                    <div className="space-y-1">
                       <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                        Company (कंपनी)
+                        Company
                       </label>
                       <input
                         type="text"
                         placeholder="Company/Business"
                         value={editCompany}
                         onChange={(e) => setEditCompany(e.target.value)}
-                        className="w-full px-2.5 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800"
+                        className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green text-xs font-semibold outline-hidden text-slate-800"
                       />
                     </div>
                   </div>
@@ -2024,7 +2024,7 @@ export default function UserProfilePage() {
                     onClick={() => setEditWizardStep((s) => s - 1)}
                     className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all border-0 cursor-pointer"
                   >
-                    &larr; Previous (पीछे)
+                    &larr; Previous
                   </button>
                 ) : (
                   <div />
@@ -2037,7 +2037,7 @@ export default function UserProfilePage() {
                       onClick={() => setEditWizardStep((s) => s + 1)}
                       className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl transition-all border-0 cursor-pointer"
                     >
-                      Next Step (आगे) &rarr;
+                      Next &rarr;
                     </button>
                   )}
 
@@ -2046,7 +2046,7 @@ export default function UserProfilePage() {
                     disabled={editLoading}
                     className="px-4 py-2 bg-whatsapp-green hover:bg-whatsapp-teal text-white font-extrabold text-xs rounded-xl shadow-md transition-all border-0 cursor-pointer disabled:opacity-50 active:scale-95"
                   >
-                    {editLoading ? "Saving..." : "Save Changes (बदलाव सहेजें)"}
+                    {editLoading ? "Saving..." : "Save Changes"}
                   </button>
                 </div>
               </div>
