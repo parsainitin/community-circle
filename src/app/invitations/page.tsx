@@ -293,7 +293,7 @@ export default function InvitationsPage() {
   };
 
   // Trigger Broadcast Workflow
-  const handleStartBroadcast = () => {
+  const handleStartBroadcast = async () => {
     if (selectedIds.length === 0) {
       alert("Please select at least one community member to send invitation!");
       return;
@@ -304,31 +304,54 @@ export default function InvitationsPage() {
     }
 
     setSendingModalOpen(true);
-    setSendingProgress(0);
+    setSendingProgress(10);
     setSendingComplete(false);
     setSentLogs([]);
 
     const targets = allContacts.filter((c) => selectedIds.includes(c.id));
-    let step = 0;
+    setCurrentSendingName(`Broadcasting to ${targets.length} members...`);
 
-    const interval = setInterval(() => {
-      if (step >= targets.length) {
-        clearInterval(interval);
-        setSendingComplete(true);
-        setSendingProgress(100);
-        return;
+    try {
+      const res = await fetch("/api/invitations/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipients: targets.map((t) => ({ name: t.name, phone: t.phone })),
+          title: invitationTitle,
+          message: invitationBody,
+        }),
+      });
+
+      const data = await res.json();
+      setSendingProgress(100);
+      setSendingComplete(true);
+
+      if (data.logs && Array.isArray(data.logs)) {
+        setSentLogs(
+          data.logs.map((l: any) => ({
+            name: `${l.name} (${l.phone})`,
+            success: l.success,
+          }))
+        );
+      } else {
+        setSentLogs(
+          targets.map((t) => ({
+            name: `${t.name} (${t.phone})`,
+            success: data.success ?? true,
+          }))
+        );
       }
-
-      const current = targets[step];
-      setCurrentSendingName(current.name);
-      setSentLogs((prev) => [
-        ...prev,
-        { name: `${current.name} (${current.phone})`, success: true },
-      ]);
-
-      step++;
-      setSendingProgress(Math.round((step / targets.length) * 100));
-    }, 600);
+    } catch (e: any) {
+      console.error("Broadcast failed:", e);
+      setSendingProgress(100);
+      setSendingComplete(true);
+      setSentLogs(
+        targets.map((t) => ({
+          name: `${t.name} (${t.phone})`,
+          success: false,
+        }))
+      );
+    }
   };
 
   return (

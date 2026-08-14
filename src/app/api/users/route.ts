@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
     };
 
     if (communityId) {
-      filter.$or = [{ communityId }, { role: { $in: ["admin", "COMMUNITY_ADMIN"] } }, { _id: { $in: adminUserIds } }];
+      filter.$or = [{ communityId }, { communityId: String(communityId) }, { role: { $in: ["admin", "COMMUNITY_ADMIN"] } }, { _id: { $in: adminUserIds } }];
     }
 
     if (query && query.trim()) {

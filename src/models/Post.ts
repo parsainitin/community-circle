@@ -3,10 +3,39 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 export interface IPost extends Document {
   author: mongoose.Types.ObjectId;
   content: string;
-  type: "text" | "image" | "poll" | "event" | "announcement";
+  type: "text" | "image" | "poll" | "event" | "announcement" | "carpool" | "trade_off";
   replies: mongoose.Types.ObjectId[] | IPost[];
   likes: mongoose.Types.ObjectId[];
   expiresAt?: Date;
+  tradeOffDetails?: {
+    tradeType: "offer" | "request";
+    category: "goods" | "services" | "vehicles" | "crowd_sharing";
+    title: string;
+    itemCondition?: string;
+    pricingModel?: string;
+    availableDate?: string;
+    location?: string;
+    contactPhone?: string;
+    whatsappNumber?: string;
+  };
+  carpoolDetails?: {
+    tripType: "offer" | "request";
+    requestCategory?: "passenger" | "parcel";
+    parcelDetails?: string;
+    parcelWeight?: string;
+    originCity: string;
+    destinationCity: string;
+    travelDate: string;
+    travelTime?: string;
+    availableSeats: number;
+    pricePerSeat?: number;
+    vehicleDetails?: string;
+    pickupLocation?: string;
+    dropLocation?: string;
+    contactPhone?: string;
+    whatsappNumber?: string;
+    notes?: string;
+  };
     eventDetails?: {
       title: string;
       date: string;
@@ -52,10 +81,39 @@ const PostSchema: Schema<IPost> = new Schema(
     type: {
       type: String,
       enum: {
-        values: ["text", "image", "poll", "event", "announcement"],
+        values: ["text", "image", "poll", "event", "announcement", "carpool", "trade_off"],
         message: "{VALUE} is not a valid post type",
       },
       default: "text",
+    },
+    tradeOffDetails: {
+      tradeType: { type: String, enum: ["offer", "request"], default: "offer" },
+      category: { type: String, enum: ["goods", "services", "vehicles", "crowd_sharing"], default: "goods" },
+      title: { type: String, trim: true },
+      itemCondition: { type: String, trim: true },
+      pricingModel: { type: String, trim: true },
+      availableDate: { type: String, trim: true },
+      location: { type: String, trim: true },
+      contactPhone: { type: String, trim: true },
+      whatsappNumber: { type: String, trim: true },
+    },
+    carpoolDetails: {
+      tripType: { type: String, enum: ["offer", "request"], default: "offer" },
+      requestCategory: { type: String, enum: ["passenger", "parcel"], default: "passenger" },
+      parcelDetails: { type: String, trim: true },
+      parcelWeight: { type: String, trim: true },
+      originCity: { type: String, trim: true },
+      destinationCity: { type: String, trim: true },
+      travelDate: { type: String, trim: true },
+      travelTime: { type: String, trim: true },
+      availableSeats: { type: Number },
+      pricePerSeat: { type: Number },
+      vehicleDetails: { type: String, trim: true },
+      pickupLocation: { type: String, trim: true },
+      dropLocation: { type: String, trim: true },
+      contactPhone: { type: String, trim: true },
+      whatsappNumber: { type: String, trim: true },
+      notes: { type: String, trim: true },
     },
     replies: [
       {

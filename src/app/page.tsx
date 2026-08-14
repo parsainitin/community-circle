@@ -27,6 +27,9 @@ import {
   Edit3,
   ChevronDown,
   ChevronUp,
+  Car,
+  ArrowRight,
+  ArrowLeftRight,
 } from "lucide-react";
 
 interface UserSummary {
@@ -73,6 +76,32 @@ interface PostType {
     userId: string;
     optionIndex: number;
   }[];
+  carpoolDetails?: {
+    tripType: "offer" | "request";
+    originCity: string;
+    destinationCity: string;
+    travelDate: string;
+    travelTime?: string;
+    availableSeats: number;
+    pricePerSeat?: number;
+    vehicleDetails?: string;
+    pickupLocation?: string;
+    dropLocation?: string;
+    contactPhone?: string;
+    whatsappNumber?: string;
+    notes?: string;
+  };
+  tradeOffDetails?: {
+    tradeType: "offer" | "request";
+    category: "goods" | "services" | "vehicles" | "crowd_sharing";
+    title: string;
+    itemCondition?: string;
+    pricingModel?: string;
+    availableDate?: string;
+    location?: string;
+    contactPhone?: string;
+    whatsappNumber?: string;
+  };
   replies?: any[];
 }
 
@@ -560,6 +589,145 @@ export default function WallPage() {
                         <p className="text-xs sm:text-sm font-semibold text-slate-800 leading-relaxed whitespace-pre-wrap">
                           {post.content}
                         </p>
+                      </div>
+                    ) : post.type === "carpool" ? (
+                      /* OUTSTATION CARPOOL CONTENT - COLLAPSIBLE */
+                      <div className="bg-rose-50/80 border border-rose-200/80 p-4 rounded-2xl space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2 text-rose-700 font-black text-xs uppercase tracking-wider">
+                            <Car className="w-4 h-4 shrink-0 text-rose-600" />
+                            <span>
+                              {post.carpoolDetails?.tripType === "request"
+                                ? "🙋 Outstation Ride Needed"
+                                : "🚘 Outstation Ride Offer"}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => toggleCollapse(post._id)}
+                            className="flex items-center space-x-1 text-[10px] font-extrabold text-rose-700 hover:text-rose-900 bg-white/80 px-2.5 py-1 rounded-xl border border-rose-200 cursor-pointer"
+                          >
+                            <span>{collapsedPosts[post._id] ? "Show Details" : "Hide Details"}</span>
+                            {collapsedPosts[post._id] ? (
+                              <ChevronDown className="w-3.5 h-3.5" />
+                            ) : (
+                              <ChevronUp className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        </div>
+
+                        {/* Route Summary */}
+                        {post.carpoolDetails && (
+                          <div className="bg-white rounded-xl p-2.5 border border-rose-100 flex items-center justify-between">
+                            <div className="flex items-center space-x-2 min-w-0">
+                              <span className="text-xs font-black text-slate-900 truncate">
+                                {post.carpoolDetails.originCity}
+                              </span>
+                              <ArrowRight className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                              <span className="text-xs font-black text-slate-900 truncate">
+                                {post.carpoolDetails.destinationCity}
+                              </span>
+                            </div>
+                            <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-lg shrink-0">
+                              {post.carpoolDetails.travelDate}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Collapsible Detailed Content */}
+                        {!collapsedPosts[post._id] && (
+                          <div className="space-y-2 pt-1 text-xs text-slate-700">
+                            <p className="font-medium leading-relaxed whitespace-pre-wrap">
+                              {post.content}
+                            </p>
+                            {post.carpoolDetails?.pickupLocation && (
+                              <div className="text-[11px] text-slate-600 font-semibold">
+                                📍 Pickup: {post.carpoolDetails.pickupLocation}
+                              </div>
+                            )}
+                            {post.carpoolDetails?.dropLocation && (
+                              <div className="text-[11px] text-slate-600 font-semibold">
+                                📍 Drop: {post.carpoolDetails.dropLocation}
+                              </div>
+                            )}
+                            {post.carpoolDetails?.notes && (
+                              <div className="text-[11px] text-slate-500 italic">
+                                Notes: {post.carpoolDetails.notes}
+                              </div>
+                            )}
+                            <div className="pt-1 flex items-center space-x-2">
+                              <a
+                                href={`/car-pooling`}
+                                className="text-[11px] font-extrabold text-rose-700 hover:text-rose-800 bg-rose-100/70 px-3 py-1.5 rounded-xl no-underline"
+                              >
+                                View in Car Pooling Hub →
+                              </a>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : post.type === "trade_off" ? (
+                      /* TRADE-OFF CONTENT - COLLAPSIBLE */
+                      <div className="bg-purple-50/80 border border-purple-200/80 p-4 rounded-2xl space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2 text-purple-800 font-black text-xs uppercase tracking-wider">
+                            <ArrowLeftRight className="w-4 h-4 shrink-0 text-purple-600" />
+                            <span>
+                              {post.tradeOffDetails?.tradeType === "request"
+                                ? "🙋 Trade-Off Seeking / Need"
+                                : "🤝 Trade-Off Offering"}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => toggleCollapse(post._id)}
+                            className="flex items-center space-x-1 text-[10px] font-extrabold text-purple-700 hover:text-purple-900 bg-white/80 px-2.5 py-1 rounded-xl border border-purple-200 cursor-pointer"
+                          >
+                            <span>{collapsedPosts[post._id] ? "Show Details" : "Hide Details"}</span>
+                            {collapsedPosts[post._id] ? (
+                              <ChevronDown className="w-3.5 h-3.5" />
+                            ) : (
+                              <ChevronUp className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        </div>
+
+                        {/* Title Summary */}
+                        {post.tradeOffDetails && (
+                          <div className="bg-white rounded-xl p-2.5 border border-purple-100 flex items-center justify-between">
+                            <span className="text-xs font-black text-slate-900 truncate">
+                              {post.tradeOffDetails.title}
+                            </span>
+                            <span className="text-[10px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-lg shrink-0 capitalize">
+                              {post.tradeOffDetails.category?.replace("_", " ")}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Collapsible Detailed Content */}
+                        {!collapsedPosts[post._id] && (
+                          <div className="space-y-2 pt-1 text-xs text-slate-700">
+                            <p className="font-medium leading-relaxed whitespace-pre-wrap">
+                              {post.content}
+                            </p>
+                            {post.tradeOffDetails?.pricingModel && (
+                              <div className="text-[11px] text-purple-800 font-semibold">
+                                🏷️ Terms: {post.tradeOffDetails.pricingModel}
+                              </div>
+                            )}
+                            {post.tradeOffDetails?.location && (
+                              <div className="text-[11px] text-slate-600 font-semibold">
+                                📍 Location: {post.tradeOffDetails.location}
+                              </div>
+                            )}
+                            <div className="pt-1 flex items-center space-x-2">
+                              <a
+                                href={`/trade-off`}
+                                className="text-[11px] font-extrabold text-purple-700 hover:text-purple-800 bg-purple-100/70 px-3 py-1.5 rounded-xl no-underline"
+                              >
+                                View in Trade-Off Hub →
+                              </a>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       /* REGULAR TEXT / IMAGE CONTENT */

@@ -404,6 +404,12 @@ export default function BookingsPage() {
     e.preventDefault();
     if (!bookingDate || !targetPropertyId) return;
 
+    const todayStr = new Date().toISOString().split("T")[0];
+    if (bookingAction === "book" && bookingDate < todayStr) {
+      alert("Booking date cannot be in the past. Please select today or a future date.");
+      return;
+    }
+
     setSubmittingBooking(true);
     try {
       const res = await fetch("/api/properties", {
@@ -1132,6 +1138,7 @@ export default function BookingsPage() {
                 <input
                   type="date"
                   required
+                  min={new Date().toISOString().split("T")[0]}
                   value={bookingDate}
                   onChange={(e) => setBookingDate(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs font-extrabold text-slate-800 outline-hidden focus:border-indigo-500"

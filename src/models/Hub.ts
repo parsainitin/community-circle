@@ -8,7 +8,9 @@ export interface IHub extends Document {
     | "organization"
     | "shopping"
     | "training"
+    | "trade_off"
     | "banking"
+    | "car_pooling"
     | "classified"
     | "showcase_business"
     | "tutor_service"
@@ -42,7 +44,9 @@ const HubSchema: Schema<IHub> = new Schema(
         "organization",
         "shopping",
         "training",
+        "trade_off",
         "banking",
+        "car_pooling",
         "classified",
         "showcase_business",
         "tutor_service",

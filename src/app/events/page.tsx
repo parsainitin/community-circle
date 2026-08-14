@@ -24,6 +24,8 @@ import {
   Landmark,
   Megaphone,
   Briefcase,
+  Car,
+  ArrowLeftRight,
 } from "lucide-react";
 import { compressImage, checkFileSize } from "@/lib/imageCompression";
 
@@ -45,6 +47,7 @@ interface HubItem {
     | "shopping"
     | "training"
     | "banking"
+    | "car_pooling"
     | "classified"
     | "showcase_business"
     | "tutor_service"
@@ -73,6 +76,7 @@ export default function HubsPage() {
     | "shopping"
     | "training"
     | "banking"
+    | "car_pooling"
     | "classified"
     | "showcase_business"
     | "tutor_service"
@@ -97,6 +101,7 @@ export default function HubsPage() {
     | "shopping"
     | "training"
     | "banking"
+    | "car_pooling"
     | "classified"
     | "showcase_business"
     | "tutor_service"
@@ -151,6 +156,7 @@ export default function HubsPage() {
       | "shopping"
       | "training"
       | "banking"
+      | "car_pooling"
       | "classified"
       | "showcase_business"
       | "tutor_service"
@@ -288,11 +294,17 @@ export default function HubsPage() {
           icon: Landmark,
           color: "bg-rose-50 text-rose-700 border-rose-200",
         };
+      case "car_pooling":
+        return {
+          label: "Car Pooling",
+          icon: Car,
+          color: "bg-rose-50 text-rose-700 border-rose-200",
+        };
       case "classified":
         return {
-          label: "Classified",
-          icon: Megaphone,
-          color: "bg-slate-100 text-slate-700 border-slate-300",
+          label: "Car Pooling",
+          icon: Car,
+          color: "bg-blue-50 text-blue-700 border-blue-200",
         };
       case "showcase_business":
         return {
@@ -334,7 +346,7 @@ export default function HubsPage() {
       <div className="bg-gradient-to-r from-amber-700 via-orange-600 to-amber-800 rounded-3xl p-4.5 text-white shadow-md border border-amber-500/30">
         <h2 className="text-base font-black tracking-wide">Community Hubs</h2>
         <p className="text-[11px] text-amber-100 font-medium mt-0.5 leading-relaxed">
-          Explore Panchang & Mahurth, Bookings, Organizations, Shoping, Training, Banking, and Classifieds.
+          Explore Panchang & Mahurth, Bookings, Organizations, Shoping, Training, Banking, and Car Pooling.
         </p>
       </div>
 
@@ -494,40 +506,26 @@ export default function HubsPage() {
           </div>
         </div>
 
-        {/* Card 4: Training */}
-        <div
-          onClick={() => setActiveTab("training")}
-          className={`group rounded-2xl p-3.5 border transition-all cursor-pointer shadow-xs hover:shadow-md relative overflow-hidden flex items-center space-x-3.5 ${
-            activeTab === "training"
-              ? "bg-gradient-to-r from-sky-600 to-blue-700 text-white border-sky-500 ring-2 ring-sky-400"
-              : "bg-gradient-to-r from-sky-50/90 to-blue-50/70 hover:from-sky-100 hover:to-blue-100 text-sky-950 border-sky-200/60"
-          }`}
+        {/* Card 4: Trade-Off (Borrowing, Goods, Services, Crowd Sharing) */}
+        <Link
+          href="/trade-off"
+          className="group rounded-2xl p-3.5 border transition-all cursor-pointer shadow-xs hover:shadow-md relative overflow-hidden flex items-center space-x-3.5 bg-gradient-to-r from-purple-50/90 to-indigo-50/70 hover:from-purple-100 hover:to-indigo-100 text-purple-950 border-purple-200/60 no-underline"
         >
-          <div
-            className={`p-3 rounded-2xl shrink-0 transition-transform duration-200 group-hover:scale-105 ${
-              activeTab === "training" ? "bg-white/20 text-white" : "bg-sky-600 text-white shadow-xs"
-            }`}
-          >
-            <GraduationCap className="w-5 h-5" />
+          <div className="p-3 rounded-2xl shrink-0 transition-transform duration-200 group-hover:scale-105 bg-purple-600 text-white shadow-xs">
+            <ArrowLeftRight className="w-5 h-5" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-black leading-tight tracking-wide">🎓 Training</h3>
-              {activeTab === "training" && (
-                <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-white/25 text-white shrink-0">
-                  Active
-                </span>
-              )}
+              <h3 className="text-xs font-black leading-tight tracking-wide">🔄 Trade-Off</h3>
+              <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-purple-600 text-white shrink-0">
+                Explore Trade-Off →
+              </span>
             </div>
-            <p
-              className={`text-[10px] font-medium mt-0.5 leading-relaxed ${
-                activeTab === "training" ? "text-sky-100" : "text-sky-700/80"
-              }`}
-            >
-              Skill Courses, Tuitions, Coaching & Workshops
+            <p className="text-[10px] text-purple-800/80 font-medium mt-0.5 leading-relaxed">
+              Borrow & Offer Goods, Services, Vehicles & Crowd Sharing
             </p>
           </div>
-        </div>
+        </Link>
 
         {/* Card 5: Banking */}
         <div
@@ -564,40 +562,26 @@ export default function HubsPage() {
           </div>
         </div>
 
-        {/* Card 6: Classified */}
-        <div
-          onClick={() => setActiveTab("classified")}
-          className={`group rounded-2xl p-3.5 border transition-all cursor-pointer shadow-xs hover:shadow-md relative overflow-hidden flex items-center space-x-3.5 ${
-            activeTab === "classified"
-              ? "bg-gradient-to-r from-slate-700 to-slate-900 text-white border-slate-600 ring-2 ring-slate-400"
-              : "bg-gradient-to-r from-slate-100 to-slate-200/80 hover:from-slate-200 hover:to-slate-300/80 text-slate-950 border-slate-300/70"
-          }`}
+        {/* Card 6: Car Pooling */}
+        <Link
+          href="/car-pooling"
+          className="group rounded-2xl p-3.5 border transition-all cursor-pointer shadow-xs hover:shadow-md relative overflow-hidden flex items-center space-x-3.5 bg-gradient-to-r from-rose-50/90 via-red-50/70 to-rose-100/60 hover:from-rose-100 hover:to-red-100 text-rose-950 border-rose-300/70 no-underline"
         >
-          <div
-            className={`p-3 rounded-2xl shrink-0 transition-transform duration-200 group-hover:scale-105 ${
-              activeTab === "classified" ? "bg-white/20 text-white" : "bg-slate-800 text-white shadow-xs"
-            }`}
-          >
-            <Megaphone className="w-5 h-5" />
+          <div className="p-3 rounded-2xl shrink-0 transition-transform duration-200 group-hover:scale-105 bg-rose-600 text-white shadow-xs">
+            <Car className="w-5 h-5" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-black leading-tight tracking-wide">📢 Classified</h3>
-              {activeTab === "classified" && (
-                <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-white/25 text-white shrink-0">
-                  Active
-                </span>
-              )}
+              <h3 className="text-xs font-black leading-tight tracking-wide">🚗 Car Pooling</h3>
+              <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-rose-600 text-white shrink-0">
+                Explore Outstation Rides →
+              </span>
             </div>
-            <p
-              className={`text-[10px] font-medium mt-0.5 leading-relaxed ${
-                activeTab === "classified" ? "text-slate-200" : "text-slate-700"
-              }`}
-            >
-              Buy & Sell, Rental Listings & Community Ads
+            <p className="text-[10px] text-rose-800/80 font-medium mt-0.5 leading-relaxed">
+              Outstation Rideshare, Inter-city Travel & Seat Offerings
             </p>
           </div>
-        </div>
+        </Link>
       </div>
 
       {/* Search Input Bar & Filter Indicator */}
@@ -644,7 +628,7 @@ export default function HubsPage() {
             {searchQuery ? "No matching hub listings found." : "No hub listings published in this category yet."}
           </p>
           <p className="text-[10px] text-slate-400 font-medium">
-            Be the first to create a listing in Mahurth & Panchang, Bookings, Organizations, Shoping, Training, Banking, or Classified!
+            Be the first to create a listing in Mahurth & Panchang, Bookings, Organizations, Shoping, Training, Banking, or Car Pooling!
           </p>
         </div>
       ) : (

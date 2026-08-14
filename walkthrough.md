@@ -90,9 +90,33 @@ I have successfully integrated Cloudinary for media uploads, extended the User s
   - **Google Pay Integration**: Includes a realistic GPay slide-up payment sheet overlay, loading spinner animations, and payment success transaction logs.
 - **Standalone Top Bar Heart Shortcut Link**: Replaced the unused decorative search button in [TopAppBar.tsx](file:///c:/VYANAMICS/Vyanamics-Project/CommunityCircle/src/components/TopAppBar.tsx) with a red heart icon (`Heart`) shortcut link pointing directly to `/donate`. Removed the "Support Platform" link from the user profile dropdown to keep it clean.
 
+
+### 13. Production MongoDB User Data Migration (`comcircle` -> `comicircle_jbs`)
+- **Migration Script**: Created [migrate-users.mjs](file:///c:/VYANAMICS/Vyanamics-Project/CommunityCircle/scripts/migrate-users.mjs) to extract user documents from the production `comcircle` database and import them into `comicircle_jbs` on MongoDB Atlas.
+- **Exclusion Logic**: Excluded 5 accounts matching `super-admin` (`6a702d0aedc038dc110a2c8d`), Twarita (`Twarita Parsai`, `Twarita`), and Nitin (`Nitin Parsai`, `Nitin p`).
+- **Data Load**: Migrated 4 member accounts into `comicircle_jbs.users`:
+  - `Mayur Tagai` (`6a7218afc3bbf21cd258bff3`)
+  - `Advik tagai` (`6a7219cedc04541ccd2cf58e`)
+  - `Ankita Tagai` (`6a721b51c3bbf21cd258bff4`)
+  - `Dinkar Rao Tagai` (`6a733056fd38bdef3c1710e6`)
+- **Schema & Linkage Preservation**: Updated `communityId` to `6a7c2e225b3387af833ec8c8` while preserving original `_id`, `parent`, and `familyMembers` relationships.
+- **BSON Type Correction & Query Resiliency**: Fixed an issue where `communityId` was initially loaded as a BSON String instead of a BSON ObjectId. Updated `comicircle_jbs.users` documents to use `ObjectId("6a7c2e225b3387af833ec8c8")` and updated [/api/users/route.ts](file:///c:/VYANAMICS/Vyanamics-Project/CommunityCircle/src/app/api/users/route.ts) to match both BSON `ObjectId` and `String` representations (`{ $or: [{ communityId }, { communityId: String(communityId) }, ...] }`). All 6 approved members (including the 4 migrated Tagai family members) now appear in the live directory.
+
 ---
 
 ## Verification and Build Results
+
+Production database query confirmation:
+```
+--- FINAL 'comicircle_jbs.users' COLLECTION STATE (7 Users) ---
+1. ID: 6a7c2e225b3387af833ec8c9 | Name: Twarita Parsai | Role: admin  | Community: undefined
+2. ID: 6a7c3ef56a9f9f81e0002d82 | Name: Nitin Parsai   | Role: member | Community: 6a7c2e225b3387af833ec8c8
+3. ID: 6a7d478a3a331d17d1eb7944 | Name: Deepak Joshi   | Role: member | Community: 6a7c2e225b3387af833ec8c8
+4. ID: 6a7218afc3bbf21cd258bff3 | Name: Mayur Tagai    | Role: member | Community: 6a7c2e225b3387af833ec8c8
+5. ID: 6a7219cedc04541ccd2cf58e | Name: Advik tagai    | Role: member | Community: 6a7c2e225b3387af833ec8c8
+6. ID: 6a721b51c3bbf21cd258bff4 | Name: Ankita Tagai   | Role: member | Community: 6a7c2e225b3387af833ec8c8
+7. ID: 6a733056fd38bdef3c1710e6 | Name: Dinkar Rao Tagai | Role: member | Community: 6a7c2e225b3387af833ec8c8
+```
 
 Production build completed successfully:
 ```bash

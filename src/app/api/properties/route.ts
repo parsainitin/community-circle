@@ -140,6 +140,10 @@ export async function PUT(request: NextRequest) {
       if (!cleanDate) {
         return Response.json({ error: "Date is required for booking" }, { status: 400 });
       }
+      const todayStr = new Date().toISOString().split("T")[0];
+      if (cleanDate < todayStr) {
+        return Response.json({ error: "Booking date cannot be in the past" }, { status: 400 });
+      }
       const existingIndex = property.bookedDates.findIndex((b) => b.date === cleanDate);
       const newSlot = {
         date: cleanDate,
