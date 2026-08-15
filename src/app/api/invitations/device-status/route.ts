@@ -5,7 +5,8 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const phoneNumber = searchParams.get("phoneNumber") || "";
 
-    const msgServiceUrl = process.env.MSG_SERVICE_URL || "http://localhost:3000";
+    const rawMsgUrl = process.env.MSG_SERVICE_URL || "http://localhost:3000";
+    const msgServiceUrl = rawMsgUrl.replace(/\/+$/, "");
 
     const url = phoneNumber
       ? `${msgServiceUrl}/api/instance/status?phoneNumber=${encodeURIComponent(phoneNumber)}`
@@ -22,7 +23,7 @@ export async function GET(req: Request) {
         success: false,
         isOnline: false,
         state: "OFFLINE",
-        error: `Messaging service returned status ${res.status}`,
+        error: `Messaging backend returned HTTP ${res.status}. Check MSG_SERVICE_URL in Netlify settings.`,
       });
     }
 
@@ -34,7 +35,7 @@ export async function GET(req: Request) {
       success: false,
       isOnline: false,
       state: "DISCONNECTED",
-      error: "WhatsApp gateway service is offline. Please run start-services.ps1 to start the gateway.",
+      error: `Cannot reach messaging service: ${error.message || "Network error"}. Ensure MSG_SERVICE_URL is configured in Netlify.`,
     });
   }
 }
@@ -44,7 +45,8 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const { action } = body;
 
-    const msgServiceUrl = process.env.MSG_SERVICE_URL || "http://localhost:3000";
+    const rawMsgUrl = process.env.MSG_SERVICE_URL || "http://localhost:3000";
+    const msgServiceUrl = rawMsgUrl.replace(/\/+$/, "");
 
     if (action === "disconnect") {
       const res = await fetch(`${msgServiceUrl}/api/instance/logout`, {

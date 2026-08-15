@@ -13,9 +13,10 @@ function formatPhoneNumber(rawNum: string): string {
 }
 
 export const getInstanceStatus = async (req: Request, res: Response): Promise<void> => {
-  const baseURL = process.env.EVOLUTION_API_URL || 'http://localhost:8080';
-  const apiKey = process.env.EVOLUTION_API_KEY || 'whastflow_dev_secret_key';
-  const instanceName = process.env.EVOLUTION_INSTANCE_NAME || 'whastflow_bot';
+  const rawBaseURL = process.env.EVOLUTION_API_URL || 'http://localhost:8080';
+  const baseURL = rawBaseURL.replace(/\/+$/, '');
+  const apiKey = (process.env.EVOLUTION_API_KEY || 'whastflow_dev_secret_key').trim();
+  const instanceName = (process.env.EVOLUTION_INSTANCE_NAME || 'whastflow_bot').trim();
   const rawPhoneNumber = req.query.phoneNumber as string | undefined;
   const phoneNumber = rawPhoneNumber ? formatPhoneNumber(rawPhoneNumber) : undefined;
 
@@ -25,11 +26,12 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
     try {
       const stateRes = await axios.get(`${baseURL}/instance/connectionState/${instanceName}`, {
         headers: { apikey: apiKey },
-        timeout: 5000,
+        timeout: 6000,
       });
       state = stateRes.data?.instance?.state || stateRes.data?.state || 'UNKNOWN';
     } catch (err: any) {
-      // If instance doesn't exist, create it
+      console.warn(`[Instance API] connectionState status ${err.response?.status || err.message}`);
+      // If instance doesn't exist (404), create it
       if (err.response?.status === 404 || err.response?.data?.error?.includes('not found')) {
         console.log(`[Instance API] Creating new instance "${instanceName}" in Evolution API...`);
         try {
@@ -37,7 +39,7 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
             `${baseURL}/instance/create`,
             {
               instanceName,
-              qrcode: true,
+              qrcode: false,
               integration: 'WHATSAPP-BAILEYS',
             },
             {
@@ -47,30 +49,39 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
           );
           state = 'connecting';
         } catch (createErr: any) {
-          console.error('[Instance API] Error creating instance:', createErr.message);
+          console.error('[Instance API] Error creating instance:', createErr.response?.data || createErr.message);
         }
       }
     }
 
     let qrCodeBase64: string | null = null;
     let pairingCode: string | null = null;
+    let connectErrorDetail: string | null = null;
 
-    // 2. If connecting/disconnected/close, fetch QR code or Pairing Code
+    // 2. If connecting/disconnected/close, fetch Pairing Code or QR code
     if (state !== 'open') {
       try {
         const connectUrl = phoneNumber
           ? `${baseURL}/instance/connect/${instanceName}?number=${phoneNumber}`
           : `${baseURL}/instance/connect/${instanceName}`;
 
+        console.log(`[Instance API] Requesting connection from: ${connectUrl}`);
         const connectRes = await axios.get(connectUrl, {
           headers: { apikey: apiKey },
-          timeout: 8000,
+          timeout: 10000,
         });
 
         qrCodeBase64 = connectRes.data?.base64 || connectRes.data?.qrcode?.base64 || null;
-        pairingCode = connectRes.data?.code || connectRes.data?.pairingCode || null;
+        pairingCode =
+          connectRes.data?.code ||
+          connectRes.data?.pairingCode ||
+          connectRes.data?.pairing_code ||
+          null;
+
+        console.log(`[Instance API] Connect response received. Pairing Code: ${pairingCode || 'NONE'}`);
       } catch (err: any) {
-        console.log('[Instance API] Notice: Connection fetch waiting for instance generation.');
+        connectErrorDetail = err.response?.data?.message || err.response?.data?.error || err.message;
+        console.error('[Instance API] Connect error:', connectErrorDetail);
       }
     }
 
@@ -81,27 +92,30 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
       isOnline: state === 'open',
       qrCodeBase64,
       pairingCode,
+      error: connectErrorDetail,
     });
   } catch (error: any) {
+    console.error('[Instance API] Fatal status check error:', error.message);
     res.status(200).json({
       success: false,
       instanceName,
       state: 'DISCONNECTED',
       isOnline: false,
-      error: error.message || 'Evolution API server is offline or instance not created yet.',
+      error: error.message || 'Evolution API server is offline or unreachable.',
     });
   }
 };
 
 export const logoutInstance = async (req: Request, res: Response): Promise<void> => {
-  const baseURL = process.env.EVOLUTION_API_URL || 'http://localhost:8080';
-  const apiKey = process.env.EVOLUTION_API_KEY || 'whastflow_dev_secret_key';
-  const instanceName = process.env.EVOLUTION_INSTANCE_NAME || 'whastflow_bot';
+  const rawBaseURL = process.env.EVOLUTION_API_URL || 'http://localhost:8080';
+  const baseURL = rawBaseURL.replace(/\/+$/, '');
+  const apiKey = (process.env.EVOLUTION_API_KEY || 'whastflow_dev_secret_key').trim();
+  const instanceName = (process.env.EVOLUTION_INSTANCE_NAME || 'whastflow_bot').trim();
 
   try {
     await axios.delete(`${baseURL}/instance/logout/${instanceName}`, {
       headers: { apikey: apiKey },
-      timeout: 5000,
+      timeout: 6000,
     });
     res.status(200).json({
       success: true,
