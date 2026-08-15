@@ -33,6 +33,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Only approved members (and super-admins) can reset password
+    if (user.role !== "super-admin") {
+      if (user.status === "pending") {
+        return NextResponse.json(
+          {
+            error:
+              "Your account is currently pending admin approval. Password reset is only available for approved members.",
+          },
+          { status: 403 }
+        );
+      }
+      if (user.status === "rejected") {
+        return NextResponse.json(
+          {
+            error:
+              "Your registration was rejected. Please contact your Community Admin.",
+          },
+          { status: 403 }
+        );
+      }
+      if (user.status && user.status !== "approved") {
+        return NextResponse.json(
+          {
+            error:
+              "Password reset is only available for approved community members.",
+          },
+          { status: 403 }
+        );
+      }
+    }
+
     // Generate random 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
