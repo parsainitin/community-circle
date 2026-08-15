@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import {
   ArrowLeft,
-  QrCode,
   CheckCircle2,
   Send,
   Users,
@@ -17,7 +16,6 @@ import {
   Italic,
   Strikethrough,
   List,
-  Smile,
   ImagePlus,
   Trash2,
   Smartphone,
@@ -25,14 +23,7 @@ import {
   X,
   CheckSquare,
   Square,
-  MessageCircle,
-  Share2,
-  ExternalLink,
   ShieldCheck,
-  Building2,
-  Calendar,
-  MapPin,
-  Clock,
   Zap,
   KeyRound,
   Copy,
@@ -40,6 +31,10 @@ import {
   PhoneCall,
   AlertTriangle,
   Radio,
+  ChevronDown,
+  Wifi,
+  WifiOff,
+  Lock,
 } from "lucide-react";
 import { compressImage, checkFileSize } from "@/lib/imageCompression";
 
@@ -138,21 +133,26 @@ export default function InvitationsPage() {
   const [cardImageFile, setCardImageFile] = useState<File | null>(null);
   const [cardImageUrl, setCardImageUrl] = useState<string>("");
 
-  // Real WhatsApp Gateway & Device Linking State
+  // Real WhatsApp Gateway & 8-Digit Pairing Code State
   const [isQrConnected, setIsQrConnected] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(true);
-  const [linkMode, setLinkMode] = useState<"pairing_code" | "qr_code">("pairing_code");
   const [phoneNumberInput, setPhoneNumberInput] = useState(
     user?.mobileNumber || user?.phone || "9826017177"
   );
   const [pairingCode, setPairingCode] = useState<string | null>(null);
-  const [qrCodeBase64, setQrCodeBase64] = useState<string | null>(null);
   const [generatingCode, setGeneratingCode] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Sync Logged-In User's phone number
+  useEffect(() => {
+    if (user?.mobileNumber || user?.phone) {
+      setPhoneNumberInput(user.mobileNumber || user.phone);
+    }
+  }, [user]);
 
   // Contacts & Selection State
   const [allContacts, setAllContacts] = useState<Contact[]>([]);
@@ -182,14 +182,12 @@ export default function InvitationsPage() {
       if (data.isOnline || data.state === "open") {
         setIsQrConnected(true);
         setPairingCode(null);
-        setQrCodeBase64(null);
         setConnectionError(null);
         return true;
       } else {
         setIsQrConnected(false);
         if (data.pairingCode) setPairingCode(data.pairingCode);
-        if (data.qrCodeBase64) setQrCodeBase64(data.qrCodeBase64);
-        if (data.error && !data.pairingCode && !data.qrCodeBase64) {
+        if (data.error && !data.pairingCode) {
           setConnectionError(data.error);
         }
         return false;
@@ -217,7 +215,7 @@ export default function InvitationsPage() {
   const handleGeneratePairingCode = async () => {
     const cleanPhone = phoneNumberInput.trim().replace(/\D/g, "");
     if (cleanPhone.length < 10) {
-      alert("Please enter a valid 10-digit mobile number");
+      alert("Please ensure your logged-in profile has a valid 10-digit mobile number");
       return;
     }
 
@@ -267,7 +265,6 @@ export default function InvitationsPage() {
       });
       setIsQrConnected(false);
       setPairingCode(null);
-      setQrCodeBase64(null);
       await fetchDeviceStatus();
     } catch (e) {
       console.error("Disconnect error:", e);
@@ -379,17 +376,17 @@ export default function InvitationsPage() {
   // Trigger Broadcast Workflow
   const handleStartBroadcast = async () => {
     if (selectedIds.length === 0) {
-      alert("Please select at least one community member to send invitation!");
+      alert("Please select at least one contact");
       return;
     }
     if (!invitationBody.trim()) {
-      alert("Please enter invitation message content!");
+      alert("Please enter invitation message");
       return;
     }
 
     if (!isQrConnected) {
       const confirmSend = confirm(
-        "WhatsApp Device is currently not linked in this browser session. Would you like to proceed with sending via the default server gateway?"
+        "WhatsApp Device is offline. Would you like to attempt delivery via server gateway?"
       );
       if (!confirmSend) return;
     }
@@ -400,7 +397,7 @@ export default function InvitationsPage() {
     setSentLogs([]);
 
     const targets = allContacts.filter((c) => selectedIds.includes(c.id));
-    setCurrentSendingName(`Broadcasting to ${targets.length} members...`);
+    setCurrentSendingName(`Sending to ${targets.length} members...`);
 
     try {
       const res = await fetch("/api/invitations/send", {
@@ -460,9 +457,6 @@ export default function InvitationsPage() {
             <div>
               <h1 className="text-sm sm:text-base font-black text-slate-900 flex items-center space-x-2">
                 <span>✉️ Invitation (आमंत्रण)</span>
-                <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                  WhatsApp Broadcast
-                </span>
               </h1>
               <p className="text-[10px] text-slate-500 font-medium hidden sm:block">
                 Design custom card invitations & broadcast directly to verified community WhatsApp contacts
@@ -474,31 +468,31 @@ export default function InvitationsPage() {
             <button
               onClick={() => fetchDeviceStatus()}
               disabled={checkingStatus}
-              title="Refresh connection status"
+              title="Refresh status"
               className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-all border-0 cursor-pointer disabled:opacity-50"
             >
               <RefreshCw className={`w-4 h-4 ${checkingStatus ? "animate-spin" : ""}`} />
             </button>
             <div
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+              title={isQrConnected ? "WhatsApp Device Online" : "WhatsApp Device Offline"}
+              className={`p-2 rounded-xl border flex items-center justify-center transition-all ${
                 isQrConnected
-                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                  : "bg-amber-50 text-amber-700 border-amber-200"
+                  ? "bg-emerald-50 text-emerald-600 border-emerald-200 shadow-xs"
+                  : "bg-amber-50 text-amber-600 border-amber-200"
               }`}
             >
-              <div
-                className={`w-2 h-2 rounded-full ${
-                  isQrConnected ? "bg-emerald-500 animate-pulse" : "bg-amber-500"
-                }`}
-              />
-              <span>{isQrConnected ? "WhatsApp Active" : "Device Offline"}</span>
+              {isQrConnected ? (
+                <Wifi className="w-4 h-4 text-emerald-600 animate-pulse" />
+              ) : (
+                <WifiOff className="w-4 h-4 text-amber-600" />
+              )}
             </div>
           </div>
         </div>
       </header>
 
       <main className="max-w-4xl mx-auto p-4 space-y-5">
-        {/* ── SECTION 1: WHATSAPP DEVICE LINKING (VIA REAL GATEWAY) ───────────────── */}
+        {/* ── SECTION 1: LINK DEVICE ────────────────────────────────────────────── */}
         <div className="bg-white rounded-3xl p-5 shadow-xs border border-slate-200/80 space-y-4">
           <div className="flex justify-between items-center pb-3 border-b border-slate-100">
             <div className="flex items-center space-x-2.5">
@@ -507,7 +501,7 @@ export default function InvitationsPage() {
               </div>
               <div>
                 <h2 className="text-xs font-black uppercase text-slate-900 tracking-wider flex items-center space-x-1.5">
-                  <span>WhatsApp Device Linking</span>
+                  <span>Link Device</span>
                   {isQrConnected && (
                     <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.2 rounded-md border border-emerald-200">
                       Connected
@@ -516,8 +510,8 @@ export default function InvitationsPage() {
                 </h2>
                 <p className="text-[10.5px] text-slate-500 font-medium">
                   {isQrConnected
-                    ? "Your WhatsApp gateway is active and ready to broadcast messages directly."
-                    : "Link your phone using a secure 8-digit pairing code or QR scan."}
+                    ? "WhatsApp is linked and ready to broadcast."
+                    : "Link your WhatsApp with an 8-digit pairing code."}
                 </p>
               </div>
             </div>
@@ -528,204 +522,135 @@ export default function InvitationsPage() {
                 disabled={disconnecting}
                 className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-extrabold text-[11px] rounded-xl transition-all border border-rose-200 cursor-pointer disabled:opacity-50"
               >
-                {disconnecting ? "Disconnecting..." : "Disconnect Session"}
+                {disconnecting ? "Disconnecting..." : "Disconnect"}
               </button>
             )}
           </div>
 
           {!isQrConnected ? (
             <div className="space-y-4 bg-slate-50/80 p-4 rounded-2xl border border-slate-200/80">
-              {/* Method Switcher: Pairing Code vs QR Code */}
-              <div className="flex items-center space-x-2 bg-slate-200/60 p-1 rounded-xl w-fit">
-                <button
-                  type="button"
-                  onClick={() => setLinkMode("pairing_code")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold border-0 cursor-pointer transition-all flex items-center space-x-1.5 ${
-                    linkMode === "pairing_code"
-                      ? "bg-white text-emerald-800 shadow-xs"
-                      : "bg-transparent text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  <KeyRound className="w-3.5 h-3.5" />
-                  <span>8-Digit Pairing Code (Recommended)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLinkMode("qr_code");
-                    fetchDeviceStatus();
-                  }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold border-0 cursor-pointer transition-all flex items-center space-x-1.5 ${
-                    linkMode === "qr_code"
-                      ? "bg-white text-emerald-800 shadow-xs"
-                      : "bg-transparent text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  <QrCode className="w-3.5 h-3.5" />
-                  <span>Scan QR Code</span>
-                </button>
-              </div>
-
               {connectionError && (
                 <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-amber-900 text-xs font-semibold flex items-start space-x-2">
                   <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                   <div className="space-y-1">
                     <span>{connectionError}</span>
                     <p className="text-[11px] text-amber-800 font-normal">
-                      Ensure <strong>start-services.ps1</strong> is running in your terminal to start Evolution API (Port 8080) and msgservice (Port 3000).
+                      Ensure your WhatsApp Gateway and messaging backend are online.
                     </p>
                   </div>
                 </div>
               )}
 
-              {/* Mode A: Pairing Code Flow */}
-              {linkMode === "pairing_code" && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Step 1: Input & Code Box */}
-                  <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
-                    <div className="space-y-1">
+              {/* 8-Digit Pairing Code Flow (Row by Row) */}
+              <div className="space-y-4">
+                {/* Step 1: Locked Mobile Number & Code Request */}
+                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
                       <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                        Your WhatsApp Mobile Number *
+                        Mobile Number
                       </label>
-                      <div className="relative">
-                        <PhoneCall className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
-                        <input
-                          type="tel"
-                          value={phoneNumberInput}
-                          onChange={(e) => setPhoneNumberInput(e.target.value)}
-                          placeholder="e.g. 9826017177"
-                          className="w-full pl-9 pr-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-extrabold text-slate-800 outline-hidden focus:border-emerald-500"
-                        />
-                      </div>
+                      <span className="text-[10px] text-slate-400 font-semibold flex items-center space-x-1">
+                        <Lock className="w-3 h-3 text-slate-400" />
+                        <span>Account Number</span>
+                      </span>
                     </div>
-
-                    {!pairingCode ? (
-                      <button
-                        type="button"
-                        onClick={handleGeneratePairingCode}
-                        disabled={generatingCode}
-                        className="w-full py-2.5 bg-whatsapp-green hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 border-0 cursor-pointer active:scale-95 disabled:opacity-50"
-                      >
-                        {generatingCode ? (
-                          <>
-                            <RefreshCw className="w-4 h-4 animate-spin" />
-                            <span>Requesting Real Pairing Code...</span>
-                          </>
-                        ) : (
-                          <>
-                            <KeyRound className="w-4 h-4" />
-                            <span>Get 8-Digit Pairing Code</span>
-                          </>
-                        )}
-                      </button>
-                    ) : (
-                      <div className="space-y-3 pt-1">
-                        <div className="p-3 bg-slate-900 text-white rounded-2xl text-center space-y-1.5 shadow-md border border-slate-800">
-                          <div className="text-[9px] font-extrabold uppercase text-emerald-400 tracking-widest flex items-center justify-center space-x-1">
-                            <Radio className="w-3 h-3 animate-pulse text-emerald-400" />
-                            <span>Official WhatsApp Pairing Code</span>
-                          </div>
-                          <div className="text-2xl font-black tracking-widest text-white font-mono select-all">
-                            {pairingCode}
-                          </div>
-                          <button
-                            type="button"
-                            onClick={handleCopyPairingCode}
-                            className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white text-[10px] font-bold rounded-lg transition-all border-0 cursor-pointer flex items-center justify-center space-x-1 mx-auto"
-                          >
-                            {codeCopied ? (
-                              <>
-                                <Check className="w-3 h-3 text-emerald-400" />
-                                <span className="text-emerald-400">Copied!</span>
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="w-3 h-3" />
-                                <span>Copy Code</span>
-                              </>
-                            )}
-                          </button>
-                        </div>
-
-                        <div className="flex items-center justify-center space-x-2 text-xs font-bold text-slate-500 py-1">
-                          <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-600" />
-                          <span>Waiting for phone confirmation (auto-detecting)...</span>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => fetchDeviceStatus()}
-                          className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition-all border-0 cursor-pointer"
-                        >
-                          Check Status Now
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Step 2: Step-by-step Instructions for Pairing Code */}
-                  <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
-                    <h3 className="text-xs font-black text-emerald-950 uppercase tracking-wide flex items-center space-x-1.5">
-                      <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                      <span>How to link in WhatsApp:</span>
-                    </h3>
-                    <ol className="space-y-2 text-xs font-semibold text-slate-700 list-decimal list-inside leading-relaxed">
-                      <li>Open <strong>WhatsApp</strong> on your phone</li>
-                      <li>Tap <strong>Settings / ⋮</strong> &gt; <strong>Linked Devices</strong> &gt; <strong>Link a Device</strong></li>
-                      <li>Tap <strong>"Link with phone number instead"</strong> at the bottom</li>
-                      <li>Enter the code: <strong className="text-emerald-700 font-bold font-mono">{pairingCode || "••••-••••"}</strong></li>
-                    </ol>
-                    <div className="p-2.5 bg-emerald-50 rounded-xl border border-emerald-200 text-[10.5px] text-emerald-900 font-bold flex items-center space-x-2">
-                      <Zap className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>No camera scanning needed! Direct official Baileys integration.</span>
+                    <div className="relative">
+                      <PhoneCall className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                      <input
+                        type="tel"
+                        value={phoneNumberInput}
+                        readOnly
+                        disabled
+                        placeholder="e.g. 9826017177"
+                        className="w-full pl-9 pr-9 py-2 bg-slate-100 rounded-xl border border-slate-200 text-xs font-extrabold text-slate-700 outline-hidden cursor-not-allowed select-none"
+                      />
+                      <Lock className="w-3.5 h-3.5 absolute right-3 top-3 text-slate-400" />
                     </div>
                   </div>
-                </div>
-              )}
 
-              {/* Mode B: QR Code Scan Flow */}
-              {linkMode === "qr_code" && (
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-center justify-between gap-6">
-                  <div className="space-y-3 max-w-sm">
-                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center space-x-2">
-                      <QrCode className="w-4 h-4 text-emerald-600" />
-                      <span>Scan QR Code to Link</span>
-                    </h3>
-                    <ol className="space-y-2 text-xs font-semibold text-slate-700 list-decimal list-inside leading-relaxed">
-                      <li>Open <strong>WhatsApp</strong> on your phone</li>
-                      <li>Go to <strong>Settings / ⋮</strong> &gt; <strong>Linked Devices</strong></li>
-                      <li>Tap <strong>Link a Device</strong> and point camera at the QR code</li>
-                    </ol>
+                  {!pairingCode ? (
                     <button
                       type="button"
-                      onClick={() => fetchDeviceStatus()}
-                      className="py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all border-0 cursor-pointer flex items-center space-x-1.5"
+                      onClick={handleGeneratePairingCode}
+                      disabled={generatingCode}
+                      className="w-full py-2.5 bg-whatsapp-green hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 border-0 cursor-pointer active:scale-95 disabled:opacity-50"
                     >
-                      <RefreshCw className="w-3.5 h-3.5" />
-                      <span>Refresh QR Code</span>
+                      {generatingCode ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          <span>Requesting Code...</span>
+                        </>
+                      ) : (
+                        <>
+                          <KeyRound className="w-4 h-4" />
+                          <span>Get Pairing Code</span>
+                        </>
+                      )}
                     </button>
-                  </div>
-
-                  <div className="p-4 bg-slate-900 rounded-3xl border border-slate-800 shadow-md flex flex-col items-center justify-center">
-                    {qrCodeBase64 ? (
-                      <img
-                        src={qrCodeBase64.startsWith("data:") ? qrCodeBase64 : `data:image/png;base64,${qrCodeBase64}`}
-                        alt="WhatsApp QR Code"
-                        className="w-48 h-48 rounded-2xl bg-white p-2"
-                      />
-                    ) : (
-                      <div className="w-48 h-48 rounded-2xl bg-slate-800/80 flex flex-col items-center justify-center text-slate-400 space-y-2 p-4 text-center">
-                        <RefreshCw className="w-6 h-6 animate-spin text-emerald-500" />
-                        <span className="text-[11px] font-semibold">Generating live QR code from WhatsApp Gateway...</span>
+                  ) : (
+                    <div className="space-y-3 pt-1">
+                      <div className="p-3 bg-slate-900 text-white rounded-2xl text-center space-y-1.5 shadow-md border border-slate-800">
+                        <div className="text-[9px] font-extrabold uppercase text-emerald-400 tracking-widest flex items-center justify-center space-x-1">
+                          <Radio className="w-3 h-3 animate-pulse text-emerald-400" />
+                          <span>WhatsApp Pairing Code</span>
+                        </div>
+                        <div className="text-2xl font-black tracking-widest text-white font-mono select-all">
+                          {pairingCode}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleCopyPairingCode}
+                          className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white text-[10px] font-bold rounded-lg transition-all border-0 cursor-pointer flex items-center justify-center space-x-1 mx-auto"
+                        >
+                          {codeCopied ? (
+                            <>
+                              <Check className="w-3 h-3 text-emerald-400" />
+                              <span className="text-emerald-400">Copied!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3 h-3" />
+                              <span>Copy</span>
+                            </>
+                          )}
+                        </button>
                       </div>
-                    )}
-                    <span className="text-[10px] text-slate-400 font-bold mt-2 flex items-center space-x-1">
-                      <Radio className="w-3 h-3 text-emerald-400 animate-ping" />
-                      <span>Auto-detecting scan...</span>
-                    </span>
+
+                      <div className="flex items-center justify-center space-x-2 text-xs font-bold text-slate-500 py-1">
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-600" />
+                        <span>Waiting for confirmation...</span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => fetchDeviceStatus()}
+                        className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition-all border-0 cursor-pointer"
+                      >
+                        Check Status
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Step 2: Step-by-step Instructions */}
+                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+                  <h3 className="text-xs font-black text-emerald-950 uppercase tracking-wide flex items-center space-x-1.5">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                    <span>How to link in WhatsApp:</span>
+                  </h3>
+                  <ol className="space-y-2 text-xs font-semibold text-slate-700 list-decimal list-inside leading-relaxed">
+                    <li>Open <strong>WhatsApp</strong> on your phone</li>
+                    <li>Tap <strong>Settings / ⋮</strong> &gt; <strong>Linked Devices</strong> &gt; <strong>Link a Device</strong></li>
+                    <li>Tap <strong>"Link with phone number instead"</strong> at the bottom</li>
+                    <li>Enter the code: <strong className="text-emerald-700 font-bold font-mono">{pairingCode || "••••-••••"}</strong></li>
+                  </ol>
+                  <div className="p-2.5 bg-emerald-50 rounded-xl border border-emerald-200 text-[10.5px] text-emerald-900 font-bold flex items-center space-x-2">
+                    <Zap className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Direct pairing. No camera scanning required.</span>
                   </div>
                 </div>
-              )}
+              </div>
             </div>
           ) : (
             <div className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white p-4.5 rounded-2xl flex flex-col sm:flex-row justify-between items-center gap-3 shadow-md">
@@ -735,67 +660,73 @@ export default function InvitationsPage() {
                 </div>
                 <div>
                   <h3 className="text-xs font-black tracking-wide flex items-center space-x-2">
-                    <span>WhatsApp Gateway Linked & Online</span>
+                    <span>WhatsApp Linked</span>
                     <span className="text-[9px] bg-white text-emerald-800 px-2 py-0.5 rounded-full font-black">
                       ACTIVE
                     </span>
                   </h3>
                   <p className="text-[10.5px] text-emerald-100 font-medium mt-0.5">
-                    Client session is live and connected. All invitation broadcasts will deliver via this WhatsApp account.
+                    Your session is online. Broadcasts will send via this number.
                   </p>
                 </div>
               </div>
 
               <div className="flex items-center space-x-2 bg-black/20 px-3.5 py-2 rounded-xl border border-white/20 text-xs font-bold shrink-0">
                 <div className="w-2.5 h-2.5 rounded-full bg-emerald-300 animate-pulse" />
-                <span>Ready to Broadcast</span>
+                <span>Ready to Send</span>
               </div>
             </div>
           )}
         </div>
 
-        {/* ── SECTION 2: RICH TEXT INVITATION COMPOSER ──────────────────────────── */}
+        {/* ── SECTION 2: COMPOSE INVITATION ────────────────────────────────────── */}
         <div className="bg-white rounded-3xl p-5 shadow-xs border border-slate-200/80 space-y-4">
           <div className="flex justify-between items-center pb-3 border-b border-slate-100">
             <div className="flex items-center space-x-2">
               <Sparkles className="w-5 h-5 text-indigo-600" />
               <h2 className="text-xs font-black uppercase text-slate-900 tracking-wider">
-                Invitation Editor
+                Compose
               </h2>
             </div>
 
             <span className="text-[10px] text-slate-400 font-bold">
-              Formatted WhatsApp Message
+              Formatted Message
             </span>
           </div>
 
-          {/* Quick Template Presets */}
-          <div className="space-y-2">
+          {/* Quick Template Selector Dropdown */}
+          <div className="space-y-1.5">
             <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-              Quick Templates (पूर्व-निर्मित प्रारूप)
+              Template
             </label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {TEMPLATE_PRESETS.map((tpl) => (
-                <button
-                  key={tpl.id}
-                  type="button"
-                  onClick={() => handleSelectTemplate(tpl)}
-                  className="p-2.5 rounded-2xl bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 text-left transition-all cursor-pointer group"
-                >
-                  <div className="text-base mb-1">{tpl.icon}</div>
-                  <div className="text-xs font-bold text-slate-800 group-hover:text-indigo-700 truncate">
-                    {tpl.name}
-                  </div>
-                  <div className="text-[10px] text-slate-400 truncate">Tap to use</div>
-                </button>
-              ))}
+            <div className="relative">
+              <select
+                onChange={(e) => {
+                  const tpl = TEMPLATE_PRESETS.find((t) => t.id === e.target.value);
+                  if (tpl) handleSelectTemplate(tpl);
+                }}
+                defaultValue=""
+                className="w-full px-3.5 py-2.5 bg-slate-50 hover:bg-slate-100/80 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 outline-hidden focus:border-indigo-500 cursor-pointer transition-all appearance-none pr-9"
+              >
+                <option value="" disabled>
+                  -- Select a template (शादी, पूजा, बैठक, भंडारा...) --
+                </option>
+                {TEMPLATE_PRESETS.map((tpl) => (
+                  <option key={tpl.id} value={tpl.id}>
+                    {tpl.icon} {tpl.name} ({tpl.title})
+                  </option>
+                ))}
+              </select>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                <ChevronDown className="w-4 h-4" />
+              </div>
             </div>
           </div>
 
           {/* Title Input */}
           <div className="space-y-1">
             <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-              Occasion Title * (शीर्षक)
+              Title *
             </label>
             <input
               type="text"
@@ -806,10 +737,10 @@ export default function InvitationsPage() {
             />
           </div>
 
-          {/* Formatting Bar */}
+          {/* Formatting Bar & Message Body */}
           <div className="space-y-1">
             <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-              Invitation Details & Message *
+              Message *
             </label>
             <div className="flex flex-wrap items-center gap-1 p-1 bg-slate-100 rounded-xl border border-slate-200">
               <button
@@ -861,20 +792,20 @@ export default function InvitationsPage() {
               rows={8}
               value={invitationBody}
               onChange={(e) => setInvitationBody(e.target.value)}
-              placeholder="Write your invitation details with date, time, venue, and host contact numbers..."
+              placeholder="Write invitation details with date, time, venue, and host contact numbers..."
               className="w-full p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-800 outline-hidden focus:border-indigo-500 font-sans leading-relaxed resize-y"
             />
           </div>
 
-          {/* Optional Card Image Banner */}
+          {/* Optional Card Image */}
           <div className="space-y-2 pt-1">
             <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-              Invitation Digital Card / Poster (वैकल्पिक कार्ड इमेज)
+              Card Image (Optional)
             </label>
             <div className="flex items-center space-x-3">
               <label className="flex items-center space-x-2 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold border border-slate-200 cursor-pointer transition-all">
                 <ImagePlus className="w-4 h-4 text-slate-500" />
-                <span>Upload Card Image</span>
+                <span>Upload Image</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -911,14 +842,14 @@ export default function InvitationsPage() {
           </div>
         </div>
 
-        {/* ── SECTION 3: WHATSAPP MESSAGE PREVIEW ───────────────────────────────── */}
+        {/* ── SECTION 3: PREVIEW ────────────────────────────────────────────────── */}
         {(invitationTitle || invitationBody) && (
           <div className="bg-emerald-950/90 text-white rounded-3xl p-5 shadow-lg border border-emerald-800/80 space-y-3">
             <div className="flex items-center justify-between pb-2 border-b border-emerald-800">
               <div className="flex items-center space-x-2">
                 <Smartphone className="w-4 h-4 text-emerald-400" />
                 <span className="text-xs font-black uppercase tracking-wider text-emerald-300">
-                  Live WhatsApp Message Preview
+                  Preview
                 </span>
               </div>
               <span className="text-[10px] text-emerald-400/80 font-mono">
@@ -949,17 +880,17 @@ export default function InvitationsPage() {
           </div>
         )}
 
-        {/* ── SECTION 4: RECIPIENT MEMBER SELECTOR ──────────────────────────────── */}
+        {/* ── SECTION 4: RECIPIENTS ────────────────────────────────────────────── */}
         <div className="bg-white rounded-3xl p-5 shadow-xs border border-slate-200/80 space-y-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-3 border-b border-slate-100">
             <div className="flex items-center space-x-2">
               <Users className="w-5 h-5 text-indigo-600" />
               <div>
                 <h2 className="text-xs font-black uppercase text-slate-900 tracking-wider">
-                  Select Recipients ({selectedIds.length} Selected)
+                  Recipients ({selectedIds.length})
                 </h2>
                 <p className="text-[10.5px] text-slate-500 font-medium">
-                  Choose verified directory contacts to receive this broadcast
+                  Select contacts to receive this broadcast
                 </p>
               </div>
             </div>
@@ -975,7 +906,7 @@ export default function InvitationsPage() {
                     : "bg-transparent text-slate-500 hover:text-slate-900"
                 }`}
               >
-                All Members ({allContacts.length})
+                All ({allContacts.length})
               </button>
               <button
                 type="button"
@@ -999,7 +930,7 @@ export default function InvitationsPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search contact name, phone, or Gotra..."
+                placeholder="Search name, phone, or Gotra..."
                 className="w-full pl-9 pr-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 outline-hidden focus:border-indigo-500"
               />
             </div>
@@ -1012,12 +943,12 @@ export default function InvitationsPage() {
               {isAllFilteredSelected ? (
                 <>
                   <Square className="w-3.5 h-3.5" />
-                  <span>Deselect All</span>
+                  <span>Deselect</span>
                 </>
               ) : (
                 <>
                   <CheckSquare className="w-3.5 h-3.5" />
-                  <span>Select All Filtered</span>
+                  <span>Select Filtered</span>
                 </>
               )}
             </button>
@@ -1028,7 +959,7 @@ export default function InvitationsPage() {
             {loadingContacts ? (
               <div className="py-12 text-center text-slate-400 text-xs font-bold flex items-center justify-center space-x-2">
                 <RefreshCw className="w-4 h-4 animate-spin text-emerald-600" />
-                <span>Loading Community Contacts...</span>
+                <span>Loading Contacts...</span>
               </div>
             ) : filteredContacts.length === 0 ? (
               <div className="py-8 text-center text-slate-400 text-xs font-bold">
@@ -1090,7 +1021,7 @@ export default function InvitationsPage() {
             >
               <Send className="w-4 h-4" />
               <span>
-                {selectedIds.length > 0 ? `Broadcast to ${selectedIds.length} Members` : "Select Recipients to Broadcast"}
+                {selectedIds.length > 0 ? `Broadcast (${selectedIds.length})` : "Broadcast"}
               </span>
             </button>
           </div>
@@ -1105,7 +1036,7 @@ export default function InvitationsPage() {
               <div className="flex items-center space-x-2">
                 <Send className="w-5 h-5 text-emerald-600" />
                 <h3 className="text-sm font-black text-slate-900">
-                  {sendingComplete ? "Broadcast Complete 🎉" : "Sending WhatsApp Invitations..."}
+                  {sendingComplete ? "Broadcast Complete 🎉" : "Sending Invitations..."}
                 </h3>
               </div>
 
@@ -1122,7 +1053,7 @@ export default function InvitationsPage() {
             {/* Progress Bar */}
             <div className="space-y-1.5">
               <div className="flex justify-between text-xs font-bold text-slate-700">
-                <span>Sending Progress</span>
+                <span>Progress</span>
                 <span>{sendingProgress}%</span>
               </div>
               <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200">
@@ -1144,7 +1075,7 @@ export default function InvitationsPage() {
             {/* Sent Logs Box */}
             <div className="space-y-1.5">
               <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                Broadcast Delivery Logs ({sentLogs.length} / {selectedIds.length})
+                Logs ({sentLogs.length} / {selectedIds.length})
               </label>
               <div className="max-h-48 overflow-y-auto space-y-1.5 p-2 bg-slate-50 rounded-2xl border border-slate-200 text-xs">
                 {sentLogs.map((log, idx) => (
@@ -1175,7 +1106,7 @@ export default function InvitationsPage() {
                   onClick={() => setSendingModalOpen(false)}
                   className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs rounded-2xl transition-all border-0 cursor-pointer"
                 >
-                  Done / Close
+                  Done
                 </button>
               </div>
             )}
