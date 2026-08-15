@@ -193,8 +193,8 @@ export default function InvitationsPage() {
           data.pairingCode.length <= 15
         ) {
           setPairingCode(data.pairingCode.trim());
-        }
-        if (data.error && !data.pairingCode) {
+          setConnectionError(null);
+        } else if (phoneToPair && data.error) {
           setConnectionError(data.error);
         }
         return false;

@@ -15,7 +15,7 @@ function formatPhoneNumber(rawNum: string): string {
 function isValidPairingCode(code: any): boolean {
   if (!code || typeof code !== 'string') return false;
   const clean = code.trim();
-  // Valid WhatsApp Pairing Code is 8 characters (often formatted as XXXX-XXXX) and never starts with 2@ (QR code)
+  // Valid WhatsApp Pairing Code is 6 to 15 alphanumeric characters and never starts with 2@ (QR code)
   return clean.length >= 6 && clean.length <= 15 && !clean.startsWith('2@') && !clean.includes(',');
 }
 
@@ -38,15 +38,15 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
       state = stateRes.data?.instance?.state || stateRes.data?.state || 'UNKNOWN';
     } catch (err: any) {
       console.warn(`[Instance API] connectionState status ${err.response?.status || err.message}`);
-      // If instance doesn't exist (404), create it
       if (err.response?.status === 404 || err.response?.data?.error?.includes('not found')) {
         console.log(`[Instance API] Creating new instance "${instanceName}" in Evolution API...`);
         try {
-          await axios.post(
+          const createRes = await axios.post(
             `${baseURL}/instance/create`,
             {
               instanceName,
               qrcode: false,
+              number: phoneNumber,
               integration: 'WHATSAPP-BAILEYS',
             },
             {
@@ -65,7 +65,7 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
     let pairingCode: string | null = null;
     let connectErrorDetail: string | null = null;
 
-    // 2. If connecting/disconnected/close, fetch Pairing Code or QR code
+    // 2. If connecting/disconnected/close, fetch Pairing Code
     if (state !== 'open') {
       try {
         const connectUrl = phoneNumber
@@ -80,7 +80,6 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
 
         qrCodeBase64 = connectRes.data?.base64 || connectRes.data?.qrcode?.base64 || null;
 
-        // Prioritize pairingCode fields over raw code
         const candidates = [
           connectRes.data?.pairingCode,
           connectRes.data?.pairing_code,
@@ -99,6 +98,69 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
       } catch (err: any) {
         connectErrorDetail = err.response?.data?.message || err.response?.data?.error || err.message;
         console.error('[Instance API] Connect error:', connectErrorDetail);
+      }
+
+      // 3. Fallback: If phoneNumber was supplied but instance returned only QR or no pairing code, recreate instance with pairing mode
+      if (!pairingCode && phoneNumber) {
+        try {
+          console.log(`[Instance API] Re-initializing instance "${instanceName}" with pairing number: ${phoneNumber}...`);
+          await axios.delete(`${baseURL}/instance/delete/${instanceName}`, {
+            headers: { apikey: apiKey },
+            timeout: 6000,
+          }).catch(() => {});
+
+          const createRes = await axios.post(
+            `${baseURL}/instance/create`,
+            {
+              instanceName,
+              qrcode: false,
+              number: phoneNumber,
+              integration: 'WHATSAPP-BAILEYS',
+            },
+            {
+              headers: { apikey: apiKey },
+              timeout: 10000,
+            }
+          );
+
+          const createCandidates = [
+            createRes.data?.pairingCode,
+            createRes.data?.pairing_code,
+            createRes.data?.codePairing,
+            createRes.data?.code,
+            createRes.data?.instance?.pairingCode,
+          ];
+
+          for (const candidate of createCandidates) {
+            if (isValidPairingCode(candidate)) {
+              pairingCode = candidate.trim();
+              break;
+            }
+          }
+
+          if (!pairingCode) {
+            const secondConnectRes = await axios.get(`${baseURL}/instance/connect/${instanceName}?number=${phoneNumber}`, {
+              headers: { apikey: apiKey },
+              timeout: 10000,
+            });
+            const secondCandidates = [
+              secondConnectRes.data?.pairingCode,
+              secondConnectRes.data?.pairing_code,
+              secondConnectRes.data?.codePairing,
+              secondConnectRes.data?.code,
+            ];
+            for (const candidate of secondCandidates) {
+              if (isValidPairingCode(candidate)) {
+                pairingCode = candidate.trim();
+                break;
+              }
+            }
+          }
+
+          console.log(`[Instance API] Fallback completed. Pairing Code: ${pairingCode || 'NONE'}`);
+        } catch (recreateErr: any) {
+          console.error('[Instance API] Fallback recreate error:', recreateErr.response?.data || recreateErr.message);
+        }
       }
     }
 
