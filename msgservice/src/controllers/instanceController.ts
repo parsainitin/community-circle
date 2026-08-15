@@ -106,48 +106,53 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
         try {
           console.log(`[Instance API] Resetting instance "${instanceName}" to force phone pairing for ${phoneNumber}...`);
           
-          // Delete old QR instance
+          // Delete old QR instance and wait 1s for cleanup
           await axios.delete(`${baseURL}/instance/delete/${instanceName}`, {
             headers: { apikey: apiKey },
             timeout: 6000,
           }).catch(() => {});
+          await new Promise((resolve) => setTimeout(resolve, 1000));
 
-          // Recreate with number and qrcode: true (triggers Baileys connectToWhatsapp with number in Evolution API)
-          const createRes = await axios.post(
-            `${baseURL}/instance/create`,
-            {
-              instanceName,
-              qrcode: true,
-              number: phoneNumber,
-              integration: 'WHATSAPP-BAILEYS',
-            },
-            {
-              headers: { apikey: apiKey },
-              timeout: 15000,
+          // Recreate with number and qrcode: true
+          try {
+            const createRes = await axios.post(
+              `${baseURL}/instance/create`,
+              {
+                instanceName,
+                qrcode: true,
+                number: phoneNumber,
+                integration: 'WHATSAPP-BAILEYS',
+              },
+              {
+                headers: { apikey: apiKey },
+                timeout: 15000,
+              }
+            );
+
+            const createCandidates = [
+              createRes.data?.pairingCode,
+              createRes.data?.pairing_code,
+              createRes.data?.codePairing,
+              createRes.data?.qrcode?.pairingCode,
+              createRes.data?.instance?.pairingCode,
+              createRes.data?.code,
+            ];
+
+            for (const candidate of createCandidates) {
+              if (isValidPairingCode(candidate)) {
+                pairingCode = candidate.trim();
+                break;
+              }
             }
-          );
-
-          const createCandidates = [
-            createRes.data?.pairingCode,
-            createRes.data?.pairing_code,
-            createRes.data?.codePairing,
-            createRes.data?.qrcode?.pairingCode,
-            createRes.data?.instance?.pairingCode,
-            createRes.data?.code,
-          ];
-
-          for (const candidate of createCandidates) {
-            if (isValidPairingCode(candidate)) {
-              pairingCode = candidate.trim();
-              break;
-            }
+          } catch (createErr: any) {
+            console.warn('[Instance API] Create returned error (may already exist), falling back to connect:', createErr.response?.data || createErr.message);
           }
 
           // Polling loop: Wait for Baileys to request pairing code from WhatsApp servers
           let attempts = 0;
-          while (!pairingCode && attempts < 4) {
+          while (!pairingCode && attempts < 5) {
             attempts++;
-            await new Promise((resolve) => setTimeout(resolve, 2000));
+            await new Promise((resolve) => setTimeout(resolve, 1500));
             try {
               const pollRes = await axios.get(`${baseURL}/instance/connect/${instanceName}?number=${phoneNumber}`, {
                 headers: { apikey: apiKey },
