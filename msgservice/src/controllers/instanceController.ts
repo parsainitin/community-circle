@@ -41,17 +41,17 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
       if (err.response?.status === 404 || err.response?.data?.error?.includes('not found')) {
         console.log(`[Instance API] Creating new instance "${instanceName}" in Evolution API...`);
         try {
-          await axios.post(
+          const createRes = await axios.post(
             `${baseURL}/instance/create`,
             {
               instanceName,
-              qrcode: false,
+              qrcode: true,
               number: phoneNumber,
               integration: 'WHATSAPP-BAILEYS',
             },
             {
               headers: { apikey: apiKey },
-              timeout: 10000,
+              timeout: 12000,
             }
           );
           state = 'connecting';
@@ -84,8 +84,8 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
           connectRes.data?.pairingCode,
           connectRes.data?.pairing_code,
           connectRes.data?.codePairing,
-          connectRes.data?.code,
           connectRes.data?.qrcode?.pairingCode,
+          connectRes.data?.code,
         ];
 
         for (const candidate of candidates) {
@@ -101,10 +101,10 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
         console.error('[Instance API] Connect error:', connectErrorDetail);
       }
 
-      // 3. If phoneNumber was provided but instance is stuck in QR mode (state == 'connecting' without pairingCode), reset instance so Baileys generates pairing code
+      // 3. If phoneNumber was provided but instance is stuck in QR mode (state == 'connecting' without pairingCode), reset instance with qrcode: true & number to trigger pairing code
       if (!pairingCode && phoneNumber) {
         try {
-          console.log(`[Instance API] Resetting instance "${instanceName}" to close state to force pairing code for ${phoneNumber}...`);
+          console.log(`[Instance API] Resetting instance "${instanceName}" to force phone pairing for ${phoneNumber}...`);
           
           // Delete old QR instance
           await axios.delete(`${baseURL}/instance/delete/${instanceName}`, {
@@ -112,18 +112,18 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
             timeout: 6000,
           }).catch(() => {});
 
-          // Recreate with number
+          // Recreate with number and qrcode: true (triggers Baileys connectToWhatsapp with number in Evolution API)
           const createRes = await axios.post(
             `${baseURL}/instance/create`,
             {
               instanceName,
-              qrcode: false,
+              qrcode: true,
               number: phoneNumber,
               integration: 'WHATSAPP-BAILEYS',
             },
             {
               headers: { apikey: apiKey },
-              timeout: 10000,
+              timeout: 15000,
             }
           );
 
@@ -131,9 +131,9 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
             createRes.data?.pairingCode,
             createRes.data?.pairing_code,
             createRes.data?.codePairing,
-            createRes.data?.code,
-            createRes.data?.instance?.pairingCode,
             createRes.data?.qrcode?.pairingCode,
+            createRes.data?.instance?.pairingCode,
+            createRes.data?.code,
           ];
 
           for (const candidate of createCandidates) {
@@ -143,9 +143,9 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
             }
           }
 
-          // Allow Baileys 1.5s to generate pairing code
+          // Allow Baileys 2s to generate pairing code if not in create response
           if (!pairingCode) {
-            await new Promise((resolve) => setTimeout(resolve, 1500));
+            await new Promise((resolve) => setTimeout(resolve, 2000));
             const secondConnectRes = await axios.get(`${baseURL}/instance/connect/${instanceName}?number=${phoneNumber}`, {
               headers: { apikey: apiKey },
               timeout: 10000,
@@ -154,8 +154,8 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
               secondConnectRes.data?.pairingCode,
               secondConnectRes.data?.pairing_code,
               secondConnectRes.data?.codePairing,
-              secondConnectRes.data?.code,
               secondConnectRes.data?.qrcode?.pairingCode,
+              secondConnectRes.data?.code,
             ];
             for (const candidate of secondCandidates) {
               if (isValidPairingCode(candidate)) {
