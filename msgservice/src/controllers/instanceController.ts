@@ -26,6 +26,7 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
   const instanceName = (process.env.EVOLUTION_INSTANCE_NAME || 'whastflow_bot').trim();
   const rawPhoneNumber = req.query.phoneNumber as string | undefined;
   const phoneNumber = rawPhoneNumber ? formatPhoneNumber(rawPhoneNumber) : undefined;
+  const checkOnly = req.query.checkOnly === 'true';
 
   try {
     // 1. Fetch connection state
@@ -61,17 +62,42 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
       }
     }
 
+    // If online, return immediately
+    if (state === 'open') {
+      res.status(200).json({
+        success: true,
+        instanceName,
+        state: 'open',
+        isOnline: true,
+        qrCodeBase64: null,
+        pairingCode: null,
+        error: null,
+      });
+      return;
+    }
+
+    // If checkOnly requested (used by background poll while waiting for user phone entry), do NOT trigger connect to preserve active pairing socket
+    if (checkOnly || (!phoneNumber && state === 'connecting')) {
+      res.status(200).json({
+        success: true,
+        instanceName,
+        state,
+        isOnline: false,
+        qrCodeBase64: null,
+        pairingCode: null,
+        error: null,
+      });
+      return;
+    }
+
     let qrCodeBase64: string | null = null;
     let pairingCode: string | null = null;
     let connectErrorDetail: string | null = null;
 
-    // 2. If connecting/disconnected/close, fetch Pairing Code
-    if (state !== 'open') {
+    // 2. If connecting/disconnected/close and a phone number was given, fetch Pairing Code
+    if (phoneNumber) {
       try {
-        const connectUrl = phoneNumber
-          ? `${baseURL}/instance/connect/${instanceName}?number=${phoneNumber}`
-          : `${baseURL}/instance/connect/${instanceName}`;
-
+        const connectUrl = `${baseURL}/instance/connect/${instanceName}?number=${phoneNumber}`;
         console.log(`[Instance API] Requesting connection from: ${connectUrl}`);
         const connectRes = await axios.get(connectUrl, {
           headers: { apikey: apiKey },
@@ -102,11 +128,11 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
       }
 
       // 3. If phoneNumber was provided but instance is stuck in QR mode (state == 'connecting' without pairingCode), reset instance with qrcode: true & number to trigger pairing code
-      if (!pairingCode && phoneNumber) {
+      if (!pairingCode) {
         try {
           console.log(`[Instance API] Resetting instance "${instanceName}" to force phone pairing for ${phoneNumber}...`);
           
-          // Delete old QR instance and wait 1s for cleanup
+          // Delete old instance and wait 1s for database cleanup
           await axios.delete(`${baseURL}/instance/delete/${instanceName}`, {
             headers: { apikey: apiKey },
             timeout: 6000,
@@ -145,7 +171,7 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
               }
             }
           } catch (createErr: any) {
-            console.warn('[Instance API] Create returned error (may already exist), falling back to connect:', createErr.response?.data || createErr.message);
+            console.warn('[Instance API] Create fallback warning:', createErr.response?.data || createErr.message);
           }
 
           // Polling loop: Wait for Baileys to request pairing code from WhatsApp servers

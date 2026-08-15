@@ -4,13 +4,18 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const phoneNumber = searchParams.get("phoneNumber") || "";
+    const checkOnly = searchParams.get("checkOnly") || "";
 
     const rawMsgUrl = process.env.MSG_SERVICE_URL || "http://localhost:3000";
     const msgServiceUrl = rawMsgUrl.replace(/\/+$/, "");
 
-    const url = phoneNumber
-      ? `${msgServiceUrl}/api/instance/status?phoneNumber=${encodeURIComponent(phoneNumber)}`
-      : `${msgServiceUrl}/api/instance/status`;
+    let url = `${msgServiceUrl}/api/instance/status`;
+    const params = new URLSearchParams();
+    if (phoneNumber) params.append("phoneNumber", phoneNumber);
+    if (checkOnly) params.append("checkOnly", checkOnly);
+    if (params.toString()) {
+      url += `?${params.toString()}`;
+    }
 
     const res = await fetch(url, {
       method: "GET",

@@ -169,11 +169,15 @@ export default function InvitationsPage() {
   const [sendingComplete, setSendingComplete] = useState(false);
 
   // 1. Check Device Status from Gateway
-  const fetchDeviceStatus = async (phoneToPair?: string): Promise<boolean> => {
+  const fetchDeviceStatus = async (phoneToPair?: string, checkOnly: boolean = false): Promise<boolean> => {
     try {
-      const url = phoneToPair
-        ? `/api/invitations/device-status?phoneNumber=${encodeURIComponent(phoneToPair)}`
-        : `/api/invitations/device-status`;
+      setCheckingStatus(true);
+      let url = "/api/invitations/device-status";
+      if (phoneToPair) {
+        url += `?phoneNumber=${encodeURIComponent(phoneToPair)}`;
+      } else if (checkOnly) {
+        url += `?checkOnly=true`;
+      }
 
       const res = await fetch(url);
       if (!res.ok) throw new Error("Gateway service unavailable");
@@ -210,7 +214,7 @@ export default function InvitationsPage() {
 
   // On Mount: Check current status and fetch contacts
   useEffect(() => {
-    fetchDeviceStatus();
+    fetchDeviceStatus(undefined, true);
     fetchCommunityContacts();
 
     return () => {
@@ -236,10 +240,10 @@ export default function InvitationsPage() {
         return;
       }
 
-      // Start live polling every 3 seconds to detect when user confirms in WhatsApp
+      // Start non-disruptive live polling every 3 seconds to detect when user confirms in WhatsApp
       if (pollingRef.current) clearInterval(pollingRef.current);
       pollingRef.current = setInterval(async () => {
-        const connected = await fetchDeviceStatus();
+        const connected = await fetchDeviceStatus(undefined, true);
         if (connected) {
           if (pollingRef.current) clearInterval(pollingRef.current);
         }
