@@ -35,6 +35,7 @@ import {
   Wifi,
   WifiOff,
   Lock,
+  QrCode,
 } from "lucide-react";
 import { compressImage, checkFileSize } from "@/lib/imageCompression";
 
@@ -139,6 +140,8 @@ export default function InvitationsPage() {
   const [phoneNumberInput, setPhoneNumberInput] = useState(
     user?.mobileNumber || user?.phone || "9826017177"
   );
+  const [linkTab, setLinkTab] = useState<"qr" | "code">("qr");
+  const [qrCodeBase64, setQrCodeBase64] = useState<string | null>(null);
   const [pairingCode, setPairingCode] = useState<string | null>(null);
   const [generatingCode, setGeneratingCode] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
@@ -186,10 +189,14 @@ export default function InvitationsPage() {
       if (data.isOnline || data.state === "open") {
         setIsQrConnected(true);
         setPairingCode(null);
+        setQrCodeBase64(null);
         setConnectionError(null);
         return true;
       } else {
         setIsQrConnected(false);
+        if (data.qrCodeBase64) {
+          setQrCodeBase64(data.qrCodeBase64);
+        }
         if (
           data.pairingCode &&
           typeof data.pairingCode === "string" &&
@@ -212,9 +219,9 @@ export default function InvitationsPage() {
     }
   };
 
-  // On Mount: Check current status and fetch contacts
+  // On Mount: Check current status and fetch QR/contacts
   useEffect(() => {
-    fetchDeviceStatus(undefined, true);
+    fetchDeviceStatus();
     fetchCommunityContacts();
 
     return () => {
@@ -552,116 +559,195 @@ export default function InvitationsPage() {
                 </div>
               )}
 
-              {/* 8-Digit Pairing Code Flow (Row by Row) */}
-              <div className="space-y-4">
-                {/* Step 1: Locked Mobile Number & Code Request */}
-                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                        Mobile Number
-                      </label>
-                      <span className="text-[10px] text-slate-400 font-semibold flex items-center space-x-1">
-                        <Lock className="w-3 h-3 text-slate-400" />
-                        <span>Account Number</span>
-                      </span>
-                    </div>
-                    <div className="relative">
-                      <PhoneCall className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
-                      <input
-                        type="tel"
-                        value={phoneNumberInput}
-                        readOnly
-                        disabled
-                        placeholder="e.g. 9826017177"
-                        className="w-full pl-9 pr-9 py-2 bg-slate-100 rounded-xl border border-slate-200 text-xs font-extrabold text-slate-700 outline-hidden cursor-not-allowed select-none"
-                      />
-                      <Lock className="w-3.5 h-3.5 absolute right-3 top-3 text-slate-400" />
-                    </div>
-                  </div>
+              {/* Tab Selector */}
+              <div className="flex bg-slate-200/80 p-1 rounded-xl gap-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLinkTab("qr");
+                    fetchDeviceStatus();
+                  }}
+                  className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
+                    linkTab === "qr"
+                      ? "bg-white text-emerald-800 shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  <QrCode className="w-3.5 h-3.5" />
+                  <span>Scan QR Code (Instant)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLinkTab("code")}
+                  className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
+                    linkTab === "code"
+                      ? "bg-white text-emerald-800 shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  <KeyRound className="w-3.5 h-3.5" />
+                  <span>8-Digit Pairing Code</span>
+                </button>
+              </div>
 
-                  {!pairingCode ? (
+              {linkTab === "qr" ? (
+                /* Tab 1: QR Code Scanner */
+                <div className="space-y-4">
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col items-center justify-center text-center space-y-3">
+                    {qrCodeBase64 ? (
+                      <div className="p-3 bg-white rounded-2xl border-2 border-emerald-500/30 shadow-md">
+                        <img
+                          src={qrCodeBase64.startsWith("data:") ? qrCodeBase64 : `data:image/png;base64,${qrCodeBase64}`}
+                          alt="WhatsApp QR Code"
+                          className="w-56 h-56 object-contain rounded-xl"
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-56 h-56 bg-slate-100 rounded-2xl flex flex-col items-center justify-center space-y-2 border border-slate-200">
+                        <RefreshCw className="w-6 h-6 text-slate-400 animate-spin" />
+                        <span className="text-xs font-bold text-slate-500">Generating QR Code...</span>
+                      </div>
+                    )}
+
+                    <div className="flex items-center space-x-2 text-xs font-bold text-emerald-700">
+                      <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      <span>Ready to scan with your phone camera</span>
+                    </div>
+
                     <button
                       type="button"
-                      onClick={handleGeneratePairingCode}
-                      disabled={generatingCode}
-                      className="w-full py-2.5 bg-whatsapp-green hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 border-0 cursor-pointer active:scale-95 disabled:opacity-50"
+                      onClick={() => fetchDeviceStatus()}
+                      className="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all border-0 cursor-pointer flex items-center space-x-1.5"
                     >
-                      {generatingCode ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 animate-spin" />
-                          <span>Requesting Code...</span>
-                        </>
-                      ) : (
-                        <>
-                          <KeyRound className="w-4 h-4" />
-                          <span>Get Pairing Code</span>
-                        </>
-                      )}
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      <span>Refresh QR Code</span>
                     </button>
-                  ) : (
-                    <div className="space-y-3 pt-1">
-                      <div className="p-3 bg-slate-900 text-white rounded-2xl text-center space-y-1.5 shadow-md border border-slate-800">
-                        <div className="text-[9px] font-extrabold uppercase text-emerald-400 tracking-widest flex items-center justify-center space-x-1">
-                          <Radio className="w-3 h-3 animate-pulse text-emerald-400" />
-                          <span>WhatsApp Pairing Code</span>
-                        </div>
-                        <div className="text-2xl font-black tracking-widest text-white font-mono select-all">
-                          {pairingCode}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={handleCopyPairingCode}
-                          className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white text-[10px] font-bold rounded-lg transition-all border-0 cursor-pointer flex items-center justify-center space-x-1 mx-auto"
-                        >
-                          {codeCopied ? (
-                            <>
-                              <Check className="w-3 h-3 text-emerald-400" />
-                              <span className="text-emerald-400">Copied!</span>
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="w-3 h-3" />
-                              <span>Copy</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
+                  </div>
 
-                      <div className="flex items-center justify-center space-x-2 text-xs font-bold text-slate-500 py-1">
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-600" />
-                        <span>Waiting for confirmation...</span>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => fetchDeviceStatus()}
-                        className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition-all border-0 cursor-pointer"
-                      >
-                        Check Status
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Step 2: Step-by-step Instructions */}
-                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
-                  <h3 className="text-xs font-black text-emerald-950 uppercase tracking-wide flex items-center space-x-1.5">
-                    <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                    <span>How to link in WhatsApp:</span>
-                  </h3>
-                  <ol className="space-y-2 text-xs font-semibold text-slate-700 list-decimal list-inside leading-relaxed">
-                    <li>Open <strong>WhatsApp</strong> on your phone</li>
-                    <li>Tap <strong>Settings / ⋮</strong> &gt; <strong>Linked Devices</strong> &gt; <strong>Link a Device</strong></li>
-                    <li>Tap <strong>"Link with phone number instead"</strong> at the bottom</li>
-                    <li>Enter the code: <strong className="text-emerald-700 font-bold font-mono">{pairingCode || "••••-••••"}</strong></li>
-                  </ol>
-                  <div className="p-2.5 bg-emerald-50 rounded-xl border border-emerald-200 text-[10.5px] text-emerald-900 font-bold flex items-center space-x-2">
-                    <Zap className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>Direct pairing. No camera scanning required.</span>
+                  <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-2.5">
+                    <h3 className="text-xs font-black text-emerald-950 uppercase tracking-wide flex items-center space-x-1.5">
+                      <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                      <span>How to scan:</span>
+                    </h3>
+                    <ol className="space-y-1.5 text-xs font-semibold text-slate-700 list-decimal list-inside leading-relaxed">
+                      <li>Open <strong>WhatsApp</strong> on your phone</li>
+                      <li>Tap <strong>Settings / ⋮</strong> &gt; <strong>Linked Devices</strong> &gt; <strong>Link a Device</strong></li>
+                      <li>Point your phone camera at the QR code above</li>
+                    </ol>
                   </div>
                 </div>
-              </div>
+              ) : (
+                /* Tab 2: 8-Digit Pairing Code */
+                <div className="space-y-4">
+                  {/* Step 1: Locked Mobile Number & Code Request */}
+                  <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                          Mobile Number
+                        </label>
+                        <span className="text-[10px] text-slate-400 font-semibold flex items-center space-x-1">
+                          <Lock className="w-3 h-3 text-slate-400" />
+                          <span>Account Number</span>
+                        </span>
+                      </div>
+                      <div className="relative">
+                        <PhoneCall className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                        <input
+                          type="tel"
+                          value={phoneNumberInput}
+                          readOnly
+                          disabled
+                          placeholder="e.g. 9826017177"
+                          className="w-full pl-9 pr-9 py-2 bg-slate-100 rounded-xl border border-slate-200 text-xs font-extrabold text-slate-700 outline-hidden cursor-not-allowed select-none"
+                        />
+                        <Lock className="w-3.5 h-3.5 absolute right-3 top-3 text-slate-400" />
+                      </div>
+                    </div>
+
+                    {!pairingCode ? (
+                      <button
+                        type="button"
+                        onClick={handleGeneratePairingCode}
+                        disabled={generatingCode}
+                        className="w-full py-2.5 bg-whatsapp-green hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 border-0 cursor-pointer active:scale-95 disabled:opacity-50"
+                      >
+                        {generatingCode ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                            <span>Requesting Code...</span>
+                          </>
+                        ) : (
+                          <>
+                            <KeyRound className="w-4 h-4" />
+                            <span>Get Pairing Code</span>
+                          </>
+                        )}
+                      </button>
+                    ) : (
+                      <div className="space-y-3 pt-1">
+                        <div className="p-3 bg-slate-900 text-white rounded-2xl text-center space-y-1.5 shadow-md border border-slate-800">
+                          <div className="text-[9px] font-extrabold uppercase text-emerald-400 tracking-widest flex items-center justify-center space-x-1">
+                            <Radio className="w-3 h-3 animate-pulse text-emerald-400" />
+                            <span>WhatsApp Pairing Code</span>
+                          </div>
+                          <div className="text-2xl font-black tracking-widest text-white font-mono select-all">
+                            {pairingCode}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleCopyPairingCode}
+                            className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white text-[10px] font-bold rounded-lg transition-all border-0 cursor-pointer flex items-center justify-center space-x-1 mx-auto"
+                          >
+                            {codeCopied ? (
+                              <>
+                                <Check className="w-3 h-3 text-emerald-400" />
+                                <span className="text-emerald-400">Copied!</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3 h-3" />
+                                <span>Copy</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+
+                        <div className="flex items-center justify-center space-x-2 text-xs font-bold text-slate-500 py-1">
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-600" />
+                          <span>Waiting for confirmation...</span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => fetchDeviceStatus()}
+                          className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition-all border-0 cursor-pointer"
+                        >
+                          Check Status
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Step 2: Step-by-step Instructions */}
+                  <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+                    <h3 className="text-xs font-black text-emerald-950 uppercase tracking-wide flex items-center space-x-1.5">
+                      <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                      <span>How to link in WhatsApp:</span>
+                    </h3>
+                    <ol className="space-y-2 text-xs font-semibold text-slate-700 list-decimal list-inside leading-relaxed">
+                      <li>Open <strong>WhatsApp</strong> on your phone</li>
+                      <li>Tap <strong>Settings / ⋮</strong> &gt; <strong>Linked Devices</strong> &gt; <strong>Link a Device</strong></li>
+                      <li>Tap <strong>"Link with phone number instead"</strong> at the bottom</li>
+                      <li>Enter the code: <strong className="text-emerald-700 font-bold font-mono">{pairingCode || "••••-••••"}</strong></li>
+                    </ol>
+                    <div className="p-2.5 bg-emerald-50 rounded-xl border border-emerald-200 text-[10.5px] text-emerald-900 font-bold flex items-center space-x-2">
+                      <Zap className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>Direct pairing. No camera scanning required.</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white p-4.5 rounded-2xl flex flex-col sm:flex-row justify-between items-center gap-3 shadow-md">
