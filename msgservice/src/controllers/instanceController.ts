@@ -15,7 +15,6 @@ function formatPhoneNumber(rawNum: string): string {
 function isValidPairingCode(code: any): boolean {
   if (!code || typeof code !== 'string') return false;
   const clean = code.trim();
-  // Valid WhatsApp Pairing Code is 6 to 15 alphanumeric characters and never starts with 2@ (QR code)
   return clean.length >= 6 && clean.length <= 15 && !clean.startsWith('2@') && !clean.includes(',');
 }
 
@@ -70,13 +69,14 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
         state: 'open',
         isOnline: true,
         qrCodeBase64: null,
+        code: null,
         pairingCode: null,
         error: null,
       });
       return;
     }
 
-    // If checkOnly requested (used by background poll while waiting for user phone entry), do NOT trigger connect
+    // If checkOnly requested, do NOT trigger connect
     if (checkOnly) {
       res.status(200).json({
         success: true,
@@ -84,6 +84,7 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
         state,
         isOnline: false,
         qrCodeBase64: null,
+        code: null,
         pairingCode: null,
         error: null,
       });
@@ -91,6 +92,7 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
     }
 
     let qrCodeBase64: string | null = null;
+    let rawCode: string | null = null;
     let pairingCode: string | null = null;
     let connectErrorDetail: string | null = null;
 
@@ -105,6 +107,7 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
         });
 
         qrCodeBase64 = connectRes.data?.base64 || connectRes.data?.qrcode?.base64 || null;
+        rawCode = connectRes.data?.code || connectRes.data?.qrcode?.code || null;
       } catch (err: any) {
         connectErrorDetail = err.response?.data?.message || err.response?.data?.error || err.message;
         console.error('[Instance API] QR Connect error:', connectErrorDetail);
@@ -120,6 +123,7 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
         });
 
         qrCodeBase64 = connectRes.data?.base64 || connectRes.data?.qrcode?.base64 || null;
+        rawCode = connectRes.data?.code || connectRes.data?.qrcode?.code || null;
 
         const candidates = [
           connectRes.data?.pairingCode,
@@ -212,6 +216,9 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
               if (pollRes.data?.base64 || pollRes.data?.qrcode?.base64) {
                 qrCodeBase64 = pollRes.data?.base64 || pollRes.data?.qrcode?.base64;
               }
+              if (pollRes.data?.code || pollRes.data?.qrcode?.code) {
+                rawCode = pollRes.data?.code || pollRes.data?.qrcode?.code;
+              }
             } catch (err: any) {
               console.warn(`[Instance API] Attempt ${attempts} waiting for pairing code...`);
             }
@@ -230,6 +237,7 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
       state,
       isOnline: state === 'open',
       qrCodeBase64,
+      code: rawCode,
       pairingCode,
       error: connectErrorDetail,
     });

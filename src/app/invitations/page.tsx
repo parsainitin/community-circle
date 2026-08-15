@@ -142,6 +142,7 @@ export default function InvitationsPage() {
   );
   const [linkTab, setLinkTab] = useState<"qr" | "code">("qr");
   const [qrCodeBase64, setQrCodeBase64] = useState<string | null>(null);
+  const [rawQrCode, setRawQrCode] = useState<string | null>(null);
   const [pairingCode, setPairingCode] = useState<string | null>(null);
   const [generatingCode, setGeneratingCode] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
@@ -190,12 +191,16 @@ export default function InvitationsPage() {
         setIsQrConnected(true);
         setPairingCode(null);
         setQrCodeBase64(null);
+        setRawQrCode(null);
         setConnectionError(null);
         return true;
       } else {
         setIsQrConnected(false);
         if (data.qrCodeBase64) {
           setQrCodeBase64(data.qrCodeBase64);
+        }
+        if (data.code) {
+          setRawQrCode(data.code);
         }
         if (
           data.pairingCode &&
@@ -594,10 +599,14 @@ export default function InvitationsPage() {
                 /* Tab 1: QR Code Scanner */
                 <div className="space-y-4">
                   <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col items-center justify-center text-center space-y-3">
-                    {qrCodeBase64 ? (
+                    {qrCodeBase64 || rawQrCode ? (
                       <div className="p-3 bg-white rounded-2xl border-2 border-emerald-500/30 shadow-md">
                         <img
-                          src={qrCodeBase64.startsWith("data:") ? qrCodeBase64 : `data:image/png;base64,${qrCodeBase64}`}
+                          src={
+                            qrCodeBase64
+                              ? (qrCodeBase64.startsWith("data:") ? qrCodeBase64 : `data:image/png;base64,${qrCodeBase64}`)
+                              : `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(rawQrCode || "")}`
+                          }
                           alt="WhatsApp QR Code"
                           className="w-56 h-56 object-contain rounded-xl"
                         />
