@@ -41,7 +41,7 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
       if (err.response?.status === 404 || err.response?.data?.error?.includes('not found')) {
         console.log(`[Instance API] Creating new instance "${instanceName}" in Evolution API...`);
         try {
-          const createRes = await axios.post(
+          await axios.post(
             `${baseURL}/instance/create`,
             {
               instanceName,
@@ -143,25 +143,34 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
             }
           }
 
-          // Allow Baileys 2s to generate pairing code if not in create response
-          if (!pairingCode) {
+          // Polling loop: Wait for Baileys to request pairing code from WhatsApp servers
+          let attempts = 0;
+          while (!pairingCode && attempts < 4) {
+            attempts++;
             await new Promise((resolve) => setTimeout(resolve, 2000));
-            const secondConnectRes = await axios.get(`${baseURL}/instance/connect/${instanceName}?number=${phoneNumber}`, {
-              headers: { apikey: apiKey },
-              timeout: 10000,
-            });
-            const secondCandidates = [
-              secondConnectRes.data?.pairingCode,
-              secondConnectRes.data?.pairing_code,
-              secondConnectRes.data?.codePairing,
-              secondConnectRes.data?.qrcode?.pairingCode,
-              secondConnectRes.data?.code,
-            ];
-            for (const candidate of secondCandidates) {
-              if (isValidPairingCode(candidate)) {
-                pairingCode = candidate.trim();
-                break;
+            try {
+              const pollRes = await axios.get(`${baseURL}/instance/connect/${instanceName}?number=${phoneNumber}`, {
+                headers: { apikey: apiKey },
+                timeout: 10000,
+              });
+              const pollCandidates = [
+                pollRes.data?.pairingCode,
+                pollRes.data?.pairing_code,
+                pollRes.data?.codePairing,
+                pollRes.data?.qrcode?.pairingCode,
+                pollRes.data?.code,
+              ];
+              for (const candidate of pollCandidates) {
+                if (isValidPairingCode(candidate)) {
+                  pairingCode = candidate.trim();
+                  break;
+                }
               }
+              if (pollRes.data?.base64 || pollRes.data?.qrcode?.base64) {
+                qrCodeBase64 = pollRes.data?.base64 || pollRes.data?.qrcode?.base64;
+              }
+            } catch (err: any) {
+              console.warn(`[Instance API] Attempt ${attempts} waiting for pairing code...`);
             }
           }
 
