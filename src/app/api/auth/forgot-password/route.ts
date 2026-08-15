@@ -1,7 +1,8 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { User, getTenantUserModel } from "@/models/User";
 import { Community } from "@/models/Community";
+import { PasswordResetOtp } from "@/models/PasswordResetOtp";
 import { hashPassword } from "@/lib/auth-crypto";
 
 export async function POST(request: NextRequest) {
@@ -9,14 +10,30 @@ export async function POST(request: NextRequest) {
     await dbConnect();
     const UserModel = await getTenantUserModel(request);
     const body = await request.json();
-    const { mobileNumber, newPassword, resetKey } = body || {};
-    const cleanMobile = typeof mobileNumber === "string" ? mobileNumber.trim() : String(mobileNumber || "").trim();
-    const cleanNewPassword = typeof newPassword === "string" ? newPassword : String(newPassword || "");
-    const cleanResetKey = typeof resetKey === "string" ? resetKey.trim() : String(resetKey || "").trim();
+    const { mobileNumber, newPassword, otp, resetKey } = body || {};
 
-    if (!cleanMobile || !cleanNewPassword || !cleanResetKey) {
-      return Response.json(
-        { error: "Mobile number, new password, and Admin Reset Key are required." },
+    const cleanMobile = typeof mobileNumber === "string" ? mobileNumber.trim().replace(/\D/g, "") : "";
+    const cleanNewPassword = typeof newPassword === "string" ? newPassword.trim() : "";
+    const cleanOtp = typeof otp === "string" ? otp.trim() : "";
+    const cleanResetKey = typeof resetKey === "string" ? resetKey.trim() : "";
+
+    if (!cleanMobile || cleanMobile.length < 10) {
+      return NextResponse.json(
+        { error: "A valid 10-digit mobile number is required." },
+        { status: 400 }
+      );
+    }
+
+    if (!cleanNewPassword || cleanNewPassword.length < 6) {
+      return NextResponse.json(
+        { error: "New password must be at least 6 characters long." },
+        { status: 400 }
+      );
+    }
+
+    if (!cleanOtp && !cleanResetKey) {
+      return NextResponse.json(
+        { error: "Please provide either the 6-digit WhatsApp OTP or the Admin Reset Key." },
         { status: 400 }
       );
     }
@@ -26,39 +43,68 @@ export async function POST(request: NextRequest) {
       user = await User.findOne({ mobileNumber: cleanMobile });
     }
     if (!user) {
-      return Response.json({ error: "No user found with this mobile number" }, { status: 404 });
-    }
-
-    // Verify Admin Reset Key against community's reset key or default keys
-    let validKey = "RESET123";
-    if (user.communityId) {
-      const community = await Community.findById(user.communityId).select("passwordResetKey").lean();
-      if (community?.passwordResetKey) {
-        validKey = community.passwordResetKey;
-      }
-    } else {
-      const activeComm = await Community.findOne({ isActive: true }).select("passwordResetKey").lean();
-      if (activeComm?.passwordResetKey) {
-        validKey = activeComm.passwordResetKey;
-      }
-    }
-
-    const allowedKeys = [validKey.trim().toLowerCase(), "reset123", "admin123"];
-    const providedKey = String(resetKey).trim().toLowerCase();
-
-    if (!allowedKeys.includes(providedKey)) {
-      return Response.json(
-        { error: "Invalid Admin Reset Key. Please ask your Community Admin for the valid Password Reset Key." },
-        { status: 401 }
+      return NextResponse.json(
+        { error: "No user found with this mobile number." },
+        { status: 404 }
       );
     }
 
-    // Update password
+    // 1. Verify via WhatsApp OTP if provided
+    if (cleanOtp) {
+      const otpRecord = await PasswordResetOtp.findOne({
+        mobileNumber: cleanMobile,
+        otp: cleanOtp,
+        expiresAt: { $gt: new Date() },
+      });
+
+      if (!otpRecord) {
+        return NextResponse.json(
+          { error: "Invalid or expired OTP. Please check the code received on WhatsApp or request a new one." },
+          { status: 401 }
+        );
+      }
+
+      // Consume OTP
+      await PasswordResetOtp.deleteMany({ mobileNumber: cleanMobile });
+    } else if (cleanResetKey) {
+      // 2. Verify via Admin Reset Key
+      let validKey = "RESET123";
+      if (user.communityId) {
+        const community = await Community.findById(user.communityId).select("passwordResetKey").lean();
+        if (community?.passwordResetKey) {
+          validKey = community.passwordResetKey;
+        }
+      } else {
+        const activeComm = await Community.findOne({ isActive: true }).select("passwordResetKey").lean();
+        if (activeComm?.passwordResetKey) {
+          validKey = activeComm.passwordResetKey;
+        }
+      }
+
+      const allowedKeys = [validKey.trim().toLowerCase(), "reset123", "admin123"];
+      const providedKey = cleanResetKey.toLowerCase();
+
+      if (!allowedKeys.includes(providedKey)) {
+        return NextResponse.json(
+          { error: "Invalid Admin Reset Key. Please ask your Community Admin for the valid Password Reset Key." },
+          { status: 401 }
+        );
+      }
+    }
+
+    // Update password with scrypt salted hash
     user.password = hashPassword(cleanNewPassword);
     await user.save();
 
-    return Response.json({ message: "Password reset successfully! You can now log in with your new password." });
+    return NextResponse.json({
+      success: true,
+      message: "Password reset successfully! You can now log in with your new password.",
+    });
   } catch (error: any) {
-    return Response.json({ error: error.message || "Failed to reset password" }, { status: 500 });
+    console.error("[Forgot Password API] Error:", error);
+    return NextResponse.json(
+      { error: error.message || "Failed to reset password" },
+      { status: 500 }
+    );
   }
 }

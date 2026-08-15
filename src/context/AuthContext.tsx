@@ -42,7 +42,12 @@ interface AuthContextProps {
   login: (mobileNumber: string, password: string) => Promise<{ success: boolean; error?: string }>;
   visitorLogin: (mobileNumber: string) => Promise<{ success: boolean; error?: string }>;
   signup: (userData: any) => Promise<{ success: boolean; pendingApproval?: boolean; error?: string }>;
-  forgotPassword: (mobileNumber: string, newPassword: string, resetKey: string) => Promise<{ success: boolean; error?: string }>;
+  sendResetOtp: (mobileNumber: string) => Promise<{ success: boolean; message?: string; error?: string }>;
+  forgotPassword: (
+    mobileNumber: string,
+    newPassword: string,
+    resetKeyOrOptions?: string | { otp?: string; resetKey?: string }
+  ) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   updateUser: (userData: Partial<UserType>) => void;
 }
@@ -206,12 +211,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const forgotPassword = async (mobileNumber: string, newPassword: string, resetKey: string) => {
+  const sendResetOtp = async (mobileNumber: string) => {
     try {
+      const res = await fetch("/api/auth/forgot-password/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mobileNumber }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        return { success: false, error: data.error || "Failed to send OTP" };
+      }
+
+      return { success: true, message: data.message };
+    } catch (e: any) {
+      return { success: false, error: e.message || "An error occurred while sending OTP" };
+    }
+  };
+
+  const forgotPassword = async (
+    mobileNumber: string,
+    newPassword: string,
+    resetKeyOrOptions?: string | { otp?: string; resetKey?: string }
+  ) => {
+    try {
+      let payload: any = { mobileNumber, newPassword };
+      if (typeof resetKeyOrOptions === "string") {
+        payload.resetKey = resetKeyOrOptions;
+      } else if (resetKeyOrOptions && typeof resetKeyOrOptions === "object") {
+        if (resetKeyOrOptions.otp) payload.otp = resetKeyOrOptions.otp;
+        if (resetKeyOrOptions.resetKey) payload.resetKey = resetKeyOrOptions.resetKey;
+      }
+
       const res = await fetch("/api/auth/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mobileNumber, newPassword, resetKey }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
 
@@ -242,7 +278,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, isVisitor, visitorSecondsLeft, login, visitorLogin, signup, forgotPassword, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, loading, isVisitor, visitorSecondsLeft, login, visitorLogin, signup, sendResetOtp, forgotPassword, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

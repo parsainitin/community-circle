@@ -3,14 +3,14 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { MessageSquare, Phone, Lock, Key, User, Home, Shield, Award, Heart, Camera, GraduationCap, Briefcase, MapPin } from "lucide-react";
+import { MessageSquare, Phone, Lock, Key, User, Home, Shield, Award, Heart, Camera, GraduationCap, Briefcase, MapPin, Send, Eye, EyeOff, CheckCircle2, RefreshCw, ShieldCheck } from "lucide-react";
 import { compressImage, checkFileSize } from "@/lib/imageCompression";
 import CommunityBrand from "@/components/CommunityBrand";
 
 type AuthTab = "signin" | "signup" | "forgot";
 
 export default function AuthPage() {
-  const { login, signup, forgotPassword, visitorLogin } = useAuth();
+  const { login, signup, sendResetOtp, forgotPassword, visitorLogin } = useAuth();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<AuthTab>("signin");
   const [error, setError] = useState<string | null>(null);
@@ -19,6 +19,15 @@ export default function AuthPage() {
   const [visitorMobile, setVisitorMobile] = useState("");
   const [visitorLoading, setVisitorLoading] = useState(false);
   const [visitorError, setVisitorError] = useState<string | null>(null);
+
+  // Forgot password specific states
+  const [forgotMethod, setForgotMethod] = useState<"otp" | "key">("otp");
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpValue, setOtpValue] = useState("");
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [resendCountdown, setResendCountdown] = useState(0);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Form states
   const [mobileNumber, setMobileNumber] = useState("");
@@ -247,28 +256,90 @@ export default function AuthPage() {
     }
   };
 
+  // Countdown timer for OTP resend
+  useEffect(() => {
+    let timer: any;
+    if (resendCountdown > 0) {
+      timer = setInterval(() => {
+        setResendCountdown((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [resendCountdown]);
+
+  const handleSendOtp = async () => {
+    const cleanMobile = mobileNumber.trim().replace(/\D/g, "");
+    if (!cleanMobile || cleanMobile.length < 10) {
+      setError("Please enter a valid 10-digit registered mobile number.");
+      return;
+    }
+
+    setError(null);
+    setSuccess(null);
+    setSendingOtp(true);
+
+    const res = await sendResetOtp(cleanMobile);
+    setSendingOtp(false);
+
+    if (res.success) {
+      setOtpSent(true);
+      setResendCountdown(60);
+      setSuccess("OTP sent successfully to your WhatsApp number!");
+    } else {
+      setError(res.error || "Failed to send OTP. Please check your mobile number.");
+    }
+  };
+
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
-    if (!resetKey.trim()) {
-      setError("Please enter the Admin Reset Key provided by your Community Admin.");
+
+    const cleanMobile = mobileNumber.trim().replace(/\D/g, "");
+    if (!cleanMobile || cleanMobile.length < 10) {
+      setError("Please enter a valid 10-digit registered mobile number.");
       return;
     }
+
+    if (forgotMethod === "otp") {
+      if (!otpValue.trim() || otpValue.trim().length !== 6) {
+        setError("Please enter the 6-digit OTP received on WhatsApp.");
+        return;
+      }
+    } else {
+      if (!resetKey.trim()) {
+        setError("Please enter the Admin Reset Key provided by your Community Admin.");
+        return;
+      }
+    }
+
+    if (newPassword.length < 6) {
+      setError("New password must be at least 6 characters long.");
+      return;
+    }
+
     if (newPassword !== confirmPassword) {
-      setError("Passwords do not match");
+      setError("Passwords do not match.");
       return;
     }
+
     setLoading(true);
-    const res = await forgotPassword(mobileNumber, newPassword, resetKey);
+    const res = await forgotPassword(
+      cleanMobile,
+      newPassword,
+      forgotMethod === "otp" ? { otp: otpValue.trim() } : { resetKey: resetKey.trim() }
+    );
     setLoading(false);
+
     if (res.success) {
-      setSuccess("Password reset successfully! You can now sign in.");
+      setSuccess("Password reset successfully! You can now sign in with your new password.");
       setActiveTab("signin");
       setPassword("");
       setNewPassword("");
       setConfirmPassword("");
       setResetKey("");
+      setOtpValue("");
+      setOtpSent(false);
     } else {
       setError(res.error || "Failed to reset password");
     }
@@ -988,77 +1059,203 @@ export default function AuthPage() {
             <form onSubmit={handleForgotPassword} className="space-y-4">
               <div className="border-l-2 border-whatsapp-green pl-2.5 mb-2">
                 <span className="text-xs font-bold text-whatsapp-green uppercase tracking-wide">
-                  Reset Password
+                  Reset Password (पासवर्ड रीसेट)
                 </span>
+                <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                  Verify your registered number to securely set a new password.
+                </p>
               </div>
 
+              {/* Method Selector Tabs */}
+              <div className="flex bg-slate-100 p-1 rounded-xl gap-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setForgotMethod("otp");
+                    setError(null);
+                  }}
+                  className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center space-x-1.5 cursor-pointer border-0 ${
+                    forgotMethod === "otp"
+                      ? "bg-white text-emerald-800 shadow-xs"
+                      : "text-slate-500 hover:text-slate-800 bg-transparent"
+                  }`}
+                >
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  <span>WhatsApp OTP</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setForgotMethod("key");
+                    setError(null);
+                  }}
+                  className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center space-x-1.5 cursor-pointer border-0 ${
+                    forgotMethod === "key"
+                      ? "bg-white text-amber-900 shadow-xs"
+                      : "text-slate-500 hover:text-slate-800 bg-transparent"
+                  }`}
+                >
+                  <Key className="w-3.5 h-3.5" />
+                  <span>Admin Reset Key</span>
+                </button>
+              </div>
+
+              {/* Mobile Number Field */}
               <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
-                  Mobile Number (Username)
+                  Registered Mobile Number *
                 </label>
                 <div className="relative">
                   <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
                     type="tel"
                     required
-                    placeholder="Enter registered mobile number"
+                    placeholder="e.g. 9826017177"
                     value={mobileNumber}
                     onChange={(e) => setMobileNumber(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green focus:ring-1 focus:ring-whatsapp-green text-sm outline-hidden transition-all text-slate-800"
+                    className="w-full pl-11 pr-4 py-3 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-200 focus:border-whatsapp-green focus:ring-1 focus:ring-whatsapp-green text-sm outline-hidden transition-all text-slate-800 font-semibold"
                   />
                 </div>
               </div>
 
+              {/* OTP Method Controls */}
+              {forgotMethod === "otp" && (
+                <div className="space-y-4">
+                  {!otpSent ? (
+                    <button
+                      type="button"
+                      onClick={handleSendOtp}
+                      disabled={sendingOtp || !mobileNumber.trim()}
+                      className="w-full py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold text-xs rounded-xl transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50"
+                    >
+                      {sendingOtp ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin text-emerald-700" />
+                          <span>Sending OTP to WhatsApp...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-3.5 h-3.5 text-emerald-700" />
+                          <span>Send 6-Digit OTP on WhatsApp</span>
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    <div className="space-y-3 p-3 bg-emerald-50/60 rounded-2xl border border-emerald-200/80">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-xs font-bold text-emerald-950 uppercase tracking-wide flex items-center space-x-1.5">
+                          <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                          <span>Enter 6-Digit OTP *</span>
+                        </label>
+                        <button
+                          type="button"
+                          disabled={resendCountdown > 0 || sendingOtp}
+                          onClick={handleSendOtp}
+                          className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 border-0 bg-transparent cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {resendCountdown > 0 ? `Resend in ${resendCountdown}s` : "Resend OTP"}
+                        </button>
+                      </div>
+
+                      <div className="relative">
+                        <Key className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-600" />
+                        <input
+                          type="text"
+                          maxLength={6}
+                          required
+                          placeholder="Enter 6-digit OTP from WhatsApp"
+                          value={otpValue}
+                          onChange={(e) => setOtpValue(e.target.value.replace(/\D/g, ""))}
+                          className="w-full pl-11 pr-4 py-2.5 bg-white rounded-xl border border-emerald-300 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-base font-mono font-bold tracking-widest text-slate-900 outline-hidden transition-all text-center"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Admin Key Method Field */}
+              {forgotMethod === "key" && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                    <span>Admin Reset Key *</span>
+                    <span className="text-[10px] text-amber-700 font-bold normal-case">Provided by Admin</span>
+                  </label>
+                  <div className="relative">
+                    <Key className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-600" />
+                    <input
+                      type="text"
+                      required
+                      placeholder="Enter Reset Key (e.g. RESET123)"
+                      value={resetKey}
+                      onChange={(e) => setResetKey(e.target.value)}
+                      className="w-full pl-11 pr-4 py-3 bg-amber-50/60 hover:bg-amber-50 focus:bg-white rounded-xl border border-amber-200/80 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-sm outline-hidden transition-all text-slate-800 font-mono font-bold"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* New Password Field */}
               <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center justify-between">
-                  <span>Admin Reset Key *</span>
-                  <span className="text-[10px] text-amber-700 font-bold normal-case">Provided by Community Admin</span>
-                </label>
-                <div className="relative">
-                  <Key className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-600" />
-                  <input
-                    type="text"
-                    required
-                    placeholder="Enter Reset Key (e.g. RESET123)"
-                    value={resetKey}
-                    onChange={(e) => setResetKey(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 bg-amber-50/60 hover:bg-amber-50 focus:bg-white rounded-xl border border-amber-200/80 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-sm outline-hidden transition-all text-slate-800 font-mono font-bold"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
-                  New Password
+                  <span>New Password *</span>
+                  <span className="text-[10px] text-slate-400 font-medium">Min 6 characters</span>
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
-                    type="password"
+                    type={showNewPassword ? "text" : "password"}
                     required
                     placeholder="Enter new password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green focus:ring-1 focus:ring-whatsapp-green text-sm outline-hidden transition-all text-slate-800"
+                    className="w-full pl-11 pr-11 py-3 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-200 focus:border-whatsapp-green focus:ring-1 focus:ring-whatsapp-green text-sm outline-hidden transition-all text-slate-800"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 border-0 bg-transparent cursor-pointer p-0"
+                  >
+                    {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
               </div>
 
+              {/* Confirm New Password Field */}
               <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
-                  Confirm New Password
+                  Confirm New Password *
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
-                    type="password"
+                    type={showConfirmPassword ? "text" : "password"}
                     required
                     placeholder="Confirm new password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-100 focus:border-whatsapp-green focus:ring-1 focus:ring-whatsapp-green text-sm outline-hidden transition-all text-slate-800"
+                    className="w-full pl-11 pr-11 py-3 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl border border-slate-200 focus:border-whatsapp-green focus:ring-1 focus:ring-whatsapp-green text-sm outline-hidden transition-all text-slate-800"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 border-0 bg-transparent cursor-pointer p-0"
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
+                {confirmPassword && newPassword && (
+                  <div className="mt-1 flex items-center space-x-1 text-[11px] font-semibold">
+                    {confirmPassword === newPassword ? (
+                      <span className="text-emerald-600 flex items-center space-x-1">
+                        <CheckCircle2 className="w-3 h-3" />
+                        <span>Passwords match</span>
+                      </span>
+                    ) : (
+                      <span className="text-rose-500">Passwords do not match</span>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="flex space-x-3 pt-2">
@@ -1067,17 +1264,25 @@ export default function AuthPage() {
                   onClick={() => {
                     setActiveTab("signin");
                     setError(null);
+                    setSuccess(null);
                   }}
-                  className="flex-1 py-3 border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl font-bold transition-all text-sm"
+                  className="flex-1 py-3 border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl font-bold transition-all text-sm cursor-pointer bg-white"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={loading}
-                  className="flex-1 py-3 bg-whatsapp-green hover:bg-whatsapp-teal text-white rounded-xl font-bold shadow-md transition-all active:scale-[0.98] disabled:opacity-50 text-sm"
+                  disabled={loading || (forgotMethod === "otp" && !otpValue)}
+                  className="flex-1 py-3 bg-whatsapp-green hover:bg-whatsapp-teal text-white rounded-xl font-bold shadow-md transition-all active:scale-[0.98] disabled:opacity-50 text-sm cursor-pointer border-0 flex items-center justify-center space-x-2"
                 >
-                  {loading ? "Resetting..." : "Reset"}
+                  {loading ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                      <span>Resetting...</span>
+                    </>
+                  ) : (
+                    <span>Reset Password</span>
+                  )}
                 </button>
               </div>
             </form>
