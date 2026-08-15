@@ -127,11 +127,17 @@ export default function DashboardPage() {
     }
     // Employment filter
     if (filterEmployment) {
-      const isEmployee = u.occupationType === "Salaried" || u.occupationType === "Self-Employed";
-      if (filterEmployment === "Employee" && !isEmployee) {
+      const isEmployed =
+        u.occupationType === "Salaried" ||
+        u.occupationType === "Self-Employed" ||
+        u.occupationType === "Salaried / Employed" ||
+        u.occupationType === "Business Owner / Self-Employed" ||
+        u.occupationType === "Business / Self-Employed" ||
+        u.occupationType === "Freelancer";
+      if (filterEmployment === "Employed" && !isEmployed) {
         return false;
       }
-      if (filterEmployment === "Unemployee" && isEmployee) {
+      if (filterEmployment === "Unemployed" && isEmployed) {
         return false;
       }
     }
@@ -429,8 +435,8 @@ export default function DashboardPage() {
                 className="w-full px-2 py-2 bg-slate-50 border border-slate-100 rounded-xl text-[10px] text-slate-850 font-semibold focus:border-whatsapp-green outline-hidden"
               >
                 <option value="">All</option>
-                <option value="Employee">Employee</option>
-                <option value="Unemployee">Unemployed</option>
+                <option value="Employed">Employed</option>
+                <option value="Unemployed">Unemployed</option>
               </select>
             </div>
           </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -38,6 +38,8 @@ import {
   Copy,
   Check,
   PhoneCall,
+  AlertTriangle,
+  Radio,
 } from "lucide-react";
 import { compressImage, checkFileSize } from "@/lib/imageCompression";
 
@@ -136,42 +138,21 @@ export default function InvitationsPage() {
   const [cardImageFile, setCardImageFile] = useState<File | null>(null);
   const [cardImageUrl, setCardImageUrl] = useState<string>("");
 
-  // Phone Number & Pairing Code Device Linking State
+  // Real WhatsApp Gateway & Device Linking State
   const [isQrConnected, setIsQrConnected] = useState(false);
-  const [phoneNumberInput, setPhoneNumberInput] = useState(user?.mobileNumber || user?.phone || "9826017177");
+  const [checkingStatus, setCheckingStatus] = useState(true);
+  const [linkMode, setLinkMode] = useState<"pairing_code" | "qr_code">("pairing_code");
+  const [phoneNumberInput, setPhoneNumberInput] = useState(
+    user?.mobileNumber || user?.phone || "9826017177"
+  );
   const [pairingCode, setPairingCode] = useState<string | null>(null);
+  const [qrCodeBase64, setQrCodeBase64] = useState<string | null>(null);
   const [generatingCode, setGeneratingCode] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
 
-  // Generate 8-digit Pairing Code (e.g. K9X2-7M4P)
-  const handleGeneratePairingCode = () => {
-    if (!phoneNumberInput || phoneNumberInput.length < 10) {
-      alert("Please enter a valid 10-digit mobile number");
-      return;
-    }
-    setGeneratingCode(true);
-    setTimeout(() => {
-      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-      let c1 = "", c2 = "";
-      for (let i = 0; i < 4; i++) {
-        c1 += chars.charAt(Math.floor(Math.random() * chars.length));
-        c2 += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-      setPairingCode(`${c1}-${c2}`);
-      setGeneratingCode(false);
-    }, 1000);
-  };
-
-  const handleCopyPairingCode = () => {
-    if (!pairingCode) return;
-    navigator.clipboard.writeText(pairingCode.replace("-", ""));
-    setCodeCopied(true);
-    setTimeout(() => setCodeCopied(false), 2000);
-  };
-
-  const handleConfirmPairing = () => {
-    setIsQrConnected(true);
-  };
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
   // Contacts & Selection State
   const [allContacts, setAllContacts] = useState<Contact[]>([]);
@@ -187,10 +168,113 @@ export default function InvitationsPage() {
   const [sentLogs, setSentLogs] = useState<{ name: string; success: boolean }[]>([]);
   const [sendingComplete, setSendingComplete] = useState(false);
 
-  // Fetch Community Contacts on Mount
+  // 1. Check Device Status from Gateway
+  const fetchDeviceStatus = async (phoneToPair?: string): Promise<boolean> => {
+    try {
+      const url = phoneToPair
+        ? `/api/invitations/device-status?phoneNumber=${encodeURIComponent(phoneToPair)}`
+        : `/api/invitations/device-status`;
+
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Gateway service unavailable");
+
+      const data = await res.json();
+      if (data.isOnline || data.state === "open") {
+        setIsQrConnected(true);
+        setPairingCode(null);
+        setQrCodeBase64(null);
+        setConnectionError(null);
+        return true;
+      } else {
+        setIsQrConnected(false);
+        if (data.pairingCode) setPairingCode(data.pairingCode);
+        if (data.qrCodeBase64) setQrCodeBase64(data.qrCodeBase64);
+        if (data.error && !data.pairingCode && !data.qrCodeBase64) {
+          setConnectionError(data.error);
+        }
+        return false;
+      }
+    } catch (err: any) {
+      console.error("[Device Status] Error:", err);
+      setIsQrConnected(false);
+      return false;
+    } finally {
+      setCheckingStatus(false);
+    }
+  };
+
+  // On Mount: Check current status and fetch contacts
   useEffect(() => {
+    fetchDeviceStatus();
     fetchCommunityContacts();
+
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    };
   }, []);
+
+  // Real WhatsApp Pairing Code Request (Baileys Gateway)
+  const handleGeneratePairingCode = async () => {
+    const cleanPhone = phoneNumberInput.trim().replace(/\D/g, "");
+    if (cleanPhone.length < 10) {
+      alert("Please enter a valid 10-digit mobile number");
+      return;
+    }
+
+    setGeneratingCode(true);
+    setConnectionError(null);
+
+    try {
+      const isOnline = await fetchDeviceStatus(cleanPhone);
+      if (isOnline) {
+        setGeneratingCode(false);
+        return;
+      }
+
+      // Start live polling every 3 seconds to detect when user confirms in WhatsApp
+      if (pollingRef.current) clearInterval(pollingRef.current);
+      pollingRef.current = setInterval(async () => {
+        const connected = await fetchDeviceStatus();
+        if (connected) {
+          if (pollingRef.current) clearInterval(pollingRef.current);
+        }
+      }, 3000);
+    } catch (e: any) {
+      setConnectionError(
+        "Failed to request pairing code. Please ensure Evolution API & msgservice are running."
+      );
+    } finally {
+      setGeneratingCode(false);
+    }
+  };
+
+  // Copy Pairing Code to Clipboard
+  const handleCopyPairingCode = () => {
+    if (!pairingCode) return;
+    navigator.clipboard.writeText(pairingCode.replace("-", ""));
+    setCodeCopied(true);
+    setTimeout(() => setCodeCopied(false), 2000);
+  };
+
+  // Disconnect / Logout Session
+  const handleDisconnectSession = async () => {
+    setDisconnecting(true);
+    try {
+      await fetch("/api/invitations/device-status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "disconnect" }),
+      });
+      setIsQrConnected(false);
+      setPairingCode(null);
+      setQrCodeBase64(null);
+      await fetchDeviceStatus();
+    } catch (e) {
+      console.error("Disconnect error:", e);
+    } finally {
+      setDisconnecting(false);
+    }
+  };
 
   const fetchCommunityContacts = async () => {
     try {
@@ -303,6 +387,13 @@ export default function InvitationsPage() {
       return;
     }
 
+    if (!isQrConnected) {
+      const confirmSend = confirm(
+        "WhatsApp Device is currently not linked in this browser session. Would you like to proceed with sending via the default server gateway?"
+      );
+      if (!confirmSend) return;
+    }
+
     setSendingModalOpen(true);
     setSendingProgress(10);
     setSendingComplete(false);
@@ -355,7 +446,7 @@ export default function InvitationsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/80 text-slate-900 pb-20">
+    <div className="min-h-screen bg-slate-50/80 text-slate-900 pb-20 select-none">
       {/* ── HEADER ───────────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-xs px-4 py-3">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
@@ -368,186 +459,296 @@ export default function InvitationsPage() {
             </Link>
             <div>
               <h1 className="text-sm sm:text-base font-black text-slate-900 flex items-center space-x-2">
-                <span>Invitation (आमंत्रण)</span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                  WhatsApp Web
+                <span>✉️ Invitation (आमंत्रण)</span>
+                <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                  WhatsApp Broadcast
                 </span>
               </h1>
-              <p className="text-[10px] text-slate-500 font-medium">
-                Design formatted cards & broadcast directly to community members and WhatsApp groups
+              <p className="text-[10px] text-slate-500 font-medium hidden sm:block">
+                Design custom card invitations & broadcast directly to verified community WhatsApp contacts
               </p>
             </div>
           </div>
 
-          {/* Connection Indicator Top */}
           <div className="flex items-center space-x-2">
+            <button
+              onClick={() => fetchDeviceStatus()}
+              disabled={checkingStatus}
+              title="Refresh connection status"
+              className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-all border-0 cursor-pointer disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${checkingStatus ? "animate-spin" : ""}`} />
+            </button>
             <div
-              title={isQrConnected ? "WhatsApp Active" : "Link Device"}
-              className={`p-2 sm:px-3 sm:py-1.5 rounded-full text-xs font-black flex items-center space-x-1.5 shadow-2xs border ${
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
                 isQrConnected
                   ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                  : "bg-amber-50 text-amber-800 border-amber-200 animate-pulse"
+                  : "bg-amber-50 text-amber-700 border-amber-200"
               }`}
             >
               <div
                 className={`w-2 h-2 rounded-full ${
-                  isQrConnected ? "bg-emerald-500" : "bg-amber-500"
+                  isQrConnected ? "bg-emerald-500 animate-pulse" : "bg-amber-500"
                 }`}
               />
-              {isQrConnected ? (
-                <span>WhatsApp Active</span>
-              ) : (
-                <KeyRound className="w-4 h-4 text-amber-600" />
-              )}
+              <span>{isQrConnected ? "WhatsApp Active" : "Device Offline"}</span>
             </div>
           </div>
         </div>
       </header>
 
       <main className="max-w-4xl mx-auto p-4 space-y-5">
-        {/* ── SECTION 1: WHATSAPP DEVICE LINKING (VIA PAIRING CODE) ───────────────── */}
+        {/* ── SECTION 1: WHATSAPP DEVICE LINKING (VIA REAL GATEWAY) ───────────────── */}
         <div className="bg-white rounded-3xl p-5 shadow-xs border border-slate-200/80 space-y-4">
           <div className="flex justify-between items-center pb-3 border-b border-slate-100">
             <div className="flex items-center space-x-2.5">
-              <div className="p-2 bg-emerald-600 text-white rounded-2xl shadow-xs">
-                <KeyRound className="w-5 h-5" />
+              <div className={`p-2 rounded-2xl shadow-xs ${isQrConnected ? "bg-emerald-600 text-white" : "bg-indigo-600 text-white"}`}>
+                <Smartphone className="w-5 h-5" />
               </div>
               <div>
                 <h2 className="text-xs font-black uppercase text-slate-900 tracking-wider flex items-center space-x-1.5">
-                  <span>Link Device</span>
+                  <span>WhatsApp Device Linking</span>
+                  {isQrConnected && (
+                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.2 rounded-md border border-emerald-200">
+                      Connected
+                    </span>
+                  )}
                 </h2>
                 <p className="text-[10.5px] text-slate-500 font-medium">
-                  Link your WhatsApp using your mobile number and a secure 8-digit pairing code
+                  {isQrConnected
+                    ? "Your WhatsApp gateway is active and ready to broadcast messages directly."
+                    : "Link your phone using a secure 8-digit pairing code or QR scan."}
                 </p>
               </div>
             </div>
 
             {isQrConnected && (
               <button
-                onClick={() => setIsQrConnected(false)}
-                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-[11px] rounded-xl transition-all border-0 cursor-pointer"
+                onClick={handleDisconnectSession}
+                disabled={disconnecting}
+                className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-extrabold text-[11px] rounded-xl transition-all border border-rose-200 cursor-pointer disabled:opacity-50"
               >
-                Disconnect Session
+                {disconnecting ? "Disconnecting..." : "Disconnect Session"}
               </button>
             )}
           </div>
 
           {!isQrConnected ? (
-            <div className="space-y-4 bg-emerald-50/40 p-4 rounded-2xl border border-emerald-200/60">
-              {/* Phone Input & Code Generator Stack */}
-              <div className="bg-white p-4 rounded-2xl border border-emerald-200 shadow-sm space-y-3">
-                <div className="space-y-1">
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                    Mobile Number *
-                  </label>
-                  <div className="relative">
-                    <PhoneCall className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
-                    <input
-                      type="tel"
-                      value={phoneNumberInput}
-                      onChange={(e) => setPhoneNumberInput(e.target.value)}
-                      placeholder="e.g. 9826017177"
-                      className="w-full pl-9 pr-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-extrabold text-slate-800 outline-hidden focus:border-emerald-500"
-                    />
+            <div className="space-y-4 bg-slate-50/80 p-4 rounded-2xl border border-slate-200/80">
+              {/* Method Switcher: Pairing Code vs QR Code */}
+              <div className="flex items-center space-x-2 bg-slate-200/60 p-1 rounded-xl w-fit">
+                <button
+                  type="button"
+                  onClick={() => setLinkMode("pairing_code")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold border-0 cursor-pointer transition-all flex items-center space-x-1.5 ${
+                    linkMode === "pairing_code"
+                      ? "bg-white text-emerald-800 shadow-xs"
+                      : "bg-transparent text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  <KeyRound className="w-3.5 h-3.5" />
+                  <span>8-Digit Pairing Code (Recommended)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLinkMode("qr_code");
+                    fetchDeviceStatus();
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold border-0 cursor-pointer transition-all flex items-center space-x-1.5 ${
+                    linkMode === "qr_code"
+                      ? "bg-white text-emerald-800 shadow-xs"
+                      : "bg-transparent text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  <QrCode className="w-3.5 h-3.5" />
+                  <span>Scan QR Code</span>
+                </button>
+              </div>
+
+              {connectionError && (
+                <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-amber-900 text-xs font-semibold flex items-start space-x-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <span>{connectionError}</span>
+                    <p className="text-[11px] text-amber-800 font-normal">
+                      Ensure <strong>start-services.ps1</strong> is running in your terminal to start Evolution API (Port 8080) and msgservice (Port 3000).
+                    </p>
                   </div>
                 </div>
+              )}
 
-                {!pairingCode ? (
-                  <button
-                    type="button"
-                    onClick={handleGeneratePairingCode}
-                    disabled={generatingCode}
-                    className="w-full py-2.5 bg-whatsapp-green hover:bg-whatsapp-teal text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 border-0 cursor-pointer active:scale-95 disabled:opacity-50"
-                  >
-                    {generatingCode ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span>Generating Code...</span>
-                      </>
-                    ) : (
-                      <>
-                        <KeyRound className="w-4 h-4" />
-                        <span>Get 8-Digit Pairing Code</span>
-                      </>
-                    )}
-                  </button>
-                ) : (
-                  <div className="space-y-3 pt-1">
-                    <div className="p-3 bg-slate-900 text-white rounded-2xl text-center space-y-1.5 shadow-md border border-slate-800">
-                      <div className="text-[9px] font-extrabold uppercase text-emerald-400 tracking-widest">
-                        WhatsApp Pairing Code
+              {/* Mode A: Pairing Code Flow */}
+              {linkMode === "pairing_code" && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Step 1: Input & Code Box */}
+                  <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+                    <div className="space-y-1">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                        Your WhatsApp Mobile Number *
+                      </label>
+                      <div className="relative">
+                        <PhoneCall className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                        <input
+                          type="tel"
+                          value={phoneNumberInput}
+                          onChange={(e) => setPhoneNumberInput(e.target.value)}
+                          placeholder="e.g. 9826017177"
+                          className="w-full pl-9 pr-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-extrabold text-slate-800 outline-hidden focus:border-emerald-500"
+                        />
                       </div>
-                      <div className="text-xl sm:text-2xl font-black tracking-widest text-white font-mono select-all">
-                        {pairingCode}
-                      </div>
+                    </div>
+
+                    {!pairingCode ? (
                       <button
                         type="button"
-                        onClick={handleCopyPairingCode}
-                        className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white text-[10px] font-bold rounded-lg transition-all border-0 cursor-pointer flex items-center justify-center space-x-1 mx-auto"
+                        onClick={handleGeneratePairingCode}
+                        disabled={generatingCode}
+                        className="w-full py-2.5 bg-whatsapp-green hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 border-0 cursor-pointer active:scale-95 disabled:opacity-50"
                       >
-                        {codeCopied ? (
+                        {generatingCode ? (
                           <>
-                            <Check className="w-3 h-3 text-emerald-400" />
-                            <span className="text-emerald-400">Copied!</span>
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                            <span>Requesting Real Pairing Code...</span>
                           </>
                         ) : (
                           <>
-                            <Copy className="w-3 h-3" />
-                            <span>Copy Code</span>
+                            <KeyRound className="w-4 h-4" />
+                            <span>Get 8-Digit Pairing Code</span>
                           </>
                         )}
                       </button>
-                    </div>
+                    ) : (
+                      <div className="space-y-3 pt-1">
+                        <div className="p-3 bg-slate-900 text-white rounded-2xl text-center space-y-1.5 shadow-md border border-slate-800">
+                          <div className="text-[9px] font-extrabold uppercase text-emerald-400 tracking-widest flex items-center justify-center space-x-1">
+                            <Radio className="w-3 h-3 animate-pulse text-emerald-400" />
+                            <span>Official WhatsApp Pairing Code</span>
+                          </div>
+                          <div className="text-2xl font-black tracking-widest text-white font-mono select-all">
+                            {pairingCode}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleCopyPairingCode}
+                            className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white text-[10px] font-bold rounded-lg transition-all border-0 cursor-pointer flex items-center justify-center space-x-1 mx-auto"
+                          >
+                            {codeCopied ? (
+                              <>
+                                <Check className="w-3 h-3 text-emerald-400" />
+                                <span className="text-emerald-400">Copied!</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3 h-3" />
+                                <span>Copy Code</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
 
+                        <div className="flex items-center justify-center space-x-2 text-xs font-bold text-slate-500 py-1">
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-600" />
+                          <span>Waiting for phone confirmation (auto-detecting)...</span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => fetchDeviceStatus()}
+                          className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition-all border-0 cursor-pointer"
+                        >
+                          Check Status Now
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Step 2: Step-by-step Instructions for Pairing Code */}
+                  <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+                    <h3 className="text-xs font-black text-emerald-950 uppercase tracking-wide flex items-center space-x-1.5">
+                      <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                      <span>How to link in WhatsApp:</span>
+                    </h3>
+                    <ol className="space-y-2 text-xs font-semibold text-slate-700 list-decimal list-inside leading-relaxed">
+                      <li>Open <strong>WhatsApp</strong> on your phone</li>
+                      <li>Tap <strong>Settings / ⋮</strong> &gt; <strong>Linked Devices</strong> &gt; <strong>Link a Device</strong></li>
+                      <li>Tap <strong>"Link with phone number instead"</strong> at the bottom</li>
+                      <li>Enter the code: <strong className="text-emerald-700 font-bold font-mono">{pairingCode || "••••-••••"}</strong></li>
+                    </ol>
+                    <div className="p-2.5 bg-emerald-50 rounded-xl border border-emerald-200 text-[10.5px] text-emerald-900 font-bold flex items-center space-x-2">
+                      <Zap className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>No camera scanning needed! Direct official Baileys integration.</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Mode B: QR Code Scan Flow */}
+              {linkMode === "qr_code" && (
+                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-center justify-between gap-6">
+                  <div className="space-y-3 max-w-sm">
+                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center space-x-2">
+                      <QrCode className="w-4 h-4 text-emerald-600" />
+                      <span>Scan QR Code to Link</span>
+                    </h3>
+                    <ol className="space-y-2 text-xs font-semibold text-slate-700 list-decimal list-inside leading-relaxed">
+                      <li>Open <strong>WhatsApp</strong> on your phone</li>
+                      <li>Go to <strong>Settings / ⋮</strong> &gt; <strong>Linked Devices</strong></li>
+                      <li>Tap <strong>Link a Device</strong> and point camera at the QR code</li>
+                    </ol>
                     <button
                       type="button"
-                      onClick={handleConfirmPairing}
-                      className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 border-0 cursor-pointer active:scale-95"
+                      onClick={() => fetchDeviceStatus()}
+                      className="py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all border-0 cursor-pointer flex items-center space-x-1.5"
                     >
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>Confirm Device Linked</span>
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      <span>Refresh QR Code</span>
                     </button>
                   </div>
-                )}
-              </div>
 
-              {/* Step-by-step Instructions for Pairing Code */}
-              <div className="bg-white p-4 rounded-2xl border border-emerald-200 shadow-xs space-y-3">
-                <h3 className="text-xs font-black text-emerald-950 uppercase tracking-wide flex items-center space-x-1.5">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                  <span>Link via Phone Number & Code:</span>
-                </h3>
-                <ol className="space-y-2 text-xs font-semibold text-slate-700 list-decimal list-inside leading-relaxed">
-                  <li>Open <strong>WhatsApp</strong> on your phone</li>
-                  <li>Tap <strong>Linked Devices</strong> &gt; <strong>Link a Device</strong></li>
-                  <li>Tap <strong>"Link with phone number instead"</strong> at bottom</li>
-                  <li>Enter the 8-digit code shown on screen: <strong className="text-emerald-800 font-bold">{pairingCode || "••••-••••"}</strong></li>
-                </ol>
-                <div className="p-2.5 bg-amber-50 rounded-xl border border-amber-200 text-[10.5px] text-amber-900 font-bold flex items-center space-x-2">
-                  <Zap className="w-4 h-4 text-amber-600 shrink-0" />
-                  <span>No camera scanning needed! Uses official WhatsApp Pairing Code authentication.</span>
+                  <div className="p-4 bg-slate-900 rounded-3xl border border-slate-800 shadow-md flex flex-col items-center justify-center">
+                    {qrCodeBase64 ? (
+                      <img
+                        src={qrCodeBase64.startsWith("data:") ? qrCodeBase64 : `data:image/png;base64,${qrCodeBase64}`}
+                        alt="WhatsApp QR Code"
+                        className="w-48 h-48 rounded-2xl bg-white p-2"
+                      />
+                    ) : (
+                      <div className="w-48 h-48 rounded-2xl bg-slate-800/80 flex flex-col items-center justify-center text-slate-400 space-y-2 p-4 text-center">
+                        <RefreshCw className="w-6 h-6 animate-spin text-emerald-500" />
+                        <span className="text-[11px] font-semibold">Generating live QR code from WhatsApp Gateway...</span>
+                      </div>
+                    )}
+                    <span className="text-[10px] text-slate-400 font-bold mt-2 flex items-center space-x-1">
+                      <Radio className="w-3 h-3 text-emerald-400 animate-ping" />
+                      <span>Auto-detecting scan...</span>
+                    </span>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           ) : (
-            <div className="bg-emerald-500 text-white p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-center gap-3 shadow-sm">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+            <div className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white p-4.5 rounded-2xl flex flex-col sm:flex-row justify-between items-center gap-3 shadow-md">
+              <div className="flex items-center space-x-3.5">
+                <div className="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center shrink-0 shadow-inner">
                   <CheckCircle2 className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-xs font-black tracking-wide">
-                    WhatsApp Linked via Pairing Code ({phoneNumberInput})
+                  <h3 className="text-xs font-black tracking-wide flex items-center space-x-2">
+                    <span>WhatsApp Gateway Linked & Online</span>
+                    <span className="text-[9px] bg-white text-emerald-800 px-2 py-0.5 rounded-full font-black">
+                      ACTIVE
+                    </span>
                   </h3>
-                  <p className="text-[10.5px] text-emerald-100 font-medium">
-                    Active Session: Primary WhatsApp Client • Ready to broadcast invitations
+                  <p className="text-[10.5px] text-emerald-100 font-medium mt-0.5">
+                    Client session is live and connected. All invitation broadcasts will deliver via this WhatsApp account.
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center space-x-2 bg-emerald-600/60 px-3 py-1.5 rounded-xl border border-emerald-400/40 text-[11px] font-bold">
-                <div className="w-2 h-2 rounded-full bg-white animate-ping" />
-                <span>Device Linked & Active</span>
+              <div className="flex items-center space-x-2 bg-black/20 px-3.5 py-2 rounded-xl border border-white/20 text-xs font-bold shrink-0">
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-300 animate-pulse" />
+                <span>Ready to Broadcast</span>
               </div>
             </div>
           )}
@@ -559,7 +760,7 @@ export default function InvitationsPage() {
             <div className="flex items-center space-x-2">
               <Sparkles className="w-5 h-5 text-indigo-600" />
               <h2 className="text-xs font-black uppercase text-slate-900 tracking-wider">
-                Editor
+                Invitation Editor
               </h2>
             </div>
 
@@ -568,122 +769,111 @@ export default function InvitationsPage() {
             </span>
           </div>
 
-          {/* Preset Template Select Dropdown */}
-          <div className="space-y-1">
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-              Select Template
+          {/* Quick Template Presets */}
+          <div className="space-y-2">
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+              Quick Templates (पूर्व-निर्मित प्रारूप)
             </label>
-            <select
-              defaultValue=""
-              onChange={(e) => {
-                const tpl = TEMPLATE_PRESETS.find((t) => t.id === e.target.value);
-                if (tpl) handleSelectTemplate(tpl);
-              }}
-              className="w-full px-3.5 py-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 text-xs font-extrabold text-slate-800 outline-hidden focus:border-indigo-500 cursor-pointer"
-            >
-              <option value="" disabled>
-                -- Select Quick Template --
-              </option>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {TEMPLATE_PRESETS.map((tpl) => (
-                <option key={tpl.id} value={tpl.id}>
-                  {tpl.icon} {tpl.name}
-                </option>
+                <button
+                  key={tpl.id}
+                  type="button"
+                  onClick={() => handleSelectTemplate(tpl)}
+                  className="p-2.5 rounded-2xl bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 text-left transition-all cursor-pointer group"
+                >
+                  <div className="text-base mb-1">{tpl.icon}</div>
+                  <div className="text-xs font-bold text-slate-800 group-hover:text-indigo-700 truncate">
+                    {tpl.name}
+                  </div>
+                  <div className="text-[10px] text-slate-400 truncate">Tap to use</div>
+                </button>
               ))}
-            </select>
+            </div>
           </div>
 
           {/* Title Input */}
           <div className="space-y-1">
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-              Title *
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+              Occasion Title * (शीर्षक)
             </label>
             <input
               type="text"
-              required
-              placeholder="e.g. Shree Ganesh Saptah & Mahaprasad Bhandara"
               value={invitationTitle}
               onChange={(e) => setInvitationTitle(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-50 rounded-2xl border border-slate-200 text-xs font-extrabold text-slate-900 outline-hidden focus:border-indigo-500 focus:bg-white transition-all"
+              placeholder="e.g. Shree Ganesh Saptah & Mahaprasad Bhandara"
+              className="w-full px-3.5 py-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 outline-hidden focus:border-indigo-500"
             />
           </div>
 
-          {/* Rich Text Toolbar */}
+          {/* Formatting Bar */}
           <div className="space-y-1">
-            <div className="flex justify-between items-center">
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                Message *
-              </label>
-
-              {/* Toolbar Buttons */}
-              <div className="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl">
-                <button
-                  type="button"
-                  onClick={() => insertFormatting("*")}
-                  title="Bold (*text*)"
-                  className="p-1 hover:bg-white rounded-lg text-slate-700 border-0 cursor-pointer"
-                >
-                  <Bold className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => insertFormatting("_")}
-                  title="Italic (_text_)"
-                  className="p-1 hover:bg-white rounded-lg text-slate-700 border-0 cursor-pointer"
-                >
-                  <Italic className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => insertFormatting("~")}
-                  title="Strikethrough (~text~)"
-                  className="p-1 hover:bg-white rounded-lg text-slate-700 border-0 cursor-pointer"
-                >
-                  <Strikethrough className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => insertFormatting("\n• ")}
-                  title="Bullet list"
-                  className="p-1 hover:bg-white rounded-lg text-slate-700 border-0 cursor-pointer"
-                >
-                  <List className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Quick Emoji Bar */}
-            <div className="flex items-center space-x-1.5 overflow-x-auto py-1 text-base">
-              {["🪔", "🌺", "🙏", "🚩", "✨", "🎉", "🎂", "💐", "📍", "🗓️", "⏰", "🍲", "📱"].map((emoji) => (
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+              Invitation Details & Message *
+            </label>
+            <div className="flex flex-wrap items-center gap-1 p-1 bg-slate-100 rounded-xl border border-slate-200">
+              <button
+                type="button"
+                onClick={() => insertFormatting("*")}
+                title="Bold (*text*)"
+                className="p-1.5 rounded-lg hover:bg-white text-slate-700 text-xs font-bold border-0 cursor-pointer"
+              >
+                <Bold className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => insertFormatting("_")}
+                title="Italic (_text_)"
+                className="p-1.5 rounded-lg hover:bg-white text-slate-700 text-xs font-bold border-0 cursor-pointer"
+              >
+                <Italic className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => insertFormatting("~")}
+                title="Strikethrough (~text~)"
+                className="p-1.5 rounded-lg hover:bg-white text-slate-700 text-xs font-bold border-0 cursor-pointer"
+              >
+                <Strikethrough className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => insertFormatting("\n• ")}
+                title="Bullet list"
+                className="p-1.5 rounded-lg hover:bg-white text-slate-700 text-xs font-bold border-0 cursor-pointer"
+              >
+                <List className="w-3.5 h-3.5" />
+              </button>
+              <div className="w-px h-4 bg-slate-300 mx-1" />
+              {["🌺", "🪔", "🚩", "🍲", "🎉", "🗓️", "📍", "⏰"].map((emoji) => (
                 <button
                   key={emoji}
                   type="button"
                   onClick={() => insertEmoji(emoji)}
-                  className="p-1 bg-slate-50 hover:bg-slate-200 rounded-lg transition-transform active:scale-90 border-0 cursor-pointer"
+                  className="p-1 rounded-lg hover:bg-white text-xs border-0 cursor-pointer"
                 >
                   {emoji}
                 </button>
               ))}
             </div>
 
-            {/* Textarea */}
             <textarea
-              rows={6}
-              required
-              placeholder="Write your invitation details with date, time, venue, and host contact numbers..."
+              rows={8}
               value={invitationBody}
               onChange={(e) => setInvitationBody(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-50 rounded-2xl border border-slate-200 text-xs font-semibold text-slate-900 outline-hidden focus:border-indigo-500 focus:bg-white resize-none leading-relaxed transition-all"
+              placeholder="Write your invitation details with date, time, venue, and host contact numbers..."
+              className="w-full p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-800 outline-hidden focus:border-indigo-500 font-sans leading-relaxed resize-y"
             />
           </div>
 
-          {/* Invitation Banner Image Upload */}
-          <div className="space-y-1.5 pt-2 border-t border-slate-100">
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-              Banner Photo
+          {/* Optional Card Image Banner */}
+          <div className="space-y-2 pt-1">
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+              Invitation Digital Card / Poster (वैकल्पिक कार्ड इमेज)
             </label>
             <div className="flex items-center space-x-3">
-              <label className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition-all cursor-pointer flex items-center space-x-2 border-0">
-                <ImagePlus className="w-4 h-4 text-slate-600" />
+              <label className="flex items-center space-x-2 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold border border-slate-200 cursor-pointer transition-all">
+                <ImagePlus className="w-4 h-4 text-slate-500" />
                 <span>Upload Card Image</span>
                 <input
                   type="file"
@@ -694,139 +884,155 @@ export default function InvitationsPage() {
               </label>
 
               {cardImageUrl && (
-                <div className="relative w-14 h-14 rounded-xl overflow-hidden border border-slate-200 shadow-2xs group">
-                  <img src={cardImageUrl} alt="Card Preview" className="w-full h-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCardImageUrl("");
-                      setCardImageFile(null);
-                    }}
-                    className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity border-0 cursor-pointer"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCardImageUrl("");
+                    setCardImageFile(null);
+                  }}
+                  className="flex items-center space-x-1 text-xs font-bold text-red-500 hover:text-red-700 bg-transparent border-0 cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Remove</span>
+                </button>
               )}
             </div>
-          </div>
 
-          {/* Real-time WhatsApp Message Preview Card */}
-          <div className="p-4 bg-[#E5DDD5] rounded-2xl border border-slate-300 space-y-2 relative overflow-hidden">
-            <div className="text-[10px] font-black uppercase tracking-wider text-slate-600 flex items-center space-x-1">
-              <MessageCircle className="w-3.5 h-3.5 text-whatsapp-green" />
-              <span>Live Preview</span>
-            </div>
-
-            <div className="bg-white p-3 rounded-xl rounded-tl-xs shadow-xs max-w-sm space-y-2 border border-slate-200">
-              {cardImageUrl && (
-                <div className="relative w-full h-36 rounded-lg overflow-hidden border border-slate-100">
-                  <img src={cardImageUrl} alt="Card Banner" className="w-full h-full object-cover" />
-                </div>
-              )}
-
-              {invitationTitle && (
-                <h4 className="text-xs font-black text-slate-900 border-b border-slate-100 pb-1">
-                  {invitationTitle}
-                </h4>
-              )}
-
-              <p className="text-[11.5px] text-slate-800 font-medium whitespace-pre-wrap leading-relaxed font-sans">
-                {invitationBody || "Your invitation message preview will appear here..."}
-              </p>
-
-              <div className="text-[9px] text-slate-400 text-right font-bold">
-                12:45 PM ✓✓
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ── SECTION 3: WHATSAPP WEB STYLE CONTACT & GROUP SELECTOR ───────────────── */}
-        <div className="bg-white rounded-3xl p-5 shadow-xs border border-slate-200/80 space-y-4">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-3 border-b border-slate-100">
-            <div>
-              <h2 className="text-xs font-black uppercase text-slate-900 tracking-wider flex items-center space-x-2">
-                <Users className="w-4 h-4 text-emerald-600" />
-                <span>Recipients</span>
-              </h2>
-              <p className="text-[10.5px] text-slate-500 font-medium">
-                Choose community members or groups to receive this digital invitation
-              </p>
-            </div>
-
-            {/* Selected Counter Badge (Only when items selected) */}
-            {selectedIds.length > 0 && (
-              <div className="px-3 py-1 bg-emerald-600 text-white rounded-full text-xs font-black shadow-2xs animate-in fade-in duration-150">
-                {selectedIds.length} Selected
+            {cardImageUrl && (
+              <div className="relative w-full max-w-sm h-48 rounded-2xl overflow-hidden border border-slate-200 mt-2">
+                <Image
+                  src={cardImageUrl}
+                  alt="Card Preview"
+                  fill
+                  className="object-cover"
+                />
               </div>
             )}
           </div>
+        </div>
 
-          {/* Search & Tabs Controls */}
-          <div className="space-y-3">
-            <div className="flex items-center space-x-2">
-              <div className="relative flex-1">
-                <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Search contact name, phone, or group..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 outline-hidden focus:border-emerald-500"
-                />
+        {/* ── SECTION 3: WHATSAPP MESSAGE PREVIEW ───────────────────────────────── */}
+        {(invitationTitle || invitationBody) && (
+          <div className="bg-emerald-950/90 text-white rounded-3xl p-5 shadow-lg border border-emerald-800/80 space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-emerald-800">
+              <div className="flex items-center space-x-2">
+                <Smartphone className="w-4 h-4 text-emerald-400" />
+                <span className="text-xs font-black uppercase tracking-wider text-emerald-300">
+                  Live WhatsApp Message Preview
+                </span>
               </div>
+              <span className="text-[10px] text-emerald-400/80 font-mono">
+                {invitationBody.length} chars
+              </span>
+            </div>
 
-              <button
-                type="button"
-                onClick={toggleSelectAllFiltered}
-                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs rounded-xl transition-all flex items-center space-x-1.5 border-0 cursor-pointer shrink-0"
-              >
-                {isAllFilteredSelected ? (
-                  <>
-                    <CheckSquare className="w-4 h-4 text-emerald-600" />
-                    <span>Deselect All</span>
-                  </>
-                ) : (
-                  <>
-                    <Square className="w-4 h-4 text-slate-400" />
-                    <span>Select All</span>
-                  </>
-                )}
-              </button>
+            <div className="max-w-md bg-emerald-900/60 p-4 rounded-2xl border border-emerald-700/60 space-y-2.5 shadow-inner">
+              {cardImageUrl && (
+                <div className="relative w-full h-40 rounded-xl overflow-hidden border border-emerald-700">
+                  <Image
+                    src={cardImageUrl}
+                    alt="Card Banner"
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              )}
+              {invitationTitle && (
+                <div className="text-sm font-black text-emerald-200">
+                  *{invitationTitle}*
+                </div>
+              )}
+              <div className="text-xs text-emerald-50 whitespace-pre-wrap font-sans leading-relaxed">
+                {invitationBody}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── SECTION 4: RECIPIENT MEMBER SELECTOR ──────────────────────────────── */}
+        <div className="bg-white rounded-3xl p-5 shadow-xs border border-slate-200/80 space-y-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-3 border-b border-slate-100">
+            <div className="flex items-center space-x-2">
+              <Users className="w-5 h-5 text-indigo-600" />
+              <div>
+                <h2 className="text-xs font-black uppercase text-slate-900 tracking-wider">
+                  Select Recipients ({selectedIds.length} Selected)
+                </h2>
+                <p className="text-[10.5px] text-slate-500 font-medium">
+                  Choose verified directory contacts to receive this broadcast
+                </p>
+              </div>
             </div>
 
             {/* Filter Tabs */}
-            <div className="flex items-center space-x-1.5 overflow-x-auto pb-1">
-              {[
-                { key: "all", label: `All Members (${allContacts.length})` },
-                { key: "selected", label: selectedIds.length > 0 ? `Selected (${selectedIds.length})` : "Selected" },
-              ].map((tab) => (
-                <button
-                  key={tab.key}
-                  type="button"
-                  onClick={() => setActiveFilterTab(tab.key as any)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all border-0 cursor-pointer shrink-0 ${
-                    activeFilterTab === tab.key
-                      ? "bg-slate-900 text-white shadow-2xs"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+            <div className="flex items-center space-x-1.5 bg-slate-100 p-1 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setActiveFilterTab("all")}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold border-0 cursor-pointer transition-all ${
+                  activeFilterTab === "all"
+                    ? "bg-white text-slate-900 shadow-xs"
+                    : "bg-transparent text-slate-500 hover:text-slate-900"
+                }`}
+              >
+                All Members ({allContacts.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveFilterTab("selected")}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold border-0 cursor-pointer transition-all ${
+                  activeFilterTab === "selected"
+                    ? "bg-white text-emerald-700 shadow-xs"
+                    : "bg-transparent text-slate-500 hover:text-slate-900"
+                }`}
+              >
+                Selected ({selectedIds.length})
+              </button>
             </div>
           </div>
 
-          {/* Contact List Box */}
-          <div className="max-h-72 overflow-y-auto space-y-1.5 pr-1 border border-slate-100 rounded-2xl p-2 bg-slate-50/50">
+          {/* Search & Bulk Select Actions */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search contact name, phone, or Gotra..."
+                className="w-full pl-9 pr-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 outline-hidden focus:border-indigo-500"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={toggleSelectAllFiltered}
+              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition-all border-0 cursor-pointer flex items-center justify-center space-x-1.5 shrink-0"
+            >
+              {isAllFilteredSelected ? (
+                <>
+                  <Square className="w-3.5 h-3.5" />
+                  <span>Deselect All</span>
+                </>
+              ) : (
+                <>
+                  <CheckSquare className="w-3.5 h-3.5" />
+                  <span>Select All Filtered</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Contacts List */}
+          <div className="max-h-72 overflow-y-auto space-y-1.5 pr-1 divide-y divide-slate-50">
             {loadingContacts ? (
-              <div className="py-8 text-center text-xs font-bold text-slate-400 animate-pulse">
-                Loading community members...
+              <div className="py-12 text-center text-slate-400 text-xs font-bold flex items-center justify-center space-x-2">
+                <RefreshCw className="w-4 h-4 animate-spin text-emerald-600" />
+                <span>Loading Community Contacts...</span>
               </div>
             ) : filteredContacts.length === 0 ? (
-              <div className="py-8 text-center text-xs font-bold text-slate-400">
-                No matching community members found.
+              <div className="py-8 text-center text-slate-400 text-xs font-bold">
+                No matching members found
               </div>
             ) : (
               filteredContacts.map((contact) => {
@@ -835,18 +1041,16 @@ export default function InvitationsPage() {
                   <div
                     key={contact.id}
                     onClick={() => toggleSelect(contact.id)}
-                    className={`p-2.5 rounded-xl border transition-all cursor-pointer select-none flex items-center justify-between ${
+                    className={`p-2.5 rounded-2xl flex items-center justify-between cursor-pointer transition-all border ${
                       isSelected
-                        ? "bg-emerald-50/90 border-emerald-300 text-emerald-950 shadow-2xs"
-                        : "bg-white border-slate-200/80 hover:bg-slate-100/80 text-slate-800"
+                        ? "bg-emerald-50/70 border-emerald-200 shadow-xs"
+                        : "bg-white hover:bg-slate-50 border-transparent"
                     }`}
                   >
                     <div className="flex items-center space-x-3 min-w-0">
-                      {/* Avatar */}
-                      <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-xs font-black bg-indigo-100 text-indigo-700">
-                        {contact.name[0]}
+                      <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 font-black text-xs flex items-center justify-center shrink-0">
+                        {contact.name.charAt(0)}
                       </div>
-
                       <div className="min-w-0">
                         <h4 className="text-xs font-black truncate leading-tight flex items-center space-x-1.5">
                           <span>{contact.name}</span>
@@ -886,7 +1090,7 @@ export default function InvitationsPage() {
             >
               <Send className="w-4 h-4" />
               <span>
-                {selectedIds.length > 0 ? `Broadcast (${selectedIds.length})` : "Broadcast"}
+                {selectedIds.length > 0 ? `Broadcast to ${selectedIds.length} Members` : "Select Recipients to Broadcast"}
               </span>
             </button>
           </div>
@@ -948,29 +1152,30 @@ export default function InvitationsPage() {
                     key={idx}
                     className="p-2 bg-white rounded-xl border border-slate-100 flex items-center justify-between font-semibold text-slate-800"
                   >
-                    <span className="truncate">{log.name}</span>
-                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md shrink-0 flex items-center space-x-1">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                      <span>Sent</span>
-                    </span>
+                    <span className="truncate mr-2">{log.name}</span>
+                    {log.success ? (
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 shrink-0">
+                        Sent ✓
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200 shrink-0">
+                        Failed ✗
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Direct 1-on-1 Manual Fallback */}
+            {/* Modal Actions */}
             {sendingComplete && (
-              <div className="pt-2 space-y-2">
-                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-[11px] font-semibold text-slate-700 text-center">
-                  ✅ Successfully broadcasted invitations to {selectedIds.length} community contacts & groups via WhatsApp Web!
-                </div>
-
+              <div className="pt-2">
                 <button
                   type="button"
                   onClick={() => setSendingModalOpen(false)}
-                  className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs rounded-2xl shadow-md transition-all cursor-pointer border-0"
+                  className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs rounded-2xl transition-all border-0 cursor-pointer"
                 >
-                  Done & Close
+                  Done / Close
                 </button>
               </div>
             )}

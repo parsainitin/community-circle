@@ -278,7 +278,7 @@ export default function HubsPage() {
         };
       case "shopping":
         return {
-          label: "Shoping",
+          label: "Shopping",
           icon: ShoppingBag,
           color: "bg-emerald-50 text-emerald-700 border-emerald-200",
         };
@@ -346,7 +346,7 @@ export default function HubsPage() {
       <div className="bg-gradient-to-r from-amber-700 via-orange-600 to-amber-800 rounded-3xl p-4.5 text-white shadow-md border border-amber-500/30">
         <h2 className="text-base font-black tracking-wide">Community Hubs</h2>
         <p className="text-[11px] text-amber-100 font-medium mt-0.5 leading-relaxed">
-          Explore Panchang & Mahurth, Bookings, Organizations, Shoping, Training, Banking, and Car Pooling.
+          Explore Panchang & Mahurth, Bookings, Organizations, Shopping, Training, Banking, and Car Pooling.
         </p>
       </div>
 
@@ -471,7 +471,7 @@ export default function HubsPage() {
           </div>
         </Link>
 
-        {/* Card 3: Shoping */}
+        {/* Card 3: Shopping */}
         <div
           onClick={() => setActiveTab("shopping")}
           className={`group rounded-2xl p-3.5 border transition-all cursor-pointer shadow-xs hover:shadow-md relative overflow-hidden flex items-center space-x-3.5 ${
@@ -489,7 +489,7 @@ export default function HubsPage() {
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-black leading-tight tracking-wide">🛍️ Shoping</h3>
+              <h3 className="text-xs font-black leading-tight tracking-wide">🛍️ Shopping</h3>
               {activeTab === "shopping" && (
                 <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-white/25 text-white shrink-0">
                   Active
@@ -628,7 +628,7 @@ export default function HubsPage() {
             {searchQuery ? "No matching hub listings found." : "No hub listings published in this category yet."}
           </p>
           <p className="text-[10px] text-slate-400 font-medium">
-            Be the first to create a listing in Mahurth & Panchang, Bookings, Organizations, Shoping, Training, Banking, or Car Pooling!
+            Be the first to create a listing in Mahurth & Panchang, Bookings, Organizations, Shopping, Training, Banking, or Car Pooling!
           </p>
         </div>
       ) : (

@@ -1,0 +1,96 @@
+services:
+  # ─────────────────────────────────────────────────────────────
+  # 1. Evolution API (WhatsApp Gateway - Docker Container)
+  # ─────────────────────────────────────────────────────────────
+  - type: web
+    name: evolution-api
+    runtime: image
+    image:
+      url: atendai/evolution-api:v2.3.7
+    plan: starter
+    envVars:
+      - key: PORT
+        value: "8080"
+      - key: AUTHENTICATION_TYPE
+        value: "apikey"
+      - key: AUTHENTICATION_API_KEY
+        value: "whastflow_dev_secret_key"
+      - key: DEL_INSTANCE
+        value: "false"
+      - key: CLIENT_NAME
+        value: "CommunityCircle"
+      - key: DATABASE_PROVIDER
+        value: "postgresql"
+      - key: DATABASE_CONNECTION_URI
+        value: "postgresql://neondb_owner:npg_KSxkQ9eP1icR@ep-raspy-wind-ayz6or5v-pooler.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require&connection_limit=20&pool_timeout=30"
+
+  # ─────────────────────────────────────────────────────────────
+  # 2. msgservice (Express API & BullMQ Outbound Queue)
+  # ─────────────────────────────────────────────────────────────
+  - type: web
+    name: msgservice
+    rootDir: msgservice
+    runtime: node
+    plan: starter
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: "production"
+      - key: PORT
+        value: "3000"
+      - key: MONGO_URI
+        value: "mongodb+srv://parsainitin_db_user:Shri214Ji%5EIndia~@cluster0.ur6sfhr.mongodb.net/whastflow?retryWrites=true&w=majority"
+      - key: EVOLUTION_INSTANCE_NAME
+        value: "whastflow_bot"
+      - key: EVOLUTION_API_KEY
+        value: "whastflow_dev_secret_key"
+      - key: EVOLUTION_API_URL
+        fromService:
+          type: web
+          name: evolution-api
+          property: host
+      - key: UPSTASH_REDIS_REST_URL
+        value: "https://neat-tarpon-200196.upstash.io"
+      - key: UPSTASH_REDIS_REST_TOKEN
+        value: "gQAAAAAAAw4EAAIgcDFmNzNmOTBmNGJiN2Q0NzA5OGYyZmMwYzVjNDA0OWU3NQ"
+      - key: REDIS_HOST
+        value: "neat-tarpon-200196.upstash.io"
+      - key: REDIS_PORT
+        value: "6379"
+      - key: REDIS_PASSWORD
+        value: "gQAAAAAAAw4EAAIgcDFmNzNmOTBmNGJiN2Q0NzA5OGYyZmMwYzVjNDA0OWU3NQ"
+      - key: REDIS_TLS
+        value: "true"
+
+  # ─────────────────────────────────────────────────────────────
+  # 3. CommunityCircle Next.js Application
+  # ─────────────────────────────────────────────────────────────
+  - type: web
+    name: community-circle
+    runtime: node
+    plan: starter
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: "production"
+      - key: MONGODB_URI
+        sync: false
+      - key: MSG_SERVICE_URL
+        fromService:
+          type: web
+          name: msgservice
+          property: host
+      - key: NEXT_PUBLIC_APP_URL
+        sync: false
+      - key: CLOUDINARY_URL
+        value: "cloudinary://819348332248451:RfAmWrlgQJcoTT0pjYJH6CrzYeU@dwexzmd4s"
+      - key: NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+        value: "dwexzmd4s"
+      - key: CLOUDINARY_API_KEY
+        value: "819348332248451"
+      - key: CLOUDINARY_API_SECRET
+        value: "RfAmWrlgQJcoTT0pjYJH6CrzYeU"
+      - key: ADMIN_MOBILE
+        value: "919644019992"
