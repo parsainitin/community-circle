@@ -6,7 +6,9 @@ export async function GET(req: Request) {
     const phoneNumber = searchParams.get("phoneNumber") || "";
     const checkOnly = searchParams.get("checkOnly") || "";
 
-    const rawMsgUrl = process.env.MSG_SERVICE_URL || "http://localhost:3000";
+    const rawMsgUrl =
+      process.env.MSG_SERVICE_URL ||
+      "https://community-circle-production.up.railway.app";
     const msgServiceUrl = rawMsgUrl.replace(/\/+$/, "");
 
     let url = `${msgServiceUrl}/api/instance/status`;
@@ -50,7 +52,9 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const { action } = body;
 
-    const rawMsgUrl = process.env.MSG_SERVICE_URL || "http://localhost:3000";
+    const rawMsgUrl =
+      process.env.MSG_SERVICE_URL ||
+      "https://community-circle-production.up.railway.app";
     const msgServiceUrl = rawMsgUrl.replace(/\/+$/, "");
 
     if (action === "disconnect") {

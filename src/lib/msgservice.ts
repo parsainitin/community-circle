@@ -18,7 +18,9 @@ export async function sendWhatsAppMessage({
   message,
   title = "Member Notification",
 }: SendWhatsAppMessageParams): Promise<SendWhatsAppMessageResponse> {
-  const rawMsgUrl = process.env.MSG_SERVICE_URL || "http://localhost:3000";
+  const rawMsgUrl =
+    process.env.MSG_SERVICE_URL ||
+    "https://community-circle-production.up.railway.app";
   const msgServiceUrl = rawMsgUrl.replace(/\/+$/, "");
 
   try {
