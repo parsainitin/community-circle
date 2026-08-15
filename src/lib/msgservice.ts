@@ -18,7 +18,8 @@ export async function sendWhatsAppMessage({
   message,
   title = "Member Notification",
 }: SendWhatsAppMessageParams): Promise<SendWhatsAppMessageResponse> {
-  const msgServiceUrl = process.env.MSG_SERVICE_URL || "http://localhost:3000";
+  const rawMsgUrl = process.env.MSG_SERVICE_URL || "http://localhost:3000";
+  const msgServiceUrl = rawMsgUrl.replace(/\/+$/, "");
 
   try {
     const response = await fetch(`${msgServiceUrl}/api/message/direct`, {
@@ -35,11 +36,15 @@ export async function sendWhatsAppMessage({
 
     const result = await response.json();
 
-    if (!response.ok) {
+    if (
+      !response.ok ||
+      result.success === false ||
+      (result.data && result.data.failedDeliveries > 0 && result.data.successfulDeliveries === 0)
+    ) {
       console.error("[msgservice client] Failed response:", result);
       return {
         success: false,
-        error: result.error || "msgservice returned an error response",
+        error: result.error || result.message || "WhatsApp gateway failed to deliver message",
       };
     }
 

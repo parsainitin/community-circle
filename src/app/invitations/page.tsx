@@ -169,7 +169,7 @@ export default function InvitationsPage() {
   const [sendingModalOpen, setSendingModalOpen] = useState(false);
   const [sendingProgress, setSendingProgress] = useState(0);
   const [currentSendingName, setCurrentSendingName] = useState("");
-  const [sentLogs, setSentLogs] = useState<{ name: string; success: boolean }[]>([]);
+  const [sentLogs, setSentLogs] = useState<{ name: string; success: boolean; error?: string }[]>([]);
   const [sendingComplete, setSendingComplete] = useState(false);
 
   // 1. Check Device Status from Gateway
@@ -442,13 +442,15 @@ export default function InvitationsPage() {
           data.logs.map((l: any) => ({
             name: `${l.name} (${l.phone})`,
             success: l.success,
+            error: l.error,
           }))
         );
       } else {
         setSentLogs(
           targets.map((t) => ({
             name: `${t.name} (${t.phone})`,
-            success: data.success ?? true,
+            success: data.success && !data.error,
+            error: data.error,
           }))
         );
       }
@@ -460,6 +462,7 @@ export default function InvitationsPage() {
         targets.map((t) => ({
           name: `${t.name} (${t.phone})`,
           success: false,
+          error: e.message || "Network error while broadcasting",
         }))
       );
     }
@@ -1187,16 +1190,23 @@ export default function InvitationsPage() {
                 {sentLogs.map((log, idx) => (
                   <div
                     key={idx}
-                    className="p-2 bg-white rounded-xl border border-slate-100 flex items-center justify-between font-semibold text-slate-800"
+                    className="p-2.5 bg-white rounded-xl border border-slate-100 flex flex-col space-y-1 font-semibold text-slate-800"
                   >
-                    <span className="truncate mr-2">{log.name}</span>
-                    {log.success ? (
-                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 shrink-0">
-                        Sent ✓
-                      </span>
-                    ) : (
-                      <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200 shrink-0">
-                        Failed ✗
+                    <div className="flex items-center justify-between">
+                      <span className="truncate mr-2">{log.name}</span>
+                      {log.success ? (
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 shrink-0">
+                          Sent ✓
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200 shrink-0">
+                          Failed ✗
+                        </span>
+                      )}
+                    </div>
+                    {log.error && !log.success && (
+                      <span className="text-[10.5px] text-rose-600 font-normal">
+                        Reason: {log.error}
                       </span>
                     )}
                   </div>
