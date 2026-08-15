@@ -18,9 +18,15 @@ export async function sendWhatsAppMessage({
   message,
   title = "Member Notification",
 }: SendWhatsAppMessageParams): Promise<SendWhatsAppMessageResponse> {
-  const rawMsgUrl =
-    process.env.MSG_SERVICE_URL ||
-    "https://community-circle-production.up.railway.app";
+  let rawMsgUrl = process.env.MSG_SERVICE_URL;
+  if (
+    !rawMsgUrl ||
+    rawMsgUrl.includes("localhost") ||
+    rawMsgUrl.includes("mysocialclan.com") ||
+    rawMsgUrl.trim() === ""
+  ) {
+    rawMsgUrl = "https://community-circle-production.up.railway.app";
+  }
   const msgServiceUrl = rawMsgUrl.replace(/\/+$/, "");
 
   try {
@@ -36,7 +42,17 @@ export async function sendWhatsAppMessage({
       }),
     });
 
-    const result = await response.json();
+    const text = await response.text();
+    let result: any;
+    try {
+      result = JSON.parse(text);
+    } catch (parseErr) {
+      console.error("[msgservice client] Invalid JSON response from msgservice:", text);
+      return {
+        success: false,
+        error: `Messaging gateway returned invalid response (HTTP ${response.status}). URL: ${msgServiceUrl}`,
+      };
+    }
 
     if (
       !response.ok ||

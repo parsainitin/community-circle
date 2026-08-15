@@ -6,9 +6,15 @@ export async function GET(req: Request) {
     const phoneNumber = searchParams.get("phoneNumber") || "";
     const checkOnly = searchParams.get("checkOnly") || "";
 
-    const rawMsgUrl =
-      process.env.MSG_SERVICE_URL ||
-      "https://community-circle-production.up.railway.app";
+    let rawMsgUrl = process.env.MSG_SERVICE_URL;
+    if (
+      !rawMsgUrl ||
+      rawMsgUrl.includes("localhost") ||
+      rawMsgUrl.includes("mysocialclan.com") ||
+      rawMsgUrl.trim() === ""
+    ) {
+      rawMsgUrl = "https://community-circle-production.up.railway.app";
+    }
     const msgServiceUrl = rawMsgUrl.replace(/\/+$/, "");
 
     let url = `${msgServiceUrl}/api/instance/status`;
@@ -34,7 +40,18 @@ export async function GET(req: Request) {
       });
     }
 
-    const data = await res.json();
+    const text = await res.text();
+    let data: any;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      return NextResponse.json({
+        success: false,
+        isOnline: false,
+        state: "DISCONNECTED",
+        error: `Gateway returned invalid response (HTTP ${res.status})`,
+      });
+    }
     return NextResponse.json(data);
   } catch (error: any) {
     console.error("[API invitations/device-status] Error connecting to msgservice:", error);
@@ -52,9 +69,15 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const { action } = body;
 
-    const rawMsgUrl =
-      process.env.MSG_SERVICE_URL ||
-      "https://community-circle-production.up.railway.app";
+    let rawMsgUrl = process.env.MSG_SERVICE_URL;
+    if (
+      !rawMsgUrl ||
+      rawMsgUrl.includes("localhost") ||
+      rawMsgUrl.includes("mysocialclan.com") ||
+      rawMsgUrl.trim() === ""
+    ) {
+      rawMsgUrl = "https://community-circle-production.up.railway.app";
+    }
     const msgServiceUrl = rawMsgUrl.replace(/\/+$/, "");
 
     if (action === "disconnect") {
