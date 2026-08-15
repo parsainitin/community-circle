@@ -12,6 +12,13 @@ function formatPhoneNumber(rawNum: string): string {
   return cleaned;
 }
 
+function isValidPairingCode(code: any): boolean {
+  if (!code || typeof code !== 'string') return false;
+  const clean = code.trim();
+  // Valid WhatsApp Pairing Code is 8 characters (often formatted as XXXX-XXXX) and never starts with 2@ (QR code)
+  return clean.length >= 6 && clean.length <= 15 && !clean.startsWith('2@') && !clean.includes(',');
+}
+
 export const getInstanceStatus = async (req: Request, res: Response): Promise<void> => {
   const rawBaseURL = process.env.EVOLUTION_API_URL || 'http://localhost:8080';
   const baseURL = rawBaseURL.replace(/\/+$/, '');
@@ -72,11 +79,21 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
         });
 
         qrCodeBase64 = connectRes.data?.base64 || connectRes.data?.qrcode?.base64 || null;
-        pairingCode =
-          connectRes.data?.code ||
-          connectRes.data?.pairingCode ||
-          connectRes.data?.pairing_code ||
-          null;
+
+        // Prioritize pairingCode fields over raw code
+        const candidates = [
+          connectRes.data?.pairingCode,
+          connectRes.data?.pairing_code,
+          connectRes.data?.codePairing,
+          connectRes.data?.code,
+        ];
+
+        for (const candidate of candidates) {
+          if (isValidPairingCode(candidate)) {
+            pairingCode = candidate.trim();
+            break;
+          }
+        }
 
         console.log(`[Instance API] Connect response received. Pairing Code: ${pairingCode || 'NONE'}`);
       } catch (err: any) {

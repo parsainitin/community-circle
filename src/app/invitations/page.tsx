@@ -186,7 +186,14 @@ export default function InvitationsPage() {
         return true;
       } else {
         setIsQrConnected(false);
-        if (data.pairingCode) setPairingCode(data.pairingCode);
+        if (
+          data.pairingCode &&
+          typeof data.pairingCode === "string" &&
+          !data.pairingCode.startsWith("2@") &&
+          data.pairingCode.length <= 15
+        ) {
+          setPairingCode(data.pairingCode.trim());
+        }
         if (data.error && !data.pairingCode) {
           setConnectionError(data.error);
         }
