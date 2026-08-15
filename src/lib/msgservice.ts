@@ -27,6 +27,10 @@ export async function sendWhatsAppMessage({
   ) {
     rawMsgUrl = "https://community-circle-production.up.railway.app";
   }
+  // Ensure HTTPS for Railway to prevent 301 redirect POST drop
+  if (rawMsgUrl.startsWith("http://") && rawMsgUrl.includes("railway.app")) {
+    rawMsgUrl = rawMsgUrl.replace(/^http:\/\//i, "https://");
+  }
   const msgServiceUrl = rawMsgUrl.replace(/\/+$/, "");
 
   try {

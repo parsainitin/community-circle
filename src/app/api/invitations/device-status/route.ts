@@ -15,6 +15,9 @@ export async function GET(req: Request) {
     ) {
       rawMsgUrl = "https://community-circle-production.up.railway.app";
     }
+    if (rawMsgUrl.startsWith("http://") && rawMsgUrl.includes("railway.app")) {
+      rawMsgUrl = rawMsgUrl.replace(/^http:\/\//i, "https://");
+    }
     const msgServiceUrl = rawMsgUrl.replace(/\/+$/, "");
 
     let url = `${msgServiceUrl}/api/instance/status`;
@@ -77,6 +80,9 @@ export async function POST(req: Request) {
       rawMsgUrl.trim() === ""
     ) {
       rawMsgUrl = "https://community-circle-production.up.railway.app";
+    }
+    if (rawMsgUrl.startsWith("http://") && rawMsgUrl.includes("railway.app")) {
+      rawMsgUrl = rawMsgUrl.replace(/^http:\/\//i, "https://");
     }
     const msgServiceUrl = rawMsgUrl.replace(/\/+$/, "");
 
