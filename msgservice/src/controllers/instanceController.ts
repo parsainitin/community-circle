@@ -41,7 +41,7 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
       if (err.response?.status === 404 || err.response?.data?.error?.includes('not found')) {
         console.log(`[Instance API] Creating new instance "${instanceName}" in Evolution API...`);
         try {
-          const createRes = await axios.post(
+          await axios.post(
             `${baseURL}/instance/create`,
             {
               instanceName,
@@ -85,6 +85,7 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
           connectRes.data?.pairing_code,
           connectRes.data?.codePairing,
           connectRes.data?.code,
+          connectRes.data?.qrcode?.pairingCode,
         ];
 
         for (const candidate of candidates) {
@@ -100,15 +101,18 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
         console.error('[Instance API] Connect error:', connectErrorDetail);
       }
 
-      // 3. Fallback: If phoneNumber was supplied but instance returned only QR or no pairing code, recreate instance with pairing mode
+      // 3. If phoneNumber was provided but instance is stuck in QR mode (state == 'connecting' without pairingCode), reset instance so Baileys generates pairing code
       if (!pairingCode && phoneNumber) {
         try {
-          console.log(`[Instance API] Re-initializing instance "${instanceName}" with pairing number: ${phoneNumber}...`);
+          console.log(`[Instance API] Resetting instance "${instanceName}" to close state to force pairing code for ${phoneNumber}...`);
+          
+          // Delete old QR instance
           await axios.delete(`${baseURL}/instance/delete/${instanceName}`, {
             headers: { apikey: apiKey },
             timeout: 6000,
           }).catch(() => {});
 
+          // Recreate with number
           const createRes = await axios.post(
             `${baseURL}/instance/create`,
             {
@@ -129,6 +133,7 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
             createRes.data?.codePairing,
             createRes.data?.code,
             createRes.data?.instance?.pairingCode,
+            createRes.data?.qrcode?.pairingCode,
           ];
 
           for (const candidate of createCandidates) {
@@ -138,7 +143,9 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
             }
           }
 
+          // Allow Baileys 1.5s to generate pairing code
           if (!pairingCode) {
+            await new Promise((resolve) => setTimeout(resolve, 1500));
             const secondConnectRes = await axios.get(`${baseURL}/instance/connect/${instanceName}?number=${phoneNumber}`, {
               headers: { apikey: apiKey },
               timeout: 10000,
@@ -148,6 +155,7 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
               secondConnectRes.data?.pairing_code,
               secondConnectRes.data?.codePairing,
               secondConnectRes.data?.code,
+              secondConnectRes.data?.qrcode?.pairingCode,
             ];
             for (const candidate of secondCandidates) {
               if (isValidPairingCode(candidate)) {
@@ -157,9 +165,9 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
             }
           }
 
-          console.log(`[Instance API] Fallback completed. Pairing Code: ${pairingCode || 'NONE'}`);
+          console.log(`[Instance API] Reset completed. Pairing Code: ${pairingCode || 'NONE'}`);
         } catch (recreateErr: any) {
-          console.error('[Instance API] Fallback recreate error:', recreateErr.response?.data || recreateErr.message);
+          console.error('[Instance API] Reset error:', recreateErr.response?.data || recreateErr.message);
         }
       }
     }
