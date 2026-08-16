@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import { createApp } from './app';
 import { connectDatabase } from './config/database';
 import { startBroadcastWorker } from './workers/broadcastWorker';
+import { startSessionReaper } from './services/sessionReaperService';
 
 dotenv.config();
 
@@ -16,7 +17,10 @@ const startServer = async () => {
     const worker = startBroadcastWorker();
     console.log('[BullMQ] Outbound Broadcast Worker started with 5-7s rate limiting.');
 
-    // 3. Create Express App & Start Server
+    // 3. Start Session Reaper — auto-disconnect idle WhatsApp sessions every 60s
+    startSessionReaper();
+
+    // 4. Create Express App & Start Server
     const app = createApp();
     app.listen(PORT, () => {
       console.log(`[WhastFlow] Server running on http://localhost:${PORT}`);
@@ -28,3 +32,4 @@ const startServer = async () => {
 };
 
 startServer();
+

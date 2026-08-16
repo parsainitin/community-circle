@@ -263,6 +263,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     clearVisitorTimer();
+
+    // Fire-and-forget: disconnect the user's WhatsApp session on logout
+    // Uses their mobile number so msgservice disconnects only their specific instance (cc_{phone})
+    const currentUser = user;
+    if (currentUser && !currentUser.isVisitor && currentUser.mobileNumber) {
+      const phoneDigits = String(currentUser.mobileNumber).replace(/\D/g, "");
+      fetch("/api/invitations/device-status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "disconnect",
+          phoneNumber: phoneDigits,
+        }),
+      }).catch(() => {
+        // Non-blocking — don't block logout if this fails
+      });
+    }
+
     localStorage.removeItem("cc_user");
     localStorage.removeItem(VISITOR_SESSION_KEY);
     setUser(null);

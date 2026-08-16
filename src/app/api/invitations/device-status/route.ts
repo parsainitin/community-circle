@@ -1,32 +1,36 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(req: Request) {
+function getMsgServiceUrl(): string {
+  let rawMsgUrl = process.env.MSG_SERVICE_URL;
+  if (
+    !rawMsgUrl ||
+    rawMsgUrl.includes("localhost") ||
+    rawMsgUrl.includes("mysocialclan.com") ||
+    rawMsgUrl.trim() === ""
+  ) {
+    rawMsgUrl = "https://community-circle-production.up.railway.app";
+  }
+  if (rawMsgUrl.startsWith("http://") && rawMsgUrl.includes("railway.app")) {
+    rawMsgUrl = rawMsgUrl.replace(/^http:\/\//i, "https://");
+  }
+  return rawMsgUrl.replace(/\/+$/, "");
+}
+
+export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const phoneNumber = searchParams.get("phoneNumber") || "";
     const checkOnly = searchParams.get("checkOnly") || "";
+    const instanceName = searchParams.get("instanceName") || "";
 
-    let rawMsgUrl = process.env.MSG_SERVICE_URL;
-    if (
-      !rawMsgUrl ||
-      rawMsgUrl.includes("localhost") ||
-      rawMsgUrl.includes("mysocialclan.com") ||
-      rawMsgUrl.trim() === ""
-    ) {
-      rawMsgUrl = "https://community-circle-production.up.railway.app";
-    }
-    if (rawMsgUrl.startsWith("http://") && rawMsgUrl.includes("railway.app")) {
-      rawMsgUrl = rawMsgUrl.replace(/^http:\/\//i, "https://");
-    }
-    const msgServiceUrl = rawMsgUrl.replace(/\/+$/, "");
+    const msgServiceUrl = getMsgServiceUrl();
 
-    let url = `${msgServiceUrl}/api/instance/status`;
     const params = new URLSearchParams();
     if (phoneNumber) params.append("phoneNumber", phoneNumber);
     if (checkOnly) params.append("checkOnly", checkOnly);
-    if (params.toString()) {
-      url += `?${params.toString()}`;
-    }
+    if (instanceName) params.append("instanceName", instanceName);
+
+    const url = `${msgServiceUrl}/api/instance/status${params.toString() ? `?${params.toString()}` : ""}`;
 
     const res = await fetch(url, {
       method: "GET",
@@ -39,7 +43,7 @@ export async function GET(req: Request) {
         success: false,
         isOnline: false,
         state: "OFFLINE",
-        error: `Messaging backend returned HTTP ${res.status}. Check MSG_SERVICE_URL in Netlify settings.`,
+        error: `Messaging backend returned HTTP ${res.status}.`,
       });
     }
 
@@ -62,36 +66,37 @@ export async function GET(req: Request) {
       success: false,
       isOnline: false,
       state: "DISCONNECTED",
-      error: `Cannot reach messaging service: ${error.message || "Network error"}. Ensure MSG_SERVICE_URL is configured in Netlify.`,
+      error: `Cannot reach messaging service: ${error.message || "Network error"}`,
     });
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
-    const { action } = body;
+    const { action, phoneNumber, instanceName } = body;
 
-    let rawMsgUrl = process.env.MSG_SERVICE_URL;
-    if (
-      !rawMsgUrl ||
-      rawMsgUrl.includes("localhost") ||
-      rawMsgUrl.includes("mysocialclan.com") ||
-      rawMsgUrl.trim() === ""
-    ) {
-      rawMsgUrl = "https://community-circle-production.up.railway.app";
-    }
-    if (rawMsgUrl.startsWith("http://") && rawMsgUrl.includes("railway.app")) {
-      rawMsgUrl = rawMsgUrl.replace(/^http:\/\//i, "https://");
-    }
-    const msgServiceUrl = rawMsgUrl.replace(/\/+$/, "");
+    const msgServiceUrl = getMsgServiceUrl();
 
     if (action === "disconnect") {
+      // Forward the specific user's phoneNumber and instanceName so msgservice
+      // disconnects only their session, not the shared whastflow_bot
       const res = await fetch(`${msgServiceUrl}/api/instance/logout`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phoneNumber: phoneNumber || undefined,
+          instanceName: instanceName || undefined,
+          platform: "community-circle",
+        }),
       });
-      const data = await res.json().catch(() => ({ success: true }));
+      const text = await res.text();
+      let data: any;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = { success: true };
+      }
       return NextResponse.json(data);
     }
 

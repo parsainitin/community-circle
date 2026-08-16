@@ -1,6 +1,14 @@
 import { Request, Response } from 'express';
 import axios from 'axios';
 import dotenv from 'dotenv';
+import {
+  resolveInstanceName,
+  upsertSession,
+  markSessionOpen,
+  touchSession,
+  disconnectSession,
+  listActiveSessions,
+} from '../services/sessionManager';
 
 dotenv.config();
 
@@ -18,14 +26,45 @@ function isValidPairingCode(code: any): boolean {
   return clean.length >= 6 && clean.length <= 15 && !clean.startsWith('2@') && !clean.includes(',');
 }
 
-export const getInstanceStatus = async (req: Request, res: Response): Promise<void> => {
+function getEvolutionConfig() {
   const rawBaseURL = process.env.EVOLUTION_API_URL || 'http://localhost:8080';
   const baseURL = rawBaseURL.replace(/\/+$/, '');
   const apiKey = (process.env.EVOLUTION_API_KEY || 'whastflow_dev_secret_key').trim();
-  const instanceName = (process.env.EVOLUTION_INSTANCE_NAME || 'whastflow_bot').trim();
+  return { baseURL, apiKey };
+}
+
+/**
+ * Resolve instanceName from multiple sources (priority order):
+ * 1. req.body.instanceName
+ * 2. req.query.instanceName
+ * 3. req.headers['x-instance-name']
+ * 4. Derived from phoneNumber: cc_{digits}
+ * 5. Default whastflow_bot
+ */
+function resolveInstanceFromRequest(req: Request, phoneNumber?: string): string {
+  const explicit =
+    (req.body?.instanceName as string) ||
+    (req.query?.instanceName as string) ||
+    (req.headers['x-instance-name'] as string) ||
+    undefined;
+  const platform = (req.body?.platform || req.query?.platform || req.headers['x-platform'] || 'community-circle') as string;
+  return resolveInstanceName(phoneNumber, explicit, platform);
+}
+
+// ─── GET /api/instance/status ────────────────────────────────────────────────
+
+export const getInstanceStatus = async (req: Request, res: Response): Promise<void> => {
+  const { baseURL, apiKey } = getEvolutionConfig();
   const rawPhoneNumber = req.query.phoneNumber as string | undefined;
   const phoneNumber = rawPhoneNumber ? formatPhoneNumber(rawPhoneNumber) : undefined;
   const checkOnly = req.query.checkOnly === 'true';
+  const platform = (req.query.platform || req.headers['x-platform'] || 'community-circle') as string;
+  const instanceName = resolveInstanceFromRequest(req, phoneNumber);
+
+  // Upsert session record so we track this instance
+  if (phoneNumber) {
+    await upsertSession(instanceName, phoneNumber, platform);
+  }
 
   try {
     // 1. Fetch connection state
@@ -61,8 +100,9 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
       }
     }
 
-    // If online, return immediately
+    // If online, touch session and return immediately
     if (state === 'open') {
+      await markSessionOpen(instanceName);
       res.status(200).json({
         success: true,
         instanceName,
@@ -76,7 +116,7 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
       return;
     }
 
-    // If checkOnly requested, do NOT trigger connect
+    // If checkOnly, do NOT trigger connect
     if (checkOnly) {
       res.status(200).json({
         success: true,
@@ -146,11 +186,11 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
         console.error('[Instance API] Connect error:', connectErrorDetail);
       }
 
-      // If phoneNumber was provided but instance returned no pairing code, reset instance with qrcode: true & number
+      // Reset instance if no pairing code obtained
       if (!pairingCode) {
         try {
           console.log(`[Instance API] Resetting instance "${instanceName}" to force phone pairing for ${phoneNumber}...`);
-          
+
           await axios.delete(`${baseURL}/instance/delete/${instanceName}`, {
             headers: { apikey: apiKey },
             timeout: 6000,
@@ -231,6 +271,9 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
       }
     }
 
+    // Touch session activity
+    await touchSession(instanceName);
+
     res.status(200).json({
       success: true,
       instanceName,
@@ -253,26 +296,41 @@ export const getInstanceStatus = async (req: Request, res: Response): Promise<vo
   }
 };
 
+// ─── POST/DELETE /api/instance/logout ────────────────────────────────────────
+
 export const logoutInstance = async (req: Request, res: Response): Promise<void> => {
-  const rawBaseURL = process.env.EVOLUTION_API_URL || 'http://localhost:8080';
-  const baseURL = rawBaseURL.replace(/\/+$/, '');
-  const apiKey = (process.env.EVOLUTION_API_KEY || 'whastflow_dev_secret_key').trim();
-  const instanceName = (process.env.EVOLUTION_INSTANCE_NAME || 'whastflow_bot').trim();
+  const rawPhoneNumber = (req.body?.phoneNumber || req.query.phoneNumber) as string | undefined;
+  const phoneNumber = rawPhoneNumber ? formatPhoneNumber(rawPhoneNumber) : undefined;
+  const instanceName = resolveInstanceFromRequest(req, phoneNumber);
 
   try {
-    await axios.delete(`${baseURL}/instance/logout/${instanceName}`, {
-      headers: { apikey: apiKey },
-      timeout: 6000,
-    });
+    await disconnectSession(instanceName, 'user-logout');
     res.status(200).json({
       success: true,
-      message: 'WhatsApp instance logged out successfully.',
+      instanceName,
+      message: 'WhatsApp session logged out and disconnected successfully.',
     });
   } catch (err: any) {
     console.error('[Instance API] Logout error:', err.message);
     res.status(200).json({
       success: true,
+      instanceName,
       message: 'Instance disconnected or already logged out.',
     });
+  }
+};
+
+// ─── GET /api/instance/sessions ──────────────────────────────────────────────
+
+export const getActiveSessions = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const sessions = await listActiveSessions();
+    res.status(200).json({
+      success: true,
+      count: sessions.length,
+      sessions,
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
   }
 };

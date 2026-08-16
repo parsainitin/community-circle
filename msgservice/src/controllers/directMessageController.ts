@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { evolutionService } from '../services/evolutionService';
 import { BroadcastLog } from '../models/BroadcastLog';
+import { resolveInstanceName, touchSession } from '../services/sessionManager';
 
 /**
  * Helper to auto-format phone numbers (e.g., auto-prepend country code 91 for 10-digit Indian numbers)
@@ -21,7 +22,16 @@ function formatPhoneNumber(rawNum: string): string {
  */
 export const sendDirectMessage = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { phoneNumbers, message, title } = req.body;
+    const { phoneNumbers, message, title, senderPhone, instanceName: explicitInstance, platform } = req.body;
+
+    // Resolve which WhatsApp instance to send from (per-user session)
+    const senderInstanceName = resolveInstanceName(
+      senderPhone ? senderPhone.trim().replace(/\D/g, '') : undefined,
+      explicitInstance,
+      platform || (req.headers['x-platform'] as string) || 'community-circle'
+    );
+    // Touch this session's lastActiveAt to reset idle timer
+    touchSession(senderInstanceName).catch(() => {});
 
     if (!phoneNumbers || !message) {
       res.status(400).json({
@@ -70,7 +80,7 @@ export const sendDirectMessage = async (req: Request, res: Response): Promise<vo
       try {
         console.log(`[DirectMessage Controller] Sending direct message to ${num}...`);
         
-        await evolutionService.sendTextMessage(num, message);
+        await evolutionService.sendTextMessage(num, message, senderInstanceName);
         successCount++;
 
         broadcastLog.deliveryDetails.push({
